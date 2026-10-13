@@ -75,7 +75,7 @@
     if (!day.routines) day.routines = {};
     for (const r of state.routines.filter(x => dayIsScheduled(x,date))) {
       if (day.routines[r.id]) continue;
-      day.routines[r.id] = {routineId:r.id,name:r.name,icon:r.icon,color:r.color,items:r.items.filter(x=>x.active!==false).map(item=>({id:item.id,label:item.label,done:false,changedAt:day.updatedAt}))};
+      day.routines[r.id] = {routineId:r.id,name:r.name,icon:r.icon,color:r.color,items:r.items.filter(x=>x.active!==false).map(item=>({id:item.id,label:item.label,done:false,touched:false,changedAt:day.updatedAt}))};
       day.updatedAt = stamp();
     }
     return day;
@@ -242,7 +242,17 @@
         const p=x.routines?.[rid],q=y.routines?.[rid];if(!p||!q){routinesForDay[rid]=structuredClone(p||q);continue;}
         const base=(Date.parse(q.updatedAt||'')||0)>=(Date.parse(p.updatedAt||'')||0)?q:p;
         const itemMap=new Map();
-        for(const it of [...(p.items||[]),...(q.items||[])]){const old=itemMap.get(it.id);if(!old||(Date.parse(it.changedAt||'')||0)>=(Date.parse(old.changedAt||'')||0))itemMap.set(it.id,structuredClone(it));}
+        for(const it of [...(p.items||[]),...(q.items||[])]){
+          const old=itemMap.get(it.id);
+          // Um passo recém-criado como incompleto não substitui uma ação da pessoa,
+          // mesmo que o outro aparelho tenha aberto o dia mais tarde.
+          const changed=it.touched===true||it.done===true;
+          const oldChanged=old&&(old.touched===true||old.done===true);
+          const time=Date.parse(it.changedAt||'')||0,oldTime=Date.parse(old?.changedAt||'')||0;
+          if(!old||(changed&&!oldChanged)||(changed===oldChanged&&(time>oldTime||(time===oldTime&&it.done&&!old.done)))){
+            itemMap.set(it.id,{...structuredClone(it),touched:changed});
+          }
+        }
         routinesForDay[rid]={...structuredClone(base),items:[...itemMap.values()]};
       }
       const maxStamp=Math.max(Date.parse(x.updatedAt||0)||0,Date.parse(y.updatedAt||0)||0);
@@ -312,7 +322,10 @@
       if(!remote){setSyncStatus('online','Ainda não há dados na nuvem para baixar.');return true;}
       state=mergeState(state,remote.data||{});
       localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-      if(JSON.stringify(state)!==JSON.stringify(remote.data))localStorage.setItem(PENDING_KEY,session.user.id);
+      if(JSON.stringify(state)!==JSON.stringify(remote.data)){
+        localStorage.setItem(PENDING_KEY,session.user.id);
+        scheduleSync();
+      }
       localStorage.setItem(LAST_SYNC_KEY,stamp());render();
       setSyncStatus('online','Dados da nuvem baixados e mesclados.');return true;
     } catch(error){console.error('Falha ao baixar dados:',error);setSyncStatus('error',`Não foi possível baixar: ${error.message||'verifique sua conexão'}`);return false;}
@@ -356,7 +369,7 @@
   $('#focus-steps').addEventListener('change',e=>{
     if(!e.target.matches('[data-focus-item]'))return;
     const itemId=e.target.dataset.focusItem,checked=e.target.checked,routineId=activeRoutineId;
-    mutateDay(day=>{const item=day.routines[routineId]?.items.find(x=>x.id===itemId);if(item){item.done=checked;item.changedAt=stamp();}});
+    mutateDay(day=>{const item=day.routines[routineId]?.items.find(x=>x.id===itemId);if(item){item.done=checked;item.touched=true;item.changedAt=stamp();}});
   });
   $('#close-routine-focus').onclick=$('#focus-done').onclick=()=>$('#routine-focus-dialog').close();
   $('#routine-focus-dialog').addEventListener('close',()=>{activeRoutineId=null;});
