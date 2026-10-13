@@ -73,6 +73,7 @@
       <div class="focus-content">
         <div class="eyebrow" id="focus-date"></div>
         <div class="focus-title-row"><span id="focus-routine-icon" class="focus-icon"></span><div><h2 id="focus-routine-name"></h2><p id="focus-routine-count"></p></div></div>
+        <p id="focus-routine-description" class="focus-routine-description hidden"></p>
         <div class="focus-progress"><div id="focus-progress-bar"></div></div>
         <div class="focus-section-label">PASSOS DESTA ROTINA</div>
         <div id="focus-steps" class="focus-steps"></div>
@@ -86,6 +87,7 @@
       <div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="routine-dialog-title">Nova rotina</h2></div><button type="button" class="close-button" data-close="routine-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="routine-id">
       <label class="field-label" for="routine-name">Nome da rotina</label><input class="text-input" id="routine-name" maxlength="60" required placeholder="Ex.: Começar com calma">
+      <label class="field-label" for="routine-description">Descrição da rotina <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="routine-description" maxlength="500" rows="2" placeholder="O que faz parte deste momento?"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="routine-icon">Ícone</label><input class="text-input icon-input" id="routine-icon" maxlength="8" value="✨" aria-label="Ícone"></div><div class="field"><label class="field-label" for="routine-color">Cor</label><input class="color-input" id="routine-color" type="color" value="#e8a59c"></div></div>
       <fieldset class="weekday-field"><legend class="field-label">Repetir em</legend><div id="weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="routine-start">Começa em</label><input class="text-input" id="routine-start" type="date"></div><div class="field"><label class="field-label" for="routine-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="routine-end" type="date"></div></div>

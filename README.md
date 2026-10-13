@@ -14,3 +14,5 @@ Até a tabela estar criada ou quando a conexão falhar, o app continua guardando
 ## Histórico e CSV
 
 O app grava automaticamente um registro de cada rotina e de cada passo por data, inclusive itens que ficaram pendentes. “Concluir meu dia” finaliza o registro daquele dia, marcando itens ainda abertos como não realizados. A seção Histórico permite rever cada data e baixar o histórico completo em CSV, em UTF-8.
+
+Cada rotina e passo pode ter uma descrição opcional. Ao abrir uma data do histórico, use “Remover deste dia” diretamente no cartão da rotina; a programação dos demais dias continua igual. A remoção também é sincronizada entre dispositivos e os registros removidos deixam de aparecer no CSV.

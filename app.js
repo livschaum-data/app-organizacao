@@ -35,7 +35,7 @@
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:1, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,icon,color,weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,active:true})),updatedAt:now,deleted:false})),history:{}};
+    return {version:1, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),history:{}};
   }
   function normalizeSeedItemIds(data) {
     for(let i=0;i<SEED.length;i++) {
@@ -73,9 +73,10 @@
     if (!state.history[date]) state.history[date] = {routines:{}, finalized:false, updatedAt:stamp()};
     const day = state.history[date];
     if (!day.routines) day.routines = {};
+    if (!day.excludedRoutines) day.excludedRoutines = {};
     for (const r of state.routines.filter(x => dayIsScheduled(x,date))) {
-      if (day.routines[r.id]) continue;
-      day.routines[r.id] = {routineId:r.id,name:r.name,icon:r.icon,color:r.color,items:r.items.filter(x=>x.active!==false).map(item=>({id:item.id,label:item.label,done:false,touched:false,changedAt:day.updatedAt}))};
+      if (day.routines[r.id] || day.excludedRoutines[r.id]) continue;
+      day.routines[r.id] = {routineId:r.id,name:r.name,description:r.description||'',icon:r.icon,color:r.color,items:r.items.filter(x=>x.active!==false).map(item=>({id:item.id,label:item.label,description:item.description||'',done:false,touched:false,changedAt:day.updatedAt}))};
       day.updatedAt = stamp();
     }
     return day;
@@ -121,7 +122,8 @@
     list.innerHTML = routines.map(r => {
       const done=r.items.filter(i=>i.done).length, total=r.items.length;
       return `<article class="routine-card" style="--routine-color:${escapeHTML(r.color)}">
-        <button class="routine-card-head" data-open-routine="${escapeHTML(r.routineId)}"><span class="routine-icon">${escapeHTML(r.icon)}</span><span class="routine-title"><strong>${escapeHTML(r.name)}</strong><small>${done} de ${total} passos</small></span><span class="mini-progress"><i style="width:${total?done/total*100:0}%"></i></span><span class="chevron">→</span></button>
+        <button class="routine-card-head" data-open-routine="${escapeHTML(r.routineId)}"><span class="routine-icon">${escapeHTML(r.icon)}</span><span class="routine-title"><strong>${escapeHTML(r.name)}</strong><small>${done} de ${total} passos</small></span></button>
+        <div class="routine-card-actions"><button type="button" class="routine-remove-day" data-remove-routine-day="${escapeHTML(r.routineId)}">Remover deste dia</button></div>
       </article>`;
     }).join('');
     renderProgress();
@@ -136,8 +138,10 @@
     $('#focus-routine-icon').textContent=routine.icon;
     $('#focus-routine-name').textContent=routine.name;
     $('#focus-routine-count').textContent=`${done} de ${total} passos concluídos`;
+    $('#focus-routine-description').textContent=routine.description||'';
+    $('#focus-routine-description').classList.toggle('hidden',!routine.description);
     $('#focus-progress-bar').style.width=`${total?done/total*100:0}%`;
-    $('#focus-steps').innerHTML=routine.items.map(item=>`<label class="focus-step ${item.done?'is-done':''}"><input type="checkbox" data-focus-item="${escapeHTML(item.id)}" ${item.done?'checked':''} ${day.finalized?'disabled':''}><span class="focus-check"></span><span>${escapeHTML(item.label)}</span></label>`).join('');
+    $('#focus-steps').innerHTML=routine.items.map(item=>`<label class="focus-step ${item.done?'is-done':''}"><input type="checkbox" data-focus-item="${escapeHTML(item.id)}" ${item.done?'checked':''} ${day.finalized?'disabled':''}><span class="focus-check"></span><span class="focus-step-copy"><span>${escapeHTML(item.label)}</span>${item.description?`<small>${escapeHTML(item.description)}</small>`:''}</span></label>`).join('');
   }
   function openFocusRoutine(id) {
     if(!ensureDay(selectedDate).routines[id])return;
@@ -171,13 +175,14 @@
     const row=document.createElement('div'); row.className='item-editor-row';
     row.dataset.itemId=typeof item==='string'?uid():item.id;
     const value=typeof item==='string'?item:item.label;
-    row.innerHTML=`<div class="item-order-actions"><button type="button" data-move="up" aria-label="Mover passo para cima" title="Mover para cima">↑</button><button type="button" data-move="down" aria-label="Mover passo para baixo" title="Mover para baixo">↓</button></div><input class="text-input item-name-input" maxlength="120" value="${escapeHTML(value)}" placeholder="Nome do passo"><button type="button" class="remove-item" aria-label="Remover passo">×</button>`;
+    const description=typeof item==='string'?'':item.description||'';
+    row.innerHTML=`<div class="item-editor-main"><div class="item-order-actions"><button type="button" data-move="up" aria-label="Mover passo para cima" title="Mover para cima">↑</button><button type="button" data-move="down" aria-label="Mover passo para baixo" title="Mover para baixo">↓</button></div><input class="text-input item-name-input" maxlength="120" value="${escapeHTML(value)}" aria-label="Nome do passo" placeholder="Nome do passo"><button type="button" class="remove-item" aria-label="Remover passo">×</button></div><textarea class="text-input description-input item-description-input" maxlength="300" rows="2" aria-label="Descrição do passo ${escapeHTML(value||'novo')}" placeholder="Descrição do passo (opcional)">${escapeHTML(description)}</textarea>`;
     $('#routine-items-editor').append(row);updateItemOrderButtons();
   }
   function openRoutineDialog(id=null) {
     const r=state.routines.find(x=>x.id===id && !x.deleted);
     $('#routine-form').reset(); $('#routine-id').value=r?.id||''; $('#routine-dialog-title').textContent=r?'Editar rotina':'Nova rotina';
-    $('#routine-name').value=r?.name||''; $('#routine-icon').value=r?.icon||'✨'; $('#routine-color').value=r?.color||'#e8a59c';
+    $('#routine-name').value=r?.name||''; $('#routine-description').value=r?.description||''; $('#routine-icon').value=r?.icon||'✨'; $('#routine-color').value=r?.color||'#e8a59c';
     $('#routine-start').value=r?.startDate||''; $('#routine-end').value=r?.endDate||'';
     buildWeekdayOptions(r?.weekdays||[0,1,2,3,4,5,6]);
     $('#routine-items-editor').innerHTML=''; (r?.items.filter(i=>i.active!==false)||['']).forEach(addItemEditor);
@@ -186,16 +191,21 @@
   function saveRoutine(event) {
     event.preventDefault();
     const id=$('#routine-id').value||uid(), existing=state.routines.find(x=>x.id===id), name=$('#routine-name').value.trim();
-    const items=$$('.item-editor-row',$('#routine-items-editor')).map(row=>({id:row.dataset.itemId,label:$('.item-name-input',row).value.trim(),active:true})).filter(item=>item.label);
+    const items=$$('.item-editor-row',$('#routine-items-editor')).map(row=>({id:row.dataset.itemId,label:$('.item-name-input',row).value.trim(),description:$('.item-description-input',row).value.trim(),active:true})).filter(item=>item.label);
     if(!name){toast('Dê um nome para a rotina.');return;}
     if(!items.length){toast('Adicione pelo menos um passo.');return;}
     const weekdays=$$('#weekday-options input:checked').map(input=>Number(input.value));
     if(!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}
     if($('#routine-end').value && $('#routine-start').value && $('#routine-end').value < $('#routine-start').value){toast('A data final precisa ser igual ou posterior à data inicial.');return;}
     const previousItems=new Map((existing?.items||[]).map(item=>[item.id,item]));
-    const next={id,name,icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
+    const next={id,name,description:$('#routine-description').value.trim(),icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
     if(existing)state.routines=state.routines.map(x=>x.id===id?next:x);else state.routines.push(next);
-    for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized&&day.routines?.[id]){sortSnapshotItems(day.routines[id],next);day.updatedAt=stamp();}
+    for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized&&day.routines?.[id]){
+      const snapshot=day.routines[id],currentItems=new Map(next.items.map(item=>[item.id,item]));
+      snapshot.name=next.name;snapshot.description=next.description;snapshot.icon=next.icon;snapshot.color=next.color;
+      for(const item of snapshot.items){const current=currentItems.get(item.id);if(current){item.label=current.label;item.description=current.description;}}
+      sortSnapshotItems(snapshot,next);day.updatedAt=stamp();
+    }
     saveLocal(); $('#routine-dialog').close(); render(); toast('Rotina salva.');
   }
   function deleteRoutine() {
@@ -203,6 +213,14 @@
     const r=state.routines.find(x=>x.id===id); if(!r)return;
     if(!confirm(`Excluir “${r.name}”? Os registros antigos continuam no histórico.`))return;
     r.deleted=true;r.updatedAt=stamp();saveLocal();$('#routine-dialog').close();render();toast('Rotina excluída.');
+  }
+  function removeRoutineFromDay(routineId) {
+    const day=ensureDay(selectedDate),routine=day.routines[routineId];if(!routine)return;
+    if(!confirm(`Remover “${routine.name}” de ${fmtDate(selectedDate)}? O registro e seus passos serão excluídos somente deste dia. A programação da rotina continua igual.`))return;
+    day.excludedRoutines={...day.excludedRoutines,[routineId]:stamp()};
+    delete day.routines[routineId];day.updatedAt=stamp();
+    if(activeRoutineId===routineId){activeRoutineId=null;$('#routine-focus-dialog').close();}
+    saveLocal();render();toast('Rotina removida apenas deste dia.');
   }
   function finishDay() {
     const day=ensureDay(selectedDate); if(day.finalized)return;
@@ -215,10 +233,10 @@
   }
   function csvCell(value) { return `"${String(value??'').replace(/"/g,'""')}"`; }
   function exportCSV() {
-    const rows=[['Data','Rotina','Ícone','Passo','Status','Dia concluído']];
+    const rows=[['Data','Rotina','Ícone','Passo','Status','Dia concluído','Descrição da rotina','Descrição do passo']];
     for(const date of Object.keys(state.history).sort()) {
       const day=state.history[date];
-      for(const routine of Object.values(day.routines||{}))for(const item of routine.items||[]) rows.push([date,routine.name,routine.icon,item.label,item.done?'Realizado':'Não realizado',day.finalized?'Sim':'Não']);
+      for(const routine of Object.values(day.routines||{}))for(const item of routine.items||[]) rows.push([date,routine.name,routine.icon,item.label,item.done?'Realizado':'Não realizado',day.finalized?'Sim':'Não',routine.description||'',item.description||'']);
     }
     if(rows.length===1){toast('Ainda não há registros para exportar.');return;}
     const csv='\ufeff'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
@@ -238,9 +256,15 @@
     const history={};
     for(const date of new Set([...Object.keys(a.history||{}),...Object.keys(b.history||{})])) {
       const x=a.history?.[date]||{},y=b.history?.[date]||{},routinesForDay={};
+      const excludedRoutines={};
+      for(const rid of new Set([...Object.keys(x.excludedRoutines||{}),...Object.keys(y.excludedRoutines||{})])){
+        const left=x.excludedRoutines?.[rid]||'',right=y.excludedRoutines?.[rid]||'';
+        excludedRoutines[rid]=left>right?left:right;
+      }
       for(const rid of new Set([...Object.keys(x.routines||{}),...Object.keys(y.routines||{})])) {
+        if(excludedRoutines[rid])continue;
         const p=x.routines?.[rid],q=y.routines?.[rid];if(!p||!q){routinesForDay[rid]=structuredClone(p||q);continue;}
-        const base=(Date.parse(q.updatedAt||'')||0)>=(Date.parse(p.updatedAt||'')||0)?q:p;
+        const base=(Date.parse(y.updatedAt||'')||0)>=(Date.parse(x.updatedAt||'')||0)?q:p;
         const itemMap=new Map();
         for(const it of [...(p.items||[]),...(q.items||[])]){
           const old=itemMap.get(it.id);
@@ -258,9 +282,14 @@
       const maxStamp=Math.max(Date.parse(x.updatedAt||0)||0,Date.parse(y.updatedAt||0)||0);
       const finalized=Boolean(x.finalized||y.finalized);
       if(!finalized&&date>=isoToday())for(const [rid,snapshot] of Object.entries(routinesForDay)){
-        const routine=routines.get(rid);if(routine&&!routine.deleted)sortSnapshotItems(snapshot,routine);
+        const routine=routines.get(rid);if(routine&&!routine.deleted){
+          snapshot.name=routine.name;snapshot.description=routine.description||'';snapshot.icon=routine.icon;snapshot.color=routine.color;
+          const currentItems=new Map(routine.items.map(item=>[item.id,item]));
+          for(const item of snapshot.items){const current=currentItems.get(item.id);if(current){item.label=current.label;item.description=current.description||'';}}
+          sortSnapshotItems(snapshot,routine);
+        }
       }
-      history[date]={routines:routinesForDay,finalized,updatedAt:new Date(maxStamp||Date.now()).toISOString()};
+      history[date]={routines:routinesForDay,excludedRoutines,finalized,updatedAt:new Date(maxStamp||Date.now()).toISOString()};
     }
     return {version:1,routines:[...routines.values()],history};
   }
@@ -364,6 +393,7 @@
   $('#next-day').onclick=()=>{const d=safeDate(selectedDate);d.setDate(d.getDate()+1);setSelectedDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);};
   $('#today-button').onclick=()=>setSelectedDate(isoToday());$('#selected-date').onchange=e=>setSelectedDate(e.target.value);
   $('#routine-list').addEventListener('click',e=>{
+    const remove=e.target.closest('[data-remove-routine-day]');if(remove){removeRoutineFromDay(remove.dataset.removeRoutineDay);return;}
     const button=e.target.closest('[data-open-routine]');if(button)openFocusRoutine(button.dataset.openRoutine);
   });
   $('#focus-steps').addEventListener('change',e=>{
