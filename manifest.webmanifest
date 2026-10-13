@@ -1,0 +1,12 @@
+{
+  "name": "Âncora — minha rotina",
+  "short_name": "Âncora",
+  "description": "Um ponto de apoio para acompanhar sua rotina diária.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f6f4f0",
+  "theme_color": "#285b61",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

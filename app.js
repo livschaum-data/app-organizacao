@@ -1,5 +1,6 @@
 (() => {
   'use strict';
+  // Chave antiga mantida para preservar os dados já salvos neste navegador.
   const STORAGE_KEY = 'ritmo-routine-tracker-v1';
   const LAST_SYNC_KEY = `${STORAGE_KEY}-last-sync`;
   const PENDING_KEY = `${STORAGE_KEY}-pending-sync`;
@@ -99,7 +100,7 @@
   function renderDateHeader() {
     $('#selected-date').value = selectedDate;
     const d = safeDate(selectedDate), today = isoToday();
-    $('#today-label').textContent = selectedDate === today ? 'SEU DIA, NO SEU RITMO' : fmtDate(selectedDate).toLocaleUpperCase('pt-BR');
+    $('#today-label').textContent = selectedDate === today ? 'UM PONTO DE APOIO PARA O SEU DIA' : fmtDate(selectedDate).toLocaleUpperCase('pt-BR');
     $('#greeting').textContent = selectedDate === today ? 'Um passo de cada vez.' : fmtDate(selectedDate, {day:'numeric',month:'long'});
     $('#today-button').classList.toggle('hidden', selectedDate === today);
   }
@@ -221,7 +222,7 @@
     }
     if(rows.length===1){toast('Ainda não há registros para exportar.');return;}
     const csv='\ufeff'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
-    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=`ritmo-historico-${isoToday()}.csv`;a.click();URL.revokeObjectURL(url);toast('Histórico exportado em CSV.');
+    const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=`ancora-historico-${isoToday()}.csv`;a.click();URL.revokeObjectURL(url);toast('Histórico exportado em CSV.');
   }
   function toast(message) {
     const node=$('#toast'); node.textContent=message;node.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>node.classList.remove('show'),3200);
@@ -253,10 +254,10 @@
     }
     return {version:1,routines:[...routines.values()],history};
   }
-  function configured() { const c=window.RITMO_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
+  function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
     if(!configured()){setSyncStatus('offline','Configure o Supabase para sincronizar entre dispositivos.');return false;}
-    if(!supabaseClient){const c=window.RITMO_SUPABASE;supabaseClient=window.supabase.createClient(c.url,c.anonKey);}
+    if(!supabaseClient){const c=window.ANCORA_SUPABASE;supabaseClient=window.supabase.createClient(c.url,c.anonKey);}
     return true;
   }
   function setSyncStatus(kind,message) {
@@ -275,7 +276,7 @@
     $('#sync-detail-pending').textContent=localStorage.getItem(PENDING_KEY)?'Aguardando confirmação':'Nenhuma pendente';
   }
   async function readRemote() {
-    const c=window.RITMO_SUPABASE;
+    const c=window.ANCORA_SUPABASE;
     const {data,error}=await supabaseClient.from(c.table).select('data,updated_at').eq('user_id',session.user.id).eq('id',c.recordId).maybeSingle();
     if(error)throw error;return data;
   }
@@ -290,8 +291,8 @@
           const remote=await readRemote();state=mergeState(state,remote?.data||{});localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
           const updatedAt=new Date(Math.max(Date.now(),(Date.parse(remote?.updated_at||'')||0)+1)).toISOString();
           let result;
-          if(remote) result=await supabaseClient.from(window.RITMO_SUPABASE.table).update({data:state,updated_at:updatedAt}).eq('user_id',session.user.id).eq('id',window.RITMO_SUPABASE.recordId).eq('updated_at',remote.updated_at).select('updated_at').maybeSingle();
-          else result=await supabaseClient.from(window.RITMO_SUPABASE.table).insert({user_id:session.user.id,id:window.RITMO_SUPABASE.recordId,data:state,updated_at:updatedAt}).select('updated_at').maybeSingle();
+          if(remote) result=await supabaseClient.from(window.ANCORA_SUPABASE.table).update({data:state,updated_at:updatedAt}).eq('user_id',session.user.id).eq('id',window.ANCORA_SUPABASE.recordId).eq('updated_at',remote.updated_at).select('updated_at').maybeSingle();
+          else result=await supabaseClient.from(window.ANCORA_SUPABASE.table).insert({user_id:session.user.id,id:window.ANCORA_SUPABASE.recordId,data:state,updated_at:updatedAt}).select('updated_at').maybeSingle();
           if(result.error?.code==='23505')continue;if(result.error)throw result.error;if(!result.data)continue;committed=true;
           if(localRevision!==revisionAtStart)saveAgain=true;
         }
