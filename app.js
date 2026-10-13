@@ -35,7 +35,7 @@
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:1, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),history:{}};
+    return {version:1, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),history:{}};
   }
   function normalizeSeedItemIds(data) {
     for(let i=0;i<SEED.length;i++) {
@@ -76,7 +76,7 @@
     if (!day.excludedRoutines) day.excludedRoutines = {};
     for (const r of state.routines.filter(x => dayIsScheduled(x,date))) {
       if (day.routines[r.id] || day.excludedRoutines[r.id]) continue;
-      day.routines[r.id] = {routineId:r.id,name:r.name,description:r.description||'',icon:r.icon,color:r.color,items:r.items.filter(x=>x.active!==false).map(item=>({id:item.id,label:item.label,description:item.description||'',done:false,touched:false,changedAt:day.updatedAt}))};
+      day.routines[r.id] = {routineId:r.id,name:r.name,description:r.description||'',icon:r.icon,color:r.color,scheduledTime:r.scheduledTime||'',items:r.items.filter(x=>x.active!==false).map(item=>({id:item.id,label:item.label,description:item.description||'',done:false,touched:false,changedAt:day.updatedAt}))};
       day.updatedAt = stamp();
     }
     return day;
@@ -117,12 +117,15 @@
   function renderDay() {
     renderDateHeader();
     const day = ensureDay(selectedDate), list = $('#routine-list');
-    const routines = Object.values(day.routines);
+    const routines = Object.values(day.routines).sort((a,b)=>{
+      const aTime=a.scheduledTime||'99:99',bTime=b.scheduledTime||'99:99';
+      return aTime.localeCompare(bTime);
+    });
     $('#empty-day').classList.toggle('hidden', routines.length>0);
     list.innerHTML = routines.map(r => {
       const done=r.items.filter(i=>i.done).length, total=r.items.length;
       return `<article class="routine-card" style="--routine-color:${escapeHTML(r.color)}">
-        <button class="routine-card-head" data-open-routine="${escapeHTML(r.routineId)}"><span class="routine-icon">${escapeHTML(r.icon)}</span><span class="routine-title"><strong>${escapeHTML(r.name)}</strong><small>${done} de ${total} passos</small></span></button>
+        <button class="routine-card-head" data-open-routine="${escapeHTML(r.routineId)}"><span class="routine-icon">${escapeHTML(r.icon)}</span><span class="routine-title"><strong>${escapeHTML(r.name)}</strong><small>${r.scheduledTime?`${escapeHTML(r.scheduledTime)} · `:''}${done} de ${total} passos</small></span></button>
         <div class="routine-card-actions"><button type="button" class="routine-remove-day" data-remove-routine-day="${escapeHTML(r.routineId)}">Remover deste dia</button></div>
       </article>`;
     }).join('');
@@ -137,7 +140,7 @@
     $('#focus-date').textContent=fmtDate(selectedDate).toLocaleUpperCase('pt-BR');
     $('#focus-routine-icon').textContent=routine.icon;
     $('#focus-routine-name').textContent=routine.name;
-    $('#focus-routine-count').textContent=`${done} de ${total} passos concluídos`;
+    $('#focus-routine-count').textContent=`${routine.scheduledTime?`${routine.scheduledTime} · `:''}${done} de ${total} passos concluídos`;
     $('#focus-routine-description').textContent=routine.description||'';
     $('#focus-routine-description').classList.toggle('hidden',!routine.description);
     $('#focus-progress-bar').style.width=`${total?done/total*100:0}%`;
@@ -149,7 +152,7 @@
   }
   function renderManage() {
     const routines=state.routines.filter(r=>!r.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-    $('#manage-list').innerHTML = routines.length ? routines.map(r=>`<article class="manage-card" style="--routine-color:${escapeHTML(r.color)}"><span class="routine-icon">${escapeHTML(r.icon)}</span><div class="manage-info"><strong>${escapeHTML(r.name)}</strong><small>${r.items.filter(x=>x.active!==false).length} passos · ${r.weekdays.length===7?'todos os dias':r.weekdays.length===5&&r.weekdays.includes(1)&&r.weekdays.includes(5)?'dias úteis':r.weekdays.length===2&&r.weekdays.includes(0)&&r.weekdays.includes(6)?'fim de semana':r.weekdays.map(d=>WEEKDAYS[d]).join(', ')}</small></div><button class="small-edit" data-edit="${escapeHTML(r.id)}">Editar</button></article>`).join('') : '<div class="empty-state"><span>✦</span><h3>Suas rotinas começam aqui</h3><p>Crie uma rotina que combine com seu dia.</p></div>';
+    $('#manage-list').innerHTML = routines.length ? routines.map(r=>`<article class="manage-card" style="--routine-color:${escapeHTML(r.color)}"><span class="routine-icon">${escapeHTML(r.icon)}</span><div class="manage-info"><strong>${escapeHTML(r.name)}</strong><small>${r.scheduledTime?`${escapeHTML(r.scheduledTime)} · `:''}${r.items.filter(x=>x.active!==false).length} passos · ${r.weekdays.length===7?'todos os dias':r.weekdays.length===5&&r.weekdays.includes(1)&&r.weekdays.includes(5)?'dias úteis':r.weekdays.length===2&&r.weekdays.includes(0)&&r.weekdays.includes(6)?'fim de semana':r.weekdays.map(d=>WEEKDAYS[d]).join(', ')}</small></div><button class="small-edit" data-edit="${escapeHTML(r.id)}">Editar</button></article>`).join('') : '<div class="empty-state"><span>✦</span><h3>Suas rotinas começam aqui</h3><p>Crie uma rotina que combine com seu dia.</p></div>';
   }
   function renderHistory() {
     const days=Object.keys(state.history).filter(date=>Object.values(state.history[date]?.routines||{}).length).sort((a,b)=>b.localeCompare(a));
@@ -182,7 +185,7 @@
   function openRoutineDialog(id=null) {
     const r=state.routines.find(x=>x.id===id && !x.deleted);
     $('#routine-form').reset(); $('#routine-id').value=r?.id||''; $('#routine-dialog-title').textContent=r?'Editar rotina':'Nova rotina';
-    $('#routine-name').value=r?.name||''; $('#routine-description').value=r?.description||''; $('#routine-icon').value=r?.icon||'✨'; $('#routine-color').value=r?.color||'#e8a59c';
+    $('#routine-name').value=r?.name||''; $('#routine-description').value=r?.description||''; $('#routine-icon').value=r?.icon||'✨'; $('#routine-color').value=r?.color||'#e8a59c';$('#routine-time').value=r?.scheduledTime||'';
     $('#routine-start').value=r?.startDate||''; $('#routine-end').value=r?.endDate||'';
     buildWeekdayOptions(r?.weekdays||[0,1,2,3,4,5,6]);
     $('#routine-items-editor').innerHTML=''; (r?.items.filter(i=>i.active!==false)||['']).forEach(addItemEditor);
@@ -198,11 +201,11 @@
     if(!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}
     if($('#routine-end').value && $('#routine-start').value && $('#routine-end').value < $('#routine-start').value){toast('A data final precisa ser igual ou posterior à data inicial.');return;}
     const previousItems=new Map((existing?.items||[]).map(item=>[item.id,item]));
-    const next={id,name,description:$('#routine-description').value.trim(),icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
+    const next={id,name,description:$('#routine-description').value.trim(),icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,scheduledTime:$('#routine-time').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
     if(existing)state.routines=state.routines.map(x=>x.id===id?next:x);else state.routines.push(next);
     for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized&&day.routines?.[id]){
       const snapshot=day.routines[id],currentItems=new Map(next.items.map(item=>[item.id,item]));
-      snapshot.name=next.name;snapshot.description=next.description;snapshot.icon=next.icon;snapshot.color=next.color;
+      snapshot.name=next.name;snapshot.description=next.description;snapshot.icon=next.icon;snapshot.color=next.color;snapshot.scheduledTime=next.scheduledTime;
       for(const item of snapshot.items){const current=currentItems.get(item.id);if(current){item.label=current.label;item.description=current.description;}}
       sortSnapshotItems(snapshot,next);day.updatedAt=stamp();
     }
@@ -233,10 +236,10 @@
   }
   function csvCell(value) { return `"${String(value??'').replace(/"/g,'""')}"`; }
   function exportCSV() {
-    const rows=[['Data','Rotina','Ícone','Passo','Status','Dia concluído','Descrição da rotina','Descrição do passo']];
+    const rows=[['Data','Rotina','Ícone','Passo','Status','Dia concluído','Descrição da rotina','Descrição do passo','Horário agendado']];
     for(const date of Object.keys(state.history).sort()) {
       const day=state.history[date];
-      for(const routine of Object.values(day.routines||{}))for(const item of routine.items||[]) rows.push([date,routine.name,routine.icon,item.label,item.done?'Realizado':'Não realizado',day.finalized?'Sim':'Não',routine.description||'',item.description||'']);
+      for(const routine of Object.values(day.routines||{}))for(const item of routine.items||[]) rows.push([date,routine.name,routine.icon,item.label,item.done?'Realizado':'Não realizado',day.finalized?'Sim':'Não',routine.description||'',item.description||'',routine.scheduledTime||'']);
     }
     if(rows.length===1){toast('Ainda não há registros para exportar.');return;}
     const csv='\ufeff'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
@@ -283,7 +286,7 @@
       const finalized=Boolean(x.finalized||y.finalized);
       if(!finalized&&date>=isoToday())for(const [rid,snapshot] of Object.entries(routinesForDay)){
         const routine=routines.get(rid);if(routine&&!routine.deleted){
-          snapshot.name=routine.name;snapshot.description=routine.description||'';snapshot.icon=routine.icon;snapshot.color=routine.color;
+          snapshot.name=routine.name;snapshot.description=routine.description||'';snapshot.icon=routine.icon;snapshot.color=routine.color;snapshot.scheduledTime=routine.scheduledTime||'';
           const currentItems=new Map(routine.items.map(item=>[item.id,item]));
           for(const item of snapshot.items){const current=currentItems.get(item.id);if(current){item.label=current.label;item.description=current.description||'';}}
           sortSnapshotItems(snapshot,routine);
