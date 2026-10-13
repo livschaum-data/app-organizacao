@@ -79,6 +79,13 @@
     }
     return day;
   }
+  function sortSnapshotItems(snapshot,routine) {
+    if(!Array.isArray(snapshot.items))return;
+    const byId=new Map(routine.items.map((item,index)=>[item.id,index]));
+    const byLabel=new Map(routine.items.map((item,index)=>[item.label,index]));
+    const position=item=>byId.get(item.id)??byLabel.get(item.label)??Number.MAX_SAFE_INTEGER;
+    snapshot.items.sort((a,b)=>position(a)-position(b));
+  }
   function saveLocal() {
     localRevision++;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem(PENDING_KEY,session?.user?.id||'local'); }
@@ -155,10 +162,16 @@
   function buildWeekdayOptions(selected=[0,1,2,3,4,5,6]) {
     $('#weekday-options').innerHTML = WEEKDAYS.map((day,i)=>`<label class="weekday-option"><input type="checkbox" value="${i}" ${selected.includes(i)?'checked':''}><span>${day}</span></label>`).join('');
   }
-  function addItemEditor(value='') {
+  function updateItemOrderButtons() {
+    const rows=$$('.item-editor-row',$('#routine-items-editor'));
+    rows.forEach((row,index)=>{row.querySelector('[data-move="up"]').disabled=index===0;row.querySelector('[data-move="down"]').disabled=index===rows.length-1;});
+  }
+  function addItemEditor(item='') {
     const row=document.createElement('div'); row.className='item-editor-row';
-    row.innerHTML=`<span class="drag-mark">· ·</span><input class="text-input item-name-input" maxlength="120" value="${escapeHTML(value)}" placeholder="Nome do passo"><button type="button" class="remove-item" aria-label="Remover passo">×</button>`;
-    $('.remove-item',row).onclick=()=>row.remove(); $('#routine-items-editor').append(row);
+    row.dataset.itemId=typeof item==='string'?uid():item.id;
+    const value=typeof item==='string'?item:item.label;
+    row.innerHTML=`<div class="item-order-actions"><button type="button" data-move="up" aria-label="Mover passo para cima" title="Mover para cima">↑</button><button type="button" data-move="down" aria-label="Mover passo para baixo" title="Mover para baixo">↓</button></div><input class="text-input item-name-input" maxlength="120" value="${escapeHTML(value)}" placeholder="Nome do passo"><button type="button" class="remove-item" aria-label="Remover passo">×</button>`;
+    $('#routine-items-editor').append(row);updateItemOrderButtons();
   }
   function openRoutineDialog(id=null) {
     const r=state.routines.find(x=>x.id===id && !x.deleted);
@@ -166,21 +179,22 @@
     $('#routine-name').value=r?.name||''; $('#routine-icon').value=r?.icon||'✨'; $('#routine-color').value=r?.color||'#e8a59c';
     $('#routine-start').value=r?.startDate||''; $('#routine-end').value=r?.endDate||'';
     buildWeekdayOptions(r?.weekdays||[0,1,2,3,4,5,6]);
-    $('#routine-items-editor').innerHTML=''; (r?.items.filter(i=>i.active!==false)||['']).forEach(item=>addItemEditor(typeof item==='string'?item:item.label));
+    $('#routine-items-editor').innerHTML=''; (r?.items.filter(i=>i.active!==false)||['']).forEach(addItemEditor);
     $('#delete-routine').classList.toggle('hidden',!r); $('#routine-dialog').showModal();
   }
   function saveRoutine(event) {
     event.preventDefault();
     const id=$('#routine-id').value||uid(), existing=state.routines.find(x=>x.id===id), name=$('#routine-name').value.trim();
-    const items=$$('.item-name-input').map(input=>input.value.trim()).filter(Boolean).map(label=>({id:uid(),label,active:true}));
+    const items=$$('.item-editor-row',$('#routine-items-editor')).map(row=>({id:row.dataset.itemId,label:$('.item-name-input',row).value.trim(),active:true})).filter(item=>item.label);
     if(!name){toast('Dê um nome para a rotina.');return;}
     if(!items.length){toast('Adicione pelo menos um passo.');return;}
     const weekdays=$$('#weekday-options input:checked').map(input=>Number(input.value));
     if(!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}
     if($('#routine-end').value && $('#routine-start').value && $('#routine-end').value < $('#routine-start').value){toast('A data final precisa ser igual ou posterior à data inicial.');return;}
-    const previousItems=existing?.items||[];
-    const next={id,name,icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>{const prev=previousItems.find(x=>x.label===item.label);return prev?{...prev,label:item.label}:{...item,id:uid()}}),updatedAt:stamp(),deleted:false};
+    const previousItems=new Map((existing?.items||[]).map(item=>[item.id,item]));
+    const next={id,name,icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
     if(existing)state.routines=state.routines.map(x=>x.id===id?next:x);else state.routines.push(next);
+    for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized&&day.routines?.[id]){sortSnapshotItems(day.routines[id],next);day.updatedAt=stamp();}
     saveLocal(); $('#routine-dialog').close(); render(); toast('Rotina salva.');
   }
   function deleteRoutine() {
@@ -231,7 +245,11 @@
         routinesForDay[rid]={...structuredClone(base),items:[...itemMap.values()]};
       }
       const maxStamp=Math.max(Date.parse(x.updatedAt||0)||0,Date.parse(y.updatedAt||0)||0);
-      history[date]={routines:routinesForDay,finalized:Boolean(x.finalized||y.finalized),updatedAt:new Date(maxStamp||Date.now()).toISOString()};
+      const finalized=Boolean(x.finalized||y.finalized);
+      if(!finalized&&date>=isoToday())for(const [rid,snapshot] of Object.entries(routinesForDay)){
+        const routine=routines.get(rid);if(routine&&!routine.deleted)sortSnapshotItems(snapshot,routine);
+      }
+      history[date]={routines:routinesForDay,finalized,updatedAt:new Date(maxStamp||Date.now()).toISOString()};
     }
     return {version:1,routines:[...routines.values()],history};
   }
@@ -343,6 +361,17 @@
   $('#routine-focus-dialog').addEventListener('close',()=>{activeRoutineId=null;});
   $('#add-routine').onclick=$('#add-routine-from-day').onclick=$('#empty-add').onclick=()=>openRoutineDialog();
   $('#routine-form').addEventListener('submit',saveRoutine);$('#add-item').onclick=()=>addItemEditor();$('#delete-routine').onclick=deleteRoutine;
+  $('#routine-items-editor').addEventListener('click',event=>{
+    const row=event.target.closest('.item-editor-row');if(!row)return;
+    if(event.target.closest('.remove-item'))row.remove();
+    else {
+      const move=event.target.closest('[data-move]');
+      if(!move)return;
+      if(move.dataset.move==='up'&&row.previousElementSibling)row.parentNode.insertBefore(row,row.previousElementSibling);
+      if(move.dataset.move==='down'&&row.nextElementSibling)row.parentNode.insertBefore(row.nextElementSibling,row);
+    }
+    updateItemOrderButtons();
+  });
   $$('[data-close]').forEach(button=>button.onclick=()=>$('#'+button.dataset.close).close());
   $('#finish-day').onclick=finishDay;$('#export-button').onclick=$('#history-export').onclick=exportCSV;
   $('#manage-list').addEventListener('click',e=>{const button=e.target.closest('[data-edit]');if(button)openRoutineDialog(button.dataset.edit);});
