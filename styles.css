@@ -186,6 +186,26 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-routine:hover{color:var(--accent-dark)}
 .planner-routine>span:first-child{width:20px;flex:none;font-size:14px}
 .planner-routine strong{min-width:0;font-size:11px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.weekly-scroll{max-width:100%;overflow-x:auto;padding-bottom:18px;margin-bottom:25px}
+.weekly-table{width:100%;min-width:1030px;table-layout:fixed;border-collapse:separate;border-spacing:5px;color:var(--ink)}
+.weekly-table th,.weekly-table td{vertical-align:top;text-align:left;border-radius:6px}
+.weekly-table thead th{background:#eeeae4;padding:11px 9px;font:700 11px/1.3 Manrope,sans-serif}
+.weekly-table thead th:first-child{width:138px}
+.weekly-table .weekly-corner{color:#77746e;text-transform:uppercase;letter-spacing:1px;font-size:10px}
+.weekly-day strong,.weekly-day small{display:block;text-transform:capitalize}
+.weekly-day small{margin-top:3px;color:inherit;opacity:.85;font:500 10px 'DM Sans',sans-serif}
+.weekly-table thead .weekly-day-1{background:#55b4aa;color:#173739}
+.weekly-table thead .weekly-day-2{background:#7658eb;color:#fff}
+.weekly-table thead .weekly-day-3{background:#3c6f78;color:#fff}
+.weekly-table thead .weekly-day-4{background:#3979c9;color:#fff}
+.weekly-table thead .weekly-day-5{background:#c89e79;color:#352a22}
+.weekly-table thead .weekly-day-6{background:#81c86d;color:#20351e}
+.weekly-table thead .weekly-day-0{background:#f1d84f;color:#3b3418}
+.weekly-table tbody th{background:color-mix(in srgb,var(--area-color) 85%,white);padding:11px 9px;font:800 11px/1.35 Manrope,sans-serif}
+.weekly-area-icon{display:block;margin-bottom:6px;color:#326f73;font-size:17px}
+.weekly-table tbody td{background:color-mix(in srgb,var(--area-color) 43%,white);padding:8px 6px;min-height:48px}
+.weekly-anchor{display:flex;align-items:flex-start;gap:4px;padding:4px 2px;font-size:10px;line-height:1.3;overflow-wrap:anywhere}
+.weekly-anchor>span:first-child{flex:none;font-size:12px;line-height:1.1}
 .workspace-heading{padding-top:47px}.area-heading{margin-top:42px}
 .anchor-filter{display:flex;align-items:center;gap:10px;margin:-4px 0 17px;color:var(--muted);font-size:11px;font-weight:600}
 .anchor-filter select{min-width:175px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);padding:9px 31px 9px 11px;font-size:11px}

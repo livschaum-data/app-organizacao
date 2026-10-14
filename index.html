@@ -19,6 +19,7 @@
       <div class="sidebar-caption">SEU ESPAÇO</div>
       <nav class="sidebar-nav" aria-label="Páginas">
         <button type="button" class="sidebar-link active" data-section="planner" aria-current="page"><span>▦</span> Visão diária</button>
+        <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
         <button type="button" class="sidebar-link" data-section="anchors"><span>⚓</span> Âncoras</button>
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
       </nav>
@@ -40,6 +41,13 @@
           <div class="date-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button></div>
         </div>
         <div id="planner-grid" class="planner-grid"></div>
+      </section>
+
+      <section id="weekly-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">VISÃO SEMANAL</div><h1>Sua semana, de relance.</h1><p id="weekly-range-label" class="planner-date-label"></p><p>As âncoras de cada área distribuídas pelos dias da semana.</p>
+          <div class="date-navigator"><button type="button" id="weekly-prev" class="round-button" aria-label="Semana anterior">←</button><input id="weekly-date" type="date" aria-label="Escolher semana"><button type="button" id="weekly-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="weekly-today" class="today-button">Esta semana</button></div>
+        </div>
+        <div id="weekly-grid" class="weekly-scroll"></div>
       </section>
 
       <section id="anchors-workspace" class="workspace-view">
