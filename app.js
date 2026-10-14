@@ -4,6 +4,7 @@
   const STORAGE_KEY = 'ritmo-routine-tracker-v1';
   const LAST_SYNC_KEY = `${STORAGE_KEY}-last-sync`;
   const PENDING_KEY = `${STORAGE_KEY}-pending-sync`;
+  const SIDEBAR_KEY = 'ancora-sidebar-collapsed-v1';
   const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
   const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const SEED = [
@@ -18,6 +19,51 @@
     ['🌚🧹','Geral da noite','#647388',['Colocar coisas fundos no lugar','Organizar cozinha','Limpar bancadas cozinha','Trocar lixos','Tour pets noite (recolher cacas, ver nível água)']],
     ['💤🛏️','Sono tranquilo','#7589a1',['Escovar dentes','Colocar pijama','Revisar portas e coisas ligadas','Skincare noite','Colocar água e chá na cabeceira','Captura e registros digitais (entradas, hábitos, vestuário, Elisa, sono)','Hidratar pés','Beber chá','Prece','Leitura']]
   ];
+  const AREA_SEED = [
+    ['casa','Casa','#f3e4d6'],['lazer','Lazer','#f4e1e9'],['estudos','Estudos','#e8e7f3'],
+    ['movimento','Movimento','#e3eddf'],['extras','Extras','#ede6df'],
+    ['tema-do-dia','Tema do dia','#e9e1ec']
+  ];
+  const AREA_ICONS = {'area-tema-do-dia':'♡','area-casa':'⌂','area-lazer':'♡','area-estudos':'✎','area-movimento':'✳','area-extras':'✦'};
+  // Títulos legíveis nos exemplos enviados. Os campos e os dias podem ser editados.
+  const ANCHOR_SEED = [
+    ['casa','🍳','Janta, marmita e almoço',[1,2,4]],
+    ['casa','🍳','Aquecer e preparos rápidos',[3]],
+    ['casa','🍳','Janta e preparos especiais',[5]],
+    ['casa','🍳','Preparos especiais',[6]],
+    ['casa','🍳','Marmita',[0]],
+    ['lazer','🌿','Mindfulness',[1]],
+    ['lazer','☀️','Sol',[2,0]],
+    ['lazer','🎵','Música | Chimas',[3]],
+    ['lazer','🧉','Chimas',[4,5,6]],
+    ['movimento','🏃','Cardio',[1]],
+    ['movimento','🤸','Funcional',[4]],
+    ['movimento','🏋️','Treino de força',[6]],
+    ['movimento','🚶','Caminhada',[0]],
+    ['lazer','📚','Leitura',[1]],
+    ['lazer','🎨','Colorir ou jogar',[3]],
+    ['lazer','🏊','Piscina',[4,0]],
+    ['lazer','🎬','Filmes e/ou seriados',[5,6]],
+    ['extras','👽','Atividades PC',[1,4]],
+    ['extras','👽','Geral cozinha',[2]],
+    ['extras','🌷','Cuidado pessoal',[3]],
+    ['extras','🧵','Dobrar/costurar roupas',[5]],
+    ['extras','🛍️','Compras',[6,0]],
+    ['casa','💧','Roupas escuras',[1]],
+    ['casa','💧','Roupas brancas',[2]],
+    ['casa','💧','Roupas de bebê',[3,6]],
+    ['casa','💧','Toalhas',[3]],
+    ['casa','💧','Roupas de cama',[4]],
+    ['casa','💧','Lingerie',[5]],
+    ['casa','💧','Panos de cozinha e chão',[6]],
+    ['tema-do-dia','🌅','Segunda: Start semana',[1]],
+    ['tema-do-dia','➡️','Terça: Ordem no digital',[2]],
+    ['tema-do-dia','🌿','Quarta: Meu espaço',[3]],
+    ['tema-do-dia','🏠','Quinta: Ordem na casa',[4]],
+    ['tema-do-dia','💼','Sexta: Profissional e fechamento em dia',[5]],
+    ['tema-do-dia','🚗','Sábado: Casa e voltas extras',[6]],
+    ['tema-do-dia','💛','Domingo: Descanso e relações em dia',[0]]
+  ];
 
   const $ = (s, root = document) => root.querySelector(s);
   const $$ = (s, root = document) => [...root.querySelectorAll(s)];
@@ -27,15 +73,38 @@
   const safeDate = (s) => { const d = new Date(`${s}T12:00:00`); return Number.isNaN(d.getTime()) ? new Date() : d; };
   const fmtDate = (s, opts = {weekday:'long', day:'numeric', month:'long'}) => new Intl.DateTimeFormat('pt-BR', opts).format(safeDate(s));
   const escapeHTML = (s='') => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const plannerHeadingInk = color => {
+    const match=/^#([0-9a-f]{6})$/i.exec(color||'');
+    if(!match)return '#25474c';
+    const channels=[0,2,4].map(index=>.84*parseInt(match[1].slice(index,index+2),16)+.16*[201,208,205][index/2]);
+    const luminance=channels.map(value=>{const channel=value/255;return channel<=.04045?channel/12.92:((channel+.055)/1.055)**2.4;});
+    return luminance[0]*.2126+luminance[1]*.7152+luminance[2]*.0722<.35?'#fffdfa':'#25474c';
+  };
   let state = loadState();
   let selectedDate = isoToday();
+  let selectedAnchorArea = '';
   let activeRoutineId = null;
   let supabaseClient = null, session = null, syncTimer = null, saving = false, saveAgain = false;
   let syncKind = 'offline', syncMessage = 'Somente neste aparelho', localRevision = 0;
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:1, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),history:{}};
+    return {version:3, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+  }
+  function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
+  function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',weekdays,startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
+  function plannerNeedsUpgrade(data){
+    return !Array.isArray(data.areas)||!Array.isArray(data.anchors)||
+      makeAreaSeed().some(seed=>!data.areas.some(area=>area.id===seed.id))||
+      makeAnchorSeed().some(seed=>!data.anchors.some(anchor=>anchor.id===seed.id));
+  }
+  function ensurePlannerData(data){
+    if(!Array.isArray(data.areas))data.areas=[];
+    if(!Array.isArray(data.anchors))data.anchors=[];
+    const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
+    for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
+    for(const anchor of makeAnchorSeed())if(!anchorIds.has(anchor.id))data.anchors.push(anchor);
+    return data;
   }
   function normalizeSeedItemIds(data) {
     for(let i=0;i<SEED.length;i++) {
@@ -55,8 +124,9 @@
     let parsed;
     try {parsed=JSON.parse(localStorage.getItem(STORAGE_KEY));} catch {}
     if(parsed && Array.isArray(parsed.routines) && parsed.history) {
-      const normalized=normalizeSeedItemIds(parsed);
-      try {localStorage.setItem(STORAGE_KEY,JSON.stringify(normalized));} catch {}
+      const needsUpgrade=plannerNeedsUpgrade(parsed);
+      const normalized=ensurePlannerData(normalizeSeedItemIds(parsed));
+      try {localStorage.setItem(STORAGE_KEY,JSON.stringify(normalized));if(needsUpgrade)localStorage.setItem(PENDING_KEY,'local');} catch {}
       return normalized;
     }
     const fresh = makeSeed();
@@ -96,7 +166,7 @@
     scheduleSync();
   }
   function mutateDay(fn) {
-    const day = ensureDay(selectedDate); fn(day); day.updatedAt = stamp(); saveLocal(); renderDay(); renderFocusRoutine();
+    const day = ensureDay(selectedDate); fn(day); day.updatedAt = stamp(); saveLocal(); renderDay(); renderPlanner(); renderFocusRoutine();
   }
   function renderDateHeader() {
     $('#selected-date').value = selectedDate;
@@ -161,14 +231,53 @@
       return `<button class="history-card" data-history-date="${date}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${done}/${items.length}</strong><small>passos concluídos</small></span><span class="history-meter"><i style="width:${pct}%"></i></span><span class="history-percent">${pct}%</span><span class="history-arrow">→</span></button>`;
     }).join('') : '<div class="empty-state"><span>♡</span><h3>Seu histórico vai aparecer aqui</h3><p>Comece uma rotina e seus passos ficam registrados por dia.</p></div>';
   }
-  function render() { renderDay(); renderManage(); renderHistory(); if($('#routine-focus-dialog').open)renderFocusRoutine(); }
+  function orderedAreas(){return state.areas.filter(area=>!area.deleted).sort((a,b)=>(a.order??0)-(b.order??0)||a.name.localeCompare(b.name,'pt-BR'));}
+  function scheduledRoutines(day){return Object.values(day.routines||{}).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99'));}
+  function renderPlanner(){
+    $('#planner-date').value=selectedDate;
+    $('#planner-date-label').textContent=fmtDate(selectedDate);
+    $('#planner-today').classList.toggle('hidden',selectedDate===isoToday());
+    const areas=orderedAreas(),day=ensureDay(selectedDate);
+    const areaBlocks=areas.map(area=>{
+      const anchors=state.anchors.filter(anchor=>anchor.areaId===area.id&&dayIsScheduled(anchor,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+      return `<section class="planner-block${area.id==='area-tema-do-dia'?' planner-theme':''}" style="--area-color:${escapeHTML(area.color)};--heading-ink:${plannerHeadingInk(area.color)}"><h2><span class="planner-heading-icon" aria-hidden="true">${AREA_ICONS[area.id]||'✦'}</span><span>${escapeHTML(area.name)}</span></h2><div class="planner-block-body">${anchors.length?anchors.map(anchor=>`<div class="planner-item"><span class="planner-item-icon">${escapeHTML(anchor.icon||'✦')}</span><div><strong>${escapeHTML(anchor.title)}</strong>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div></div>`).join(''):'<p class="planner-empty">Nenhuma âncora neste dia.</p>'}</div></section>`;
+    });
+    const routines=scheduledRoutines(day);
+    const routineBlock=`<section class="planner-block planner-routines"><h2><span class="planner-heading-icon" aria-hidden="true">☑</span><span>Rotinas do dia</span></h2><div class="planner-block-body">${routines.length?routines.map(r=>`<button type="button" class="planner-routine" data-planner-routine="${escapeHTML(r.routineId)}"><span>${escapeHTML(r.icon)}</span><strong>${escapeHTML(r.name)}</strong></button>`).join(''):'<p class="planner-empty">Nenhuma rotina neste dia.</p>'}</div></section>`;
+    const themeIndex=areas.findIndex(area=>area.id==='area-tema-do-dia');
+    const themeBlock=themeIndex<0?'':areaBlocks[themeIndex];
+    const otherBlocks=areaBlocks.filter((_,index)=>index!==themeIndex);
+    $('#planner-grid').innerHTML=`${themeBlock}<div class="planner-areas">${otherBlocks.join('')}</div>${routineBlock}`;
+  }
+  function renderAnchors(){
+    const areas=orderedAreas(),areaById=new Map(areas.map(area=>[area.id,area]));
+    if(selectedAnchorArea&&!areaById.has(selectedAnchorArea))selectedAnchorArea='';
+    $('#anchor-area-filter').innerHTML='<option value="">Todas as áreas</option>'+areas.map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
+    $('#anchor-area-filter').value=selectedAnchorArea;
+    const anchors=state.anchors.filter(anchor=>!anchor.deleted&&(!selectedAnchorArea||anchor.areaId===selectedAnchorArea)).sort((a,b)=>(areaById.get(a.areaId)?.order??999)-(areaById.get(b.areaId)?.order??999)||a.title.localeCompare(b.title,'pt-BR'));
+    $('#anchor-list').innerHTML=anchors.length?anchors.map(anchor=>`<article class="anchor-card"><span class="anchor-icon">${escapeHTML(anchor.icon||'✦')}</span><div class="anchor-info"><strong>${escapeHTML(anchor.title)}</strong><small>${escapeHTML(areaById.get(anchor.areaId)?.name||'Área indisponível')} · ${anchor.weekdays?.length===7?'Todos os dias':(anchor.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${anchor.startDate?` · a partir de ${escapeHTML(fmtDate(anchor.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}${anchor.endDate?` · até ${escapeHTML(fmtDate(anchor.endDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div><button type="button" class="small-edit" data-edit-anchor="${escapeHTML(anchor.id)}">Editar</button></article>`).join(''):selectedAnchorArea?'<div class="empty-state"><h3>Nenhuma âncora nesta área</h3><p>Escolha outra área ou crie uma nova âncora.</p></div>':'<div class="empty-state"><h3>Suas âncoras começam aqui</h3><p>Crie uma âncora para organizar seu dia.</p></div>';
+    $('#area-list').innerHTML=areas.map((area,index)=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color)}"></span><strong>${escapeHTML(area.name)}</strong><div class="area-card-actions"><button type="button" data-move-area="up" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para cima" ${index===0?'disabled':''}>↑</button><button type="button" data-move-area="down" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para baixo" ${index===areas.length-1?'disabled':''}>↓</button><button type="button" class="small-edit" data-edit-area="${escapeHTML(area.id)}">Editar</button></div></article>`).join('');
+  }
+  function render() { renderDay(); renderManage(); renderHistory(); renderPlanner(); renderAnchors(); if($('#routine-focus-dialog').open)renderFocusRoutine(); }
+  function setSection(section){
+    $$('.workspace-view').forEach(view=>view.classList.toggle('active-workspace',view.id===`${section}-workspace`));
+    $$('.sidebar-link').forEach(link=>{const active=link.dataset.section===section;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
+    document.body.classList.remove('sidebar-open');updateSidebarToggle();
+  }
+  function updateSidebarToggle(){
+    const mobile=window.matchMedia('(max-width:700px)').matches;
+    const expanded=mobile?document.body.classList.contains('sidebar-open'):!document.body.classList.contains('sidebar-collapsed');
+    const button=$('#sidebar-toggle');
+    button.setAttribute('aria-expanded',String(expanded));
+    button.setAttribute('aria-label',mobile?(expanded?'Fechar menu':'Abrir menu'):(expanded?'Recolher menu':'Expandir menu'));
+  }
   function setView(view) {
     $$('.tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
     $$('.view').forEach(v=>v.classList.toggle('active-view',v.id===`${view}-view`));
     if(view==='history')renderHistory(); if(view==='manage')renderManage();
   }
-  function buildWeekdayOptions(selected=[0,1,2,3,4,5,6]) {
-    $('#weekday-options').innerHTML = WEEKDAYS.map((day,i)=>`<label class="weekday-option"><input type="checkbox" value="${i}" ${selected.includes(i)?'checked':''}><span>${day}</span></label>`).join('');
+  function buildWeekdayOptions(selected=[0,1,2,3,4,5,6],target='#weekday-options') {
+    $(target).innerHTML = WEEKDAYS.map((day,i)=>`<label class="weekday-option"><input type="checkbox" value="${i}" ${selected.includes(i)?'checked':''}><span>${day}</span></label>`).join('');
   }
   function updateItemOrderButtons() {
     const rows=$$('.item-editor-row',$('#routine-items-editor'));
@@ -211,6 +320,64 @@
     }
     saveLocal(); $('#routine-dialog').close(); render(); toast('Rotina salva.');
   }
+  function openAnchorDialog(id=null){
+    const anchor=state.anchors.find(item=>item.id===id&&!item.deleted),areas=orderedAreas();
+    if(!areas.length){toast('Crie uma área antes de adicionar âncoras.');return;}
+    $('#anchor-form').reset();$('#anchor-id').value=anchor?.id||'';
+    $('#anchor-dialog-title').textContent=anchor?'Editar âncora':'Nova âncora';
+    $('#anchor-title').value=anchor?.title||'';$('#anchor-icon').value=anchor?.icon||'✨';
+    $('#anchor-description').value=anchor?.description||'';
+    $('#anchor-area').innerHTML=areas.map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
+    $('#anchor-area').value=anchor?.areaId||areas[0].id;
+    $('#anchor-start').value=anchor?.startDate||'';$('#anchor-end').value=anchor?.endDate||'';
+    buildWeekdayOptions(anchor?.weekdays||[0,1,2,3,4,5,6],'#anchor-weekday-options');
+    $('#delete-anchor').classList.toggle('hidden',!anchor);$('#anchor-dialog').showModal();
+  }
+  function saveAnchor(event){
+    event.preventDefault();
+    const id=$('#anchor-id').value||uid(),existing=state.anchors.find(anchor=>anchor.id===id);
+    const title=$('#anchor-title').value.trim(),weekdays=$$('#anchor-weekday-options input:checked').map(input=>Number(input.value));
+    if(!title){toast('Dê um nome à âncora.');return;}
+    if(!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}
+    if(!orderedAreas().some(area=>area.id===$('#anchor-area').value)){toast('Escolha uma área disponível.');return;}
+    if($('#anchor-end').value&&$('#anchor-start').value&&$('#anchor-end').value<$('#anchor-start').value){toast('A data final precisa ser igual ou posterior à inicial.');return;}
+    const next={id,title,icon:$('#anchor-icon').value.trim()||'✦',description:$('#anchor-description').value.trim(),areaId:$('#anchor-area').value,weekdays,startDate:$('#anchor-start').value,endDate:$('#anchor-end').value,updatedAt:stamp(),deleted:false};
+    if(existing)state.anchors=state.anchors.map(anchor=>anchor.id===id?next:anchor);else state.anchors.push(next);
+    saveLocal();$('#anchor-dialog').close();render();toast('Âncora salva.');
+  }
+  function deleteAnchor(){
+    const anchor=state.anchors.find(item=>item.id===$('#anchor-id').value);if(!anchor)return;
+    if(!confirm(`Excluir a âncora “${anchor.title}”?`))return;
+    anchor.deleted=true;anchor.updatedAt=stamp();saveLocal();$('#anchor-dialog').close();render();toast('Âncora excluída.');
+  }
+  function openAreaDialog(id=null){
+    const area=state.areas.find(item=>item.id===id&&!item.deleted);
+    $('#area-form').reset();$('#area-id').value=area?.id||'';
+    $('#area-dialog-title').textContent=area?'Editar área':'Nova área';
+    $('#area-name').value=area?.name||'';$('#area-color').value=area?.color||'#e8e5dd';
+    $('#delete-area').classList.toggle('hidden',!area);$('#area-dialog').showModal();
+  }
+  function saveArea(event){
+    event.preventDefault();const id=$('#area-id').value||uid(),name=$('#area-name').value.trim();
+    if(!name){toast('Dê um nome à área.');return;}
+    const existing=state.areas.find(area=>area.id===id);
+    const next={id,name,color:$('#area-color').value,order:existing?.order??state.areas.length,updatedAt:stamp(),deleted:false};
+    if(existing)state.areas=state.areas.map(area=>area.id===id?next:area);else state.areas.push(next);
+    saveLocal();$('#area-dialog').close();render();toast('Área salva.');
+  }
+  function deleteArea(){
+    const area=state.areas.find(item=>item.id===$('#area-id').value);if(!area)return;
+    if(state.anchors.some(anchor=>!anchor.deleted&&anchor.areaId===area.id)){toast('Mova ou exclua as âncoras desta área antes de excluí-la.');return;}
+    if(!confirm(`Excluir a área “${area.name}”?`))return;
+    area.deleted=true;area.updatedAt=stamp();saveLocal();$('#area-dialog').close();render();toast('Área excluída.');
+  }
+  function moveArea(id,direction){
+    const areas=orderedAreas(),index=areas.findIndex(area=>area.id===id),other=index+(direction==='up'?-1:1);
+    if(index<0||other<0||other>=areas.length)return;
+    [areas[index],areas[other]]=[areas[other],areas[index]];
+    const now=stamp();areas.forEach((area,order)=>{if(area.order!==order){area.order=order;area.updatedAt=now;}});
+    saveLocal();renderAnchors();renderPlanner();
+  }
   function deleteRoutine() {
     const id=$('#routine-id').value;if(!id)return;
     const r=state.routines.find(x=>x.id===id); if(!r)return;
@@ -229,10 +396,14 @@
     const day=ensureDay(selectedDate); if(day.finalized)return;
     if(!confirm('Concluir este dia? Os passos ainda abertos serão registrados como não realizados.'))return;
     for(const r of Object.values(day.routines))for(const i of r.items)if(!i.done){i.done=false;i.changedAt=stamp();}
-    day.finalized=true;day.updatedAt=stamp();saveLocal();renderDay();renderHistory();toast('Dia registrado no histórico.');
+    day.finalized=true;day.updatedAt=stamp();saveLocal();renderDay();renderPlanner();renderHistory();toast('Dia registrado no histórico.');
   }
   function setSelectedDate(date) {
-    if(!date)return; selectedDate=date;ensureDay(date);saveLocal();renderDay();
+    if(!date)return; selectedDate=date;ensureDay(date);saveLocal();renderDay();renderPlanner();
+  }
+  function shiftSelectedDate(amount){
+    const date=safeDate(selectedDate);date.setDate(date.getDate()+amount);
+    setSelectedDate(`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`);
   }
   function csvCell(value) { return `"${String(value??'').replace(/"/g,'""')}"`; }
   function exportCSV() {
@@ -250,7 +421,16 @@
   }
 
   function mergeState(a={},b={}) {
-    a=normalizeSeedItemIds(a);b=normalizeSeedItemIds(b);
+    a=ensurePlannerData(normalizeSeedItemIds(a));b=ensurePlannerData(normalizeSeedItemIds(b));
+    const mergeRecords=(left,right)=>{
+      const records=new Map();
+      for(const record of [...left,...right]){
+        const previous=records.get(record.id),currentTime=Date.parse(record.updatedAt||0)||0,previousTime=Date.parse(previous?.updatedAt||0)||0;
+        if(!previous||currentTime>=previousTime)records.set(record.id,structuredClone(record));
+      }
+      return [...records.values()];
+    };
+    const areas=mergeRecords(a.areas,b.areas),anchors=mergeRecords(a.anchors,b.anchors);
     const routines=new Map();
     for(const r of [...(a.routines||[]),...(b.routines||[])]) {
       const prev=routines.get(r.id), rt=Date.parse(r.updatedAt||0)||0, pt=Date.parse(prev?.updatedAt||0)||0;
@@ -294,7 +474,7 @@
       }
       history[date]={routines:routinesForDay,excludedRoutines,finalized,updatedAt:new Date(maxStamp||Date.now()).toISOString()};
     }
-    return {version:1,routines:[...routines.values()],history};
+    return {version:3,routines:[...routines.values()],areas,anchors,history};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -391,10 +571,31 @@
     supabaseClient.auth.onAuthStateChange((_event,newSession)=>{session=newSession;if(session?.user)pushSync();else setSyncStatus('offline','Somente neste aparelho');updateAccountDialog();});
   }
 
+  $$('.sidebar-link').forEach(link=>link.addEventListener('click',()=>setSection(link.dataset.section)));
+  try{if(localStorage.getItem(SIDEBAR_KEY)==='true')document.body.classList.add('sidebar-collapsed');}catch{}
+  updateSidebarToggle();
+  $('#sidebar-toggle').onclick=()=>{
+    if(window.matchMedia('(max-width:700px)').matches)document.body.classList.toggle('sidebar-open');
+    else{const collapsed=document.body.classList.toggle('sidebar-collapsed');try{localStorage.setItem(SIDEBAR_KEY,String(collapsed));}catch{}}
+    updateSidebarToggle();
+  };
+  $('#sidebar-scrim').onclick=()=>{document.body.classList.remove('sidebar-open');updateSidebarToggle();};
+  window.matchMedia('(max-width:700px)').addEventListener('change',()=>{document.body.classList.remove('sidebar-open');updateSidebarToggle();});
+  $('.brand').onclick=event=>{event.preventDefault();setSection('planner');};
   $$('.tab').forEach(tab=>tab.addEventListener('click',()=>setView(tab.dataset.view)));
-  $('#prev-day').onclick=()=>{const d=safeDate(selectedDate);d.setDate(d.getDate()-1);setSelectedDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);};
-  $('#next-day').onclick=()=>{const d=safeDate(selectedDate);d.setDate(d.getDate()+1);setSelectedDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);};
+  $('#prev-day').onclick=$('#planner-prev-day').onclick=()=>shiftSelectedDate(-1);
+  $('#next-day').onclick=$('#planner-next-day').onclick=()=>shiftSelectedDate(1);
   $('#today-button').onclick=()=>setSelectedDate(isoToday());$('#selected-date').onchange=e=>setSelectedDate(e.target.value);
+  $('#planner-today').onclick=()=>setSelectedDate(isoToday());$('#planner-date').onchange=e=>setSelectedDate(e.target.value);
+  $('#planner-grid').addEventListener('click',event=>{const button=event.target.closest('[data-planner-routine]');if(button)openFocusRoutine(button.dataset.plannerRoutine);});
+  $('#add-anchor').onclick=()=>openAnchorDialog();$('#anchor-form').addEventListener('submit',saveAnchor);$('#delete-anchor').onclick=deleteAnchor;
+  $('#anchor-area-filter').onchange=event=>{selectedAnchorArea=event.target.value;renderAnchors();};
+  $('#anchor-list').addEventListener('click',event=>{const button=event.target.closest('[data-edit-anchor]');if(button)openAnchorDialog(button.dataset.editAnchor);});
+  $('#add-area').onclick=()=>openAreaDialog();$('#area-form').addEventListener('submit',saveArea);$('#delete-area').onclick=deleteArea;
+  $('#area-list').addEventListener('click',event=>{
+    const move=event.target.closest('[data-move-area]');if(move){moveArea(move.dataset.areaId,move.dataset.moveArea);return;}
+    const edit=event.target.closest('[data-edit-area]');if(edit)openAreaDialog(edit.dataset.editArea);
+  });
   $('#routine-list').addEventListener('click',e=>{
     const remove=e.target.closest('[data-remove-routine-day]');if(remove){removeRoutineFromDay(remove.dataset.removeRoutineDay);return;}
     const button=e.target.closest('[data-open-routine]');if(button)openFocusRoutine(button.dataset.openRoutine);
@@ -422,7 +623,7 @@
   $$('[data-close]').forEach(button=>button.onclick=()=>$('#'+button.dataset.close).close());
   $('#finish-day').onclick=finishDay;$('#export-button').onclick=$('#history-export').onclick=exportCSV;
   $('#manage-list').addEventListener('click',e=>{const button=e.target.closest('[data-edit]');if(button)openRoutineDialog(button.dataset.edit);});
-  $('#history-list').addEventListener('click',e=>{const button=e.target.closest('[data-history-date]');if(button){setSelectedDate(button.dataset.historyDate);setView('day');}});
+  $('#history-list').addEventListener('click',e=>{const button=e.target.closest('[data-history-date]');if(button){setSelectedDate(button.dataset.historyDate);setSection('routines');setView('day');}});
   $('#sync-indicator').onclick=()=>{updateAccountDialog();$('#account-dialog').showModal();};
   $('#account-form').addEventListener('submit',e=>e.preventDefault());$('#sign-up').onclick=()=>connectAccount(true);$('#sign-in').onclick=()=>connectAccount(false);
   $('#sync-now').onclick=()=>pushSync();
