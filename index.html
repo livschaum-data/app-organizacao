@@ -19,6 +19,7 @@
       <div class="sidebar-caption">SEU ESPAÇO</div>
       <nav class="sidebar-nav" aria-label="Páginas">
         <button type="button" class="sidebar-link active" data-section="planner" aria-current="page"><span>▦</span> Visão diária</button>
+        <button type="button" class="sidebar-link" data-section="planner-secondary"><span>▧</span> Visão secundária</button>
         <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
         <button type="button" class="sidebar-link" data-section="anchors"><span>⚓</span> Âncoras</button>
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
@@ -43,6 +44,13 @@
         <div id="planner-grid" class="planner-grid"></div>
       </section>
 
+      <section id="planner-secondary-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA SECUNDÁRIA</div><h1>Outro olhar para o dia.</h1><p id="planner-secondary-date-label" class="planner-date-label"></p><p>As âncoras das áreas escolhidas para esta visão.</p>
+          <div class="date-navigator"><button type="button" id="planner-secondary-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-secondary-date" type="date" aria-label="Escolher dia da visão secundária"><button type="button" id="planner-secondary-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-secondary-today" class="today-button">Hoje</button></div>
+        </div>
+        <div id="planner-secondary-grid" class="planner-secondary-grid"></div>
+      </section>
+
       <section id="weekly-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">VISÃO SEMANAL</div><h1>Sua semana, de relance.</h1><p id="weekly-range-label" class="planner-date-label"></p><p>As âncoras de cada área distribuídas pelos dias da semana.</p>
           <div class="date-navigator"><button type="button" id="weekly-prev" class="round-button" aria-label="Semana anterior">←</button><input id="weekly-date" type="date" aria-label="Escolher semana"><button type="button" id="weekly-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="weekly-today" class="today-button">Esta semana</button></div>
@@ -52,7 +60,7 @@
 
       <section id="anchors-workspace" class="workspace-view">
         <div class="section-heading workspace-heading"><div><div class="eyebrow">PONTOS DE APOIO</div><h2>Âncoras</h2></div><button type="button" class="primary-button" id="add-anchor">＋ Nova âncora</button></div>
-        <p class="section-intro">Organize atividades por área e escolha em quais dias elas aparecem na visão diária.</p>
+        <p class="section-intro">Organize atividades por área e escolha em quais dias elas aparecem nas visões diárias.</p>
         <div class="anchor-filter"><label for="anchor-area-filter">Filtrar por área</label><select id="anchor-area-filter" aria-label="Filtrar âncoras por área"></select></div>
         <div id="anchor-list" class="anchor-list"></div>
         <div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Áreas</h2></div><button type="button" class="text-button" id="add-area">＋ Nova área</button></div>
@@ -159,6 +167,7 @@
       <input type="hidden" id="area-id">
       <label class="field-label" for="area-name">Nome da área</label><input class="text-input" id="area-name" maxlength="40" required placeholder="Ex.: Projetos">
       <label class="field-label" for="area-color">Cor de fundo</label><input class="color-input" id="area-color" type="color" value="#e8e5dd">
+      <label class="field-label" for="area-daily-view">Mostrar na visão diária</label><select class="text-input" id="area-daily-view"><option value="primary">Principal</option><option value="secondary">Secundária</option></select>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-area">Excluir área</button><span></span><button type="button" class="secondary-button" data-close="area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar área</button></div>
     </form>
   </dialog>
@@ -166,7 +175,7 @@
   <dialog id="account-dialog" class="dialog sync-dialog" aria-labelledby="account-dialog-title">
     <form id="account-form" method="dialog">
       <div class="dialog-head"><div><div class="eyebrow">SUPABASE</div><h2 id="account-dialog-title">Sincronização da conta</h2></div><button type="button" class="close-button" data-close="account-dialog" aria-label="Fechar">×</button></div>
-      <p class="sync-intro">Rotinas e histórico são sincronizados entre aparelhos conectados à mesma conta. As alterações ficam guardadas neste aparelho até a confirmação na nuvem.</p>
+      <p class="sync-intro">Áreas, âncoras, rotinas e histórico são sincronizados entre aparelhos conectados à mesma conta. As alterações ficam guardadas neste aparelho até a confirmação na nuvem.</p>
       <div class="sync-summary" aria-label="Resumo da sincronização">
         <div><small>ESTADO</small><strong id="sync-detail-status">Somente neste aparelho</strong></div>
         <div><small>ÚLTIMA SINCRONIZAÇÃO</small><strong id="sync-detail-last">Ainda não confirmada</strong></div>

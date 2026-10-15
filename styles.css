@@ -166,6 +166,8 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-hero .date-navigator{margin-top:24px}
 .planner-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(250px,1fr);align-items:stretch;gap:14px;padding:0 0 42px}
 .planner-areas{min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:14px}
+.planner-secondary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-content:start;gap:14px;padding:0 0 42px}
+.planner-secondary-empty{grid-column:1/-1}
 .planner-block{min-width:0;border-radius:6px;background:color-mix(in srgb,var(--area-color) 46%,white);border:1px solid color-mix(in srgb,var(--area-color) 60%,white);overflow:hidden;box-shadow:2px 3px 0 #25474c09}
 .planner-block h2{display:flex;align-items:center;gap:8px;margin:0;padding:11px 13px 9px;background:color-mix(in srgb,var(--area-color) 84%,#c9d0cd);border-bottom:1px dashed #48636a48;color:var(--heading-ink,#25474c);font:800 12px/1.2 Manrope,sans-serif;letter-spacing:.55px;text-transform:uppercase}
 .planner-block h2::after{content:'✧';margin-left:auto;color:inherit;opacity:.75;font:400 17px/1 'Segoe Print',cursive;transform:rotate(-12deg)}
@@ -216,13 +218,15 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .anchor-icon{width:38px;height:38px;display:grid;place-items:center;background:#f2eee8;border-radius:10px;font-size:18px;flex:none}
 .anchor-info{display:grid;gap:3px;flex:1;min-width:0}.anchor-info strong{font-size:12px}.anchor-info small{font-size:10px;color:var(--muted);line-height:1.4}.anchor-info p{font-size:11px;color:var(--muted);margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .area-list{display:grid;gap:8px;padding-bottom:40px}.area-card strong{flex:1;font-size:12px}.area-swatch{width:25px;height:25px;border-radius:8px;border:1px solid #d8d1c8}
+.area-view-tag{color:var(--muted);font-size:10px;white-space:nowrap}
 .area-card-actions{display:flex;gap:5px;align-items:center}.area-card-actions>button:not(.small-edit){width:26px;height:27px;border:0;border-radius:6px;background:var(--accent-soft);font-size:14px;color:var(--accent-dark)}
 .area-card-actions>button:disabled{opacity:.35;cursor:default}
 @media(min-width:701px){.sidebar-collapsed .sidebar{width:0;min-width:0;min-height:0;padding:0;border:0;overflow:hidden;visibility:hidden;pointer-events:none}}
-@media(max-width:850px){.planner-grid{grid-template-columns:minmax(0,1fr) minmax(220px,1fr)}.planner-areas{grid-template-columns:1fr}}
+@media(max-width:850px){.planner-grid{grid-template-columns:minmax(0,1fr) minmax(220px,1fr)}.planner-areas{grid-template-columns:1fr}.planner-secondary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.sidebar{position:fixed;left:0;transform:translateX(-102%);transition:transform .2s ease;box-shadow:12px 0 35px #231d1733}.sidebar-open .sidebar{transform:translateX(0)}.sidebar-open .sidebar-scrim{display:block;position:fixed;inset:0;width:100%;height:100%;border:0;background:#231d1766;z-index:7}.app-layout>.shell{width:100%}}
 @media(max-width:560px){.planner-grid{grid-template-columns:1fr}.planner-areas{grid-template-columns:1fr}.planner-hero{padding-top:35px}.planner-hero h1{font-size:31px}.workspace-heading{padding-top:34px}.sidebar-note{display:none}.anchor-card{gap:9px;padding:11px}.anchor-icon{width:32px;height:32px;font-size:15px}.anchor-card .small-edit{padding:7px 9px}.area-card{padding:10px}}
 @media(max-width:560px){.planner-theme{display:block}.planner-theme h2{border-right:0;border-bottom:1px dashed #48636a48}.planner-theme .planner-block-body{padding:7px 12px 11px}}
+@media(max-width:560px){.planner-secondary-grid{grid-template-columns:1fr}.area-card{flex-wrap:wrap}.area-card-actions{margin-left:auto}}
 .manage-card{display:block;padding:0}
 .manage-card-main{display:flex;align-items:center;gap:13px;padding:12px 15px}
 .manage-info{min-width:0}
