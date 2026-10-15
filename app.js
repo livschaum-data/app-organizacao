@@ -84,6 +84,7 @@
   let selectedDate = isoToday();
   let selectedWeekDate = isoToday();
   let selectedAnchorArea = '';
+  const openManageRoutines = new Set();
   let activeRoutineId = null;
   let supabaseClient = null, session = null, syncTimer = null, saving = false, saveAgain = false;
   let syncKind = 'offline', syncMessage = 'Somente neste aparelho', localRevision = 0;
@@ -229,7 +230,10 @@
   }
   function renderManage() {
     const routines=state.routines.filter(r=>!r.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-    $('#manage-list').innerHTML = routines.length ? routines.map(r=>`<article class="manage-card" style="--routine-color:${escapeHTML(r.color)}"><span class="routine-icon">${escapeHTML(r.icon)}</span><div class="manage-info"><strong>${escapeHTML(r.name)}</strong><small>${r.scheduledTime?`${escapeHTML(r.scheduledTime)} · `:''}${r.items.filter(x=>x.active!==false).length} passos · ${r.weekdays.length===7?'todos os dias':r.weekdays.length===5&&r.weekdays.includes(1)&&r.weekdays.includes(5)?'dias úteis':r.weekdays.length===2&&r.weekdays.includes(0)&&r.weekdays.includes(6)?'fim de semana':r.weekdays.map(d=>WEEKDAYS[d]).join(', ')}</small></div><button class="small-edit" data-edit="${escapeHTML(r.id)}">Editar</button></article>`).join('') : '<div class="empty-state"><span>✦</span><h3>Suas rotinas começam aqui</h3><p>Crie uma rotina que combine com seu dia.</p></div>';
+    $('#manage-list').innerHTML = routines.length ? routines.map(r=>{
+      const items=r.items.filter(item=>item.active!==false),expanded=openManageRoutines.has(r.id);
+      return `<article class="manage-card${expanded?' is-open':''}" style="--routine-color:${escapeHTML(r.color)}"><div class="manage-card-main"><span class="routine-icon">${escapeHTML(r.icon)}</span><div class="manage-info"><strong>${escapeHTML(r.name)}</strong><small>${r.scheduledTime?`${escapeHTML(r.scheduledTime)} · `:''}${items.length} passos · ${r.weekdays.length===7?'todos os dias':r.weekdays.length===5&&r.weekdays.includes(1)&&r.weekdays.includes(5)?'dias úteis':r.weekdays.length===2&&r.weekdays.includes(0)&&r.weekdays.includes(6)?'fim de semana':r.weekdays.map(d=>WEEKDAYS[d]).join(', ')}</small></div><button type="button" class="manage-toggle" data-manage-toggle="${escapeHTML(r.id)}" aria-expanded="${expanded}" aria-controls="manage-steps-${escapeHTML(r.id)}" aria-label="${expanded?'Ocultar':'Mostrar'} passos de ${escapeHTML(r.name)}">▾</button><button type="button" class="small-edit" data-edit="${escapeHTML(r.id)}">Editar</button></div><div id="manage-steps-${escapeHTML(r.id)}" class="manage-step-list${expanded?'':' hidden'}"><ol>${items.map(item=>`<li>${escapeHTML(item.label)}</li>`).join('')}</ol></div></article>`;
+    }).join('') : '<div class="empty-state"><span>✦</span><h3>Suas rotinas começam aqui</h3><p>Crie uma rotina que combine com seu dia.</p></div>';
   }
   function renderHistory() {
     const days=Object.keys(state.history).filter(date=>Object.values(state.history[date]?.routines||{}).length).sort((a,b)=>b.localeCompare(a));
@@ -666,7 +670,19 @@
   });
   $$('[data-close]').forEach(button=>button.onclick=()=>$('#'+button.dataset.close).close());
   $('#finish-day').onclick=finishDay;$('#export-button').onclick=$('#history-export').onclick=exportCSV;
-  $('#manage-list').addEventListener('click',e=>{const button=e.target.closest('[data-edit]');if(button)openRoutineDialog(button.dataset.edit);});
+  $('#manage-list').addEventListener('click',e=>{
+    const toggle=e.target.closest('[data-manage-toggle]');
+    if(toggle){
+      const id=toggle.dataset.manageToggle,card=toggle.closest('.manage-card'),expanded=!openManageRoutines.has(id);
+      if(expanded)openManageRoutines.add(id);else openManageRoutines.delete(id);
+      card.classList.toggle('is-open',expanded);
+      card.querySelector('.manage-step-list').classList.toggle('hidden',!expanded);
+      toggle.setAttribute('aria-expanded',String(expanded));
+      toggle.setAttribute('aria-label',`${expanded?'Ocultar':'Mostrar'} passos de ${card.querySelector('.manage-info strong').textContent}`);
+      return;
+    }
+    const button=e.target.closest('[data-edit]');if(button)openRoutineDialog(button.dataset.edit);
+  });
   $('#history-list').addEventListener('click',e=>{const button=e.target.closest('[data-history-date]');if(button){setSelectedDate(button.dataset.historyDate);setSection('routines');setView('day');}});
   $('#sync-indicator').onclick=()=>{updateAccountDialog();$('#account-dialog').showModal();};
   $('#account-form').addEventListener('submit',e=>e.preventDefault());$('#sign-up').onclick=()=>connectAccount(true);$('#sign-in').onclick=()=>connectAccount(false);

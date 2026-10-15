@@ -223,3 +223,14 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 @media(max-width:700px){.sidebar{position:fixed;left:0;transform:translateX(-102%);transition:transform .2s ease;box-shadow:12px 0 35px #231d1733}.sidebar-open .sidebar{transform:translateX(0)}.sidebar-open .sidebar-scrim{display:block;position:fixed;inset:0;width:100%;height:100%;border:0;background:#231d1766;z-index:7}.app-layout>.shell{width:100%}}
 @media(max-width:560px){.planner-grid{grid-template-columns:1fr}.planner-areas{grid-template-columns:1fr}.planner-hero{padding-top:35px}.planner-hero h1{font-size:31px}.workspace-heading{padding-top:34px}.sidebar-note{display:none}.anchor-card{gap:9px;padding:11px}.anchor-icon{width:32px;height:32px;font-size:15px}.anchor-card .small-edit{padding:7px 9px}.area-card{padding:10px}}
 @media(max-width:560px){.planner-theme{display:block}.planner-theme h2{border-right:0;border-bottom:1px dashed #48636a48}.planner-theme .planner-block-body{padding:7px 12px 11px}}
+.manage-card{display:block;padding:0}
+.manage-card-main{display:flex;align-items:center;gap:13px;padding:12px 15px}
+.manage-info{min-width:0}
+.manage-toggle{flex:none;display:grid;place-items:center;width:27px;height:27px;padding:0;border:0;border-radius:7px;background:transparent;color:#8b837b;font-size:19px;line-height:1;transition:transform .18s,background .18s}
+.manage-toggle:hover{background:#f3efea;color:var(--ink)}
+.manage-card.is-open .manage-toggle{transform:rotate(180deg)}
+.manage-step-list{padding:6px 15px 10px 75px;border-top:1px solid #eee9e2}
+.manage-step-list ol{margin:0;padding-left:16px;color:#625f59}
+.manage-step-list li{padding:2px 0;font-size:11px;line-height:1.35}
+.manage-step-list li::marker{color:var(--routine-color);font-weight:700}
+@media(max-width:650px){.manage-card-main{gap:9px;padding:10px}.manage-step-list{padding-left:60px}}
