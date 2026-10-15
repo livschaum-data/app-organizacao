@@ -148,23 +148,35 @@
     return (routine.weekdays || []).includes(safeDate(date).getDay());
   }
   function ensureDay(date) {
-    if (!state.history[date]) state.history[date] = {routines:{}, finalized:false, updatedAt:stamp()};
+    const isNew=!state.history[date];
+    if (isNew) state.history[date] = {routines:{}, finalized:false, updatedAt:stamp()};
     const day = state.history[date];
     if (!day.routines) day.routines = {};
     if (!day.excludedRoutines) day.excludedRoutines = {};
-    for (const r of state.routines.filter(x => dayIsScheduled(x,date))) {
-      if (day.routines[r.id] || day.excludedRoutines[r.id]) continue;
-      day.routines[r.id] = {routineId:r.id,name:r.name,description:r.description||'',icon:r.icon,color:r.color,scheduledTime:r.scheduledTime||'',items:r.items.filter(x=>x.active!==false).map(item=>({id:item.id,label:item.label,description:item.description||'',done:false,touched:false,changedAt:day.updatedAt}))};
-      day.updatedAt = stamp();
-    }
+    if(isNew||date>=isoToday())reconcileDay(date,day,state.routines,isNew);
     return day;
   }
-  function sortSnapshotItems(snapshot,routine) {
-    if(!Array.isArray(snapshot.items))return;
-    const byId=new Map(routine.items.map((item,index)=>[item.id,index]));
-    const byLabel=new Map(routine.items.map((item,index)=>[item.label,index]));
-    const position=item=>byId.get(item.id)??byLabel.get(item.label)??Number.MAX_SAFE_INTEGER;
-    snapshot.items.sort((a,b)=>position(a)-position(b));
+  function reconcileDay(date,day,routines,includePast=false){
+    if(day.finalized||(!includePast&&date<isoToday()))return false;
+    const scheduled=new Map(routines.filter(routine=>dayIsScheduled(routine,date)).map(routine=>[routine.id,routine]));
+    const now=stamp();let changed=false;
+    for(const id of Object.keys(day.routines||{}))if(!scheduled.has(id)||day.excludedRoutines?.[id]){delete day.routines[id];changed=true;}
+    for(const [id,routine] of scheduled){
+      if(day.excludedRoutines?.[id])continue;
+      let snapshot=day.routines[id];
+      if(!snapshot){snapshot={routineId:id,items:[]};day.routines[id]=snapshot;changed=true;}
+      for(const [key,value] of Object.entries({name:routine.name,description:routine.description||'',icon:routine.icon,color:routine.color,scheduledTime:routine.scheduledTime||''})){
+        if(snapshot[key]!==value){snapshot[key]=value;changed=true;}
+      }
+      const previous=new Map((snapshot.items||[]).map(item=>[item.id,item]));
+      const items=routine.items.filter(item=>item.active!==false).map(item=>{
+        const old=previous.get(item.id);
+        return old?{...old,label:item.label,description:item.description||''}:{id:item.id,label:item.label,description:item.description||'',done:false,touched:false,changedAt:now};
+      });
+      if(JSON.stringify(snapshot.items)!==JSON.stringify(items)){snapshot.items=items;changed=true;}
+    }
+    if(changed)day.updatedAt=now;
+    return changed;
   }
   function saveLocal() {
     localRevision++;
@@ -347,12 +359,7 @@
     const previousItems=new Map((existing?.items||[]).map(item=>[item.id,item]));
     const next={id,name,description:$('#routine-description').value.trim(),icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,scheduledTime:$('#routine-time').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
     if(existing)state.routines=state.routines.map(x=>x.id===id?next:x);else state.routines.push(next);
-    for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized&&day.routines?.[id]){
-      const snapshot=day.routines[id],currentItems=new Map(next.items.map(item=>[item.id,item]));
-      snapshot.name=next.name;snapshot.description=next.description;snapshot.icon=next.icon;snapshot.color=next.color;snapshot.scheduledTime=next.scheduledTime;
-      for(const item of snapshot.items){const current=currentItems.get(item.id);if(current){item.label=current.label;item.description=current.description;}}
-      sortSnapshotItems(snapshot,next);day.updatedAt=stamp();
-    }
+    for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized)reconcileDay(date,day,state.routines);
     saveLocal(); $('#routine-dialog').close(); render(); toast('Rotina salva.');
   }
   function openAnchorDialog(id=null){
@@ -421,7 +428,9 @@
     const id=$('#routine-id').value;if(!id)return;
     const r=state.routines.find(x=>x.id===id); if(!r)return;
     if(!confirm(`Excluir “${r.name}”? Os registros antigos continuam no histórico.`))return;
-    r.deleted=true;r.updatedAt=stamp();saveLocal();$('#routine-dialog').close();render();toast('Rotina excluída.');
+    r.deleted=true;r.updatedAt=stamp();
+    for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized)reconcileDay(date,day,state.routines);
+    saveLocal();$('#routine-dialog').close();render();toast('Rotina excluída.');
   }
   function removeRoutineFromDay(routineId) {
     const day=ensureDay(selectedDate),routine=day.routines[routineId];if(!routine)return;
@@ -508,15 +517,8 @@
       }
       const maxStamp=Math.max(Date.parse(x.updatedAt||0)||0,Date.parse(y.updatedAt||0)||0);
       const finalized=Boolean(x.finalized||y.finalized);
-      if(!finalized&&date>=isoToday())for(const [rid,snapshot] of Object.entries(routinesForDay)){
-        const routine=routines.get(rid);if(routine&&!routine.deleted){
-          snapshot.name=routine.name;snapshot.description=routine.description||'';snapshot.icon=routine.icon;snapshot.color=routine.color;snapshot.scheduledTime=routine.scheduledTime||'';
-          const currentItems=new Map(routine.items.map(item=>[item.id,item]));
-          for(const item of snapshot.items){const current=currentItems.get(item.id);if(current){item.label=current.label;item.description=current.description||'';}}
-          sortSnapshotItems(snapshot,routine);
-        }
-      }
       history[date]={routines:routinesForDay,excludedRoutines,finalized,updatedAt:new Date(maxStamp||Date.now()).toISOString()};
+      if(!finalized&&date>=isoToday())reconcileDay(date,history[date],[...routines.values()]);
     }
     return {version:3,routines:[...routines.values()],areas,anchors,history};
   }
