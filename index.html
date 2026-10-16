@@ -23,6 +23,7 @@
         <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
         <button type="button" class="sidebar-link" data-section="anchors"><span>⚓</span> Âncoras</button>
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
+        <button type="button" class="sidebar-link" data-section="tasks"><span>✓</span> Tarefas</button>
       </nav>
       <p class="sidebar-note">Um ponto de apoio para cada dia.</p>
     </aside>
@@ -109,6 +110,16 @@
         <div id="manage-list" class="manage-list"></div>
       </section>
       </div>
+
+      <section id="tasks-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">TAREFAS</div><h1>Um compromisso de cada vez.</h1><p id="task-date-label" class="planner-date-label"></p><p>Tarefas semanais e quinzenais, com passos opcionais.</p>
+          <div class="date-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button></div>
+        </div>
+        <nav class="tabs" aria-label="Seções de tarefas"><button type="button" class="tab task-tab active" data-task-view="day">Tarefas do dia</button><button type="button" class="tab task-tab" data-task-view="history">Histórico</button><button type="button" class="tab task-tab" data-task-view="manage">Minhas tarefas</button></nav>
+        <section id="task-day-view" class="view task-view active-view"><div class="section-heading"><div><div class="eyebrow">PARA ESTE DIA</div><h2>Suas tarefas</h2></div><button type="button" class="text-button" id="add-task-from-day">＋ Nova tarefa</button></div><div id="task-day-list" class="task-groups"></div></section>
+        <section id="task-history-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">REGISTROS</div><h2>Histórico de tarefas</h2></div><button type="button" class="text-button" id="task-history-export">↓ Exportar CSV</button></div><div id="task-history-list" class="history-list"></div></section>
+        <section id="task-manage-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">DO SEU JEITO</div><h2>Minhas tarefas</h2></div><button type="button" class="primary-button" id="add-task">＋ Nova tarefa</button></div><p class="section-intro">Cadastre tarefas com ou sem passos e escolha a repetição semanal ou quinzenal.</p><div id="task-manage-list" class="manage-list"></div></section>
+      </section>
     </main>
     <footer class="footer">Um ponto de apoio para cada dia.</footer>
   </div>
@@ -127,6 +138,25 @@
         <div class="focus-actions"><button type="button" id="focus-done" class="primary-button">Voltar ao dia</button></div>
       </div>
     </div>
+  </dialog>
+
+  <dialog id="task-focus-dialog" class="focus-dialog" aria-labelledby="task-focus-name">
+    <div class="focus-shell"><div class="focus-topbar"><span class="focus-brand">âncora<span>·</span></span><button type="button" class="focus-close" id="close-task-focus" aria-label="Fechar tarefa">×</button></div>
+      <div class="focus-content"><div class="eyebrow" id="task-focus-date"></div><div class="focus-title-row"><span id="task-focus-icon" class="focus-icon"></span><div><h2 id="task-focus-name"></h2><p id="task-focus-count"></p></div></div><p id="task-focus-description" class="focus-routine-description hidden"></p><label class="task-completion"><input type="checkbox" id="task-focus-complete"><span>Marcar tarefa como concluída</span></label><div id="task-focus-step-section" class="hidden"><div class="focus-section-label">PASSOS DESTA TAREFA</div><div id="task-focus-steps" class="focus-steps"></div></div><div class="focus-actions"><button type="button" id="task-focus-done" class="primary-button">Voltar ao dia</button></div></div>
+    </div>
+  </dialog>
+
+  <dialog id="task-dialog" class="dialog" aria-labelledby="task-dialog-title">
+    <form id="task-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="task-dialog-title">Nova tarefa</h2></div><button type="button" class="close-button" data-close="task-dialog" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="task-id"><label class="field-label" for="task-name">Nome da tarefa</label><input class="text-input" id="task-name" maxlength="80" required placeholder="Ex.: Organizar documentos"><label class="field-label" for="task-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="task-description" maxlength="500" rows="2"></textarea>
+      <div class="form-row"><div class="field"><label class="field-label" for="task-icon">Ícone</label><input class="text-input icon-input" id="task-icon" maxlength="8" value="✓"></div><div class="field"><label class="field-label" for="task-color">Cor</label><input class="color-input" id="task-color" type="color" value="#87aaa2"></div></div>
+      <label class="field-label" for="task-time">Horário sugerido <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="task-time" type="time">
+      <label class="field-label" for="task-frequency">Frequência</label><select class="text-input" id="task-frequency"><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option></select>
+      <fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="task-weekday-options" class="weekday-options"></div></fieldset>
+      <div class="form-row"><div class="field"><label class="field-label" for="task-start">Começa em</label><input class="text-input" id="task-start" type="date"></div><div class="field"><label class="field-label" for="task-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="task-end" type="date"></div></div><p id="task-biweekly-hint" class="schedule-hint hidden">A repetição quinzenal conta a partir da semana da data inicial, de segunda a domingo.</p>
+      <div class="items-editor-head"><label class="field-label">Passos <span class="optional">(opcionais)</span></label><button type="button" class="text-button" id="task-add-step">＋ Adicionar passo</button></div><div id="task-items-editor" class="routine-items-editor"></div>
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="task-delete">Excluir tarefa</button><span></span><button type="button" class="secondary-button" data-close="task-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar tarefa</button></div>
+    </form>
   </dialog>
 
   <dialog id="routine-dialog" class="dialog">
@@ -175,7 +205,7 @@
   <dialog id="account-dialog" class="dialog sync-dialog" aria-labelledby="account-dialog-title">
     <form id="account-form" method="dialog">
       <div class="dialog-head"><div><div class="eyebrow">SUPABASE</div><h2 id="account-dialog-title">Sincronização da conta</h2></div><button type="button" class="close-button" data-close="account-dialog" aria-label="Fechar">×</button></div>
-      <p class="sync-intro">Áreas, âncoras, rotinas e histórico são sincronizados entre aparelhos conectados à mesma conta. As alterações ficam guardadas neste aparelho até a confirmação na nuvem.</p>
+      <p class="sync-intro">Áreas, âncoras, rotinas, tarefas e histórico são sincronizados entre aparelhos conectados à mesma conta. As alterações ficam guardadas neste aparelho até a confirmação na nuvem.</p>
       <div class="sync-summary" aria-label="Resumo da sincronização">
         <div><small>ESTADO</small><strong id="sync-detail-status">Somente neste aparelho</strong></div>
         <div><small>ÚLTIMA SINCRONIZAÇÃO</small><strong id="sync-detail-last">Ainda não confirmada</strong></div>

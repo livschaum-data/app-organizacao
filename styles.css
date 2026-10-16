@@ -189,6 +189,22 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-routine>span:first-child{width:20px;flex:none;font-size:14px}
 .planner-routine strong{min-width:0;font-size:11px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
 .planner-routine-time{flex:none;margin-left:auto;padding-left:7px;color:#5c7376;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.planner-task-block{--area-color:#e2eee6}
+.planner-task-biweekly{--area-color:#e9e3f0}
+.task-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.task-group{min-width:0;padding:13px 15px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
+.task-group h3{margin:0 0 9px;color:var(--ink);font:700 14px Manrope,sans-serif}
+.task-row{display:flex;align-items:center;gap:6px;width:100%;min-height:30px;padding:4px 2px;border:0;background:transparent;text-align:left}
+.task-row:hover{color:var(--accent-dark)}
+.task-status{flex:none;display:grid;place-items:center;width:18px;height:18px;border:1px solid #a6b6ae;border-radius:5px;color:#6c8f82;font-size:12px;font-weight:700}
+.task-row.is-done .task-status{background:#83a995;border-color:#83a995;color:white}
+.task-row-icon{flex:none;width:19px;text-align:center;font-size:14px}
+.task-row-name{min-width:0;flex:1;font-size:11px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.task-row.is-done .task-row-name{color:#8a948d;text-decoration:line-through}
+.task-row time,.task-row small{flex:none;color:#6e7771;font-size:9px;font-weight:600}
+.task-completion{display:flex;align-items:center;gap:11px;margin:16px 0 22px;padding:14px 16px;border:1px solid #e0e8df;border-radius:11px;background:#eff5ee;font-size:13px;font-weight:700;cursor:pointer}
+.task-completion input{width:19px;height:19px;accent-color:#6e9d83}
+.task-manage-card .manage-info small{line-height:1.4}
 .weekly-scroll{max-width:100%;overflow-x:auto;padding-bottom:18px;margin-bottom:25px}
 .weekly-table{width:100%;min-width:1030px;table-layout:fixed;border-collapse:separate;border-spacing:5px;color:var(--ink)}
 .weekly-table th,.weekly-table td{vertical-align:top;text-align:left;border-radius:6px}
@@ -227,6 +243,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 @media(max-width:560px){.planner-grid{grid-template-columns:1fr}.planner-areas{grid-template-columns:1fr}.planner-hero{padding-top:35px}.planner-hero h1{font-size:31px}.workspace-heading{padding-top:34px}.sidebar-note{display:none}.anchor-card{gap:9px;padding:11px}.anchor-icon{width:32px;height:32px;font-size:15px}.anchor-card .small-edit{padding:7px 9px}.area-card{padding:10px}}
 @media(max-width:560px){.planner-theme{display:block}.planner-theme h2{border-right:0;border-bottom:1px dashed #48636a48}.planner-theme .planner-block-body{padding:7px 12px 11px}}
 @media(max-width:560px){.planner-secondary-grid{grid-template-columns:1fr}.area-card{flex-wrap:wrap}.area-card-actions{margin-left:auto}}
+@media(max-width:650px){.task-groups{grid-template-columns:1fr}}
 .manage-card{display:block;padding:0}
 .manage-card-main{display:flex;align-items:center;gap:13px;padding:12px 15px}
 .manage-info{min-width:0}
