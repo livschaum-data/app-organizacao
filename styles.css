@@ -198,7 +198,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 @media(max-width:700px){.task-tab-bar{flex-wrap:wrap;justify-content:flex-end;gap:0}.task-tab-bar .tabs{order:2;flex:0 0 100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}.task-tab-bar .tabs::-webkit-scrollbar{display:none}.task-add-button{order:1;margin:0}}
 .task-group{min-width:0;padding:13px 15px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
 .task-group h3{margin:0 0 9px;color:var(--ink);font:700 14px Manrope,sans-serif}
-.task-entry{padding-bottom:5px}
+.task-entry.has-remove{padding-bottom:5px}
 .task-row{display:block;width:100%;padding:5px 2px;border:0;background:transparent;text-align:left}
 .task-row:hover{color:var(--accent-dark)}
 .task-row-main{display:flex;align-items:flex-start;gap:6px;min-height:20px}
