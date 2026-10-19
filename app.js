@@ -412,7 +412,7 @@
     const rows=[['weekly','Semanais','#e2eee6','☑'],['biweekly','Quinzenais','#e9e3f0','◫']].map(([frequency,label,color,icon])=>{
       const cells=snapshots.map((day,index)=>{
         const tasks=taskSnapshots(day,frequency);
-        return `<td>${tasks.map(task=>`<button type="button" class="weekly-task${task.done?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}" data-task-week-date="${dates[index]}"><span class="task-status" aria-hidden="true">${task.done?'✓':'○'}</span><span class="weekly-task-name"><span aria-hidden="true">${escapeHTML(task.icon||'✓')}</span> ${escapeHTML(task.name)}</span>${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</button>`).join('')}</td>`;
+        return `<td>${tasks.map(task=>`<button type="button" class="weekly-anchor weekly-task${task.done?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}" data-task-week-date="${dates[index]}" aria-label="${escapeHTML(task.name)} — ${task.done?'concluída':'não concluída'}"><span aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span>${escapeHTML(task.name)}</span></button>`).join('')}</td>`;
       }).join('');
       return `<tr style="--area-color:${color}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${icon}</span><span>${label}</span></th>${cells}</tr>`;
     }).join('');

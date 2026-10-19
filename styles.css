@@ -227,12 +227,10 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .weekly-anchor>span:first-child{flex:none;font-size:12px;line-height:1.1}
 .task-week-navigator{margin:0 0 18px}
 .task-week-table tbody td{vertical-align:top}
-.weekly-task{display:flex;align-items:flex-start;gap:5px;width:100%;padding:5px 2px;border:0;background:transparent;text-align:left;color:var(--ink);font:600 10px/1.3 Manrope,sans-serif}
+.weekly-task{width:100%;border:0;border-radius:0;background:transparent;text-align:left;color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:400;cursor:pointer}
 .weekly-task:hover{color:var(--accent-dark)}
-.weekly-task .task-status{width:15px;height:15px;font-size:10px}
-.weekly-task-name{min-width:0;flex:1;overflow-wrap:anywhere}
-.weekly-task time{flex:none;color:#6e7771;font-size:9px;font-variant-numeric:tabular-nums}
-.weekly-task.is-done .weekly-task-name{color:#75847d;text-decoration:line-through}
+.weekly-task>span:last-child{min-width:0;overflow-wrap:anywhere}
+.weekly-task.is-done>span:last-child{color:#75847d;text-decoration:line-through}
 .workspace-heading{padding-top:47px}.area-heading{margin-top:42px}
 .anchor-filter{display:flex;align-items:center;gap:10px;margin:-4px 0 17px;color:var(--muted);font-size:11px;font-weight:600}
 .anchor-filter select{min-width:175px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);padding:9px 31px 9px 11px;font-size:11px}
