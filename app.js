@@ -86,6 +86,7 @@
   let selectedTaskWeekDate = isoToday();
   let selectedAnchorArea = '';
   const openManageRoutines = new Set();
+  const openManageTasks = new Set();
   let activeRoutineId = null;
   let activeTaskId = null;
   let activeTaskDate = null;
@@ -301,8 +302,8 @@
     return Object.values(day.tasks||{}).filter(task=>task.frequency===frequency).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99')||a.name.localeCompare(b.name,'pt-BR'));
   }
   function taskRow(task){
-    const completed=(task.items||[]).filter(item=>item.done).length,total=task.items?.length||0;
-    return `<button type="button" class="task-row${task.done?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-status" aria-hidden="true">${task.done?'✓':'○'}</span><span class="task-row-icon">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}${total?`<small>${completed}/${total}</small>`:''}</button>`;
+    const items=task.items||[];
+    return `<button type="button" class="task-row${task.done?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-row-main"><span class="task-row-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</span>${items.length?`<span class="task-row-steps">${items.map(item=>`<span class="task-row-step${item.done?' is-done':''}">${escapeHTML(item.label)}</span>`).join('')}</span>`:''}</button>`;
   }
   function taskGroup(day,frequency,planner=false){
     const tasks=taskSnapshots(day,frequency),label=frequency==='biweekly'?'Quinzenais':'Semanais';
@@ -316,7 +317,10 @@
     const day=ensureTaskDay(selectedDate);
     $('#task-day-list').innerHTML=taskGroup(day,'weekly')+taskGroup(day,'biweekly');
     const tasks=state.tasks.filter(task=>!task.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-    $('#task-manage-list').innerHTML=tasks.length?tasks.map(task=>`<article class="manage-card task-manage-card" style="--routine-color:${escapeHTML(task.color)}"><div class="manage-card-main"><span class="routine-icon">${escapeHTML(task.icon||'✓')}</span><div class="manage-info"><strong>${escapeHTML(task.name)}</strong><small>${task.frequency==='biweekly'?'Quinzenal':'Semanal'} · ${task.items?.length||0} passos · ${(task.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${task.startDate?` · desde ${escapeHTML(fmtDate(task.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small></div><button type="button" class="small-edit" data-edit-task="${escapeHTML(task.id)}">Editar</button></div></article>`).join(''):'<div class="empty-state"><span>✓</span><h3>Suas tarefas começam aqui</h3><p>Crie uma tarefa semanal ou quinzenal, com passos se desejar.</p></div>';
+    $('#task-manage-list').innerHTML=tasks.length?tasks.map(task=>{
+      const items=(task.items||[]).filter(item=>item.active!==false),expanded=openManageTasks.has(task.id);
+      return `<article class="manage-card task-manage-card${expanded?' is-open':''}" style="--routine-color:${escapeHTML(task.color)}"><div class="manage-card-main"><span class="routine-icon">${escapeHTML(task.icon||'✓')}</span><div class="manage-info"><strong>${escapeHTML(task.name)}</strong><small>${task.frequency==='biweekly'?'Quinzenal':'Semanal'} · ${items.length} passos · ${(task.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${task.startDate?` · desde ${escapeHTML(fmtDate(task.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small></div>${items.length?`<button type="button" class="manage-toggle" data-task-manage-toggle="${escapeHTML(task.id)}" aria-expanded="${expanded}" aria-controls="task-manage-steps-${escapeHTML(task.id)}" aria-label="${expanded?'Ocultar':'Mostrar'} passos de ${escapeHTML(task.name)}">▾</button>`:''}<button type="button" class="small-edit" data-edit-task="${escapeHTML(task.id)}">Editar</button></div>${items.length?`<div id="task-manage-steps-${escapeHTML(task.id)}" class="manage-step-list${expanded?'':' hidden'}"><ol>${items.map(item=>`<li>${escapeHTML(item.label)}</li>`).join('')}</ol></div>`:''}</article>`;
+    }).join(''):'<div class="empty-state"><span>✓</span><h3>Suas tarefas começam aqui</h3><p>Crie uma tarefa semanal ou quinzenal, com passos se desejar.</p></div>';
     const dates=Object.keys(state.taskHistory).filter(date=>Object.keys(state.taskHistory[date]?.tasks||{}).length).sort((a,b)=>b.localeCompare(a));
     $('#task-history-list').innerHTML=dates.length?dates.map(date=>{
       const entries=Object.values(state.taskHistory[date].tasks),done=entries.filter(task=>task.done).length;
@@ -908,7 +912,19 @@
     }
     updateTaskItemOrderButtons();
   });
-  $('#task-manage-list').addEventListener('click',event=>{const button=event.target.closest('[data-edit-task]');if(button)openTaskDialog(button.dataset.editTask);});
+  $('#task-manage-list').addEventListener('click',event=>{
+    const toggle=event.target.closest('[data-task-manage-toggle]');
+    if(toggle){
+      const id=toggle.dataset.taskManageToggle,card=toggle.closest('.manage-card'),expanded=!openManageTasks.has(id);
+      if(expanded)openManageTasks.add(id);else openManageTasks.delete(id);
+      card.classList.toggle('is-open',expanded);
+      card.querySelector('.manage-step-list').classList.toggle('hidden',!expanded);
+      toggle.setAttribute('aria-expanded',String(expanded));
+      toggle.setAttribute('aria-label',`${expanded?'Ocultar':'Mostrar'} passos de ${card.querySelector('.manage-info strong').textContent}`);
+      return;
+    }
+    const button=event.target.closest('[data-edit-task]');if(button)openTaskDialog(button.dataset.editTask);
+  });
   $('#task-history-list').addEventListener('click',event=>{const button=event.target.closest('[data-task-history-date]');if(button){setSelectedDate(button.dataset.taskHistoryDate);setSection('tasks');setTaskView('day');}});
   $('#task-history-export').onclick=exportTaskCSV;
   $('#add-anchor').onclick=()=>openAnchorDialog();$('#anchor-form').addEventListener('submit',saveAnchor);$('#delete-anchor').onclick=deleteAnchor;
