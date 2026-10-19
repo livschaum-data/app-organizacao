@@ -895,7 +895,7 @@
   });
   $('#close-task-focus').onclick=$('#task-focus-done').onclick=()=>$('#task-focus-dialog').close();
   $('#task-focus-dialog').addEventListener('close',()=>{activeTaskId=null;activeTaskDate=null;});
-  $('#add-task').onclick=$('#add-task-from-day').onclick=()=>openTaskDialog();
+  $('#add-task').onclick=()=>openTaskDialog();
   $('#task-form').addEventListener('submit',saveTask);$('#task-delete').onclick=deleteTask;
   $('#task-frequency').onchange=updateTaskFrequency;$('#task-add-step').onclick=()=>addTaskItemEditor();
   $('#task-items-editor').addEventListener('click',event=>{

@@ -192,6 +192,10 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-task-block{--area-color:#e2eee6}
 .planner-task-biweekly{--area-color:#e9e3f0}
 .task-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.task-tab-bar{display:flex;align-items:flex-end;gap:14px;border-bottom:1px solid var(--line)}
+.task-tab-bar .tabs{flex:1;min-width:0;margin-top:12px;border-bottom:0;white-space:nowrap;overflow-x:auto}
+.task-add-button{flex:none;margin-bottom:6px;white-space:nowrap;color:var(--ink)}
+@media(max-width:700px){.task-tab-bar{flex-wrap:wrap;justify-content:flex-end;gap:0}.task-tab-bar .tabs{order:2;flex:0 0 100%}.task-add-button{order:1;margin:0}}
 .task-group{min-width:0;padding:13px 15px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
 .task-group h3{margin:0 0 9px;color:var(--ink);font:700 14px Manrope,sans-serif}
 .task-row{display:flex;align-items:center;gap:6px;width:100%;min-height:30px;padding:4px 2px;border:0;background:transparent;text-align:left}
