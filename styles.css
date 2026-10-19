@@ -198,6 +198,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 @media(max-width:700px){.task-tab-bar{flex-wrap:wrap;justify-content:flex-end;gap:0}.task-tab-bar .tabs{order:2;flex:0 0 100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}.task-tab-bar .tabs::-webkit-scrollbar{display:none}.task-add-button{order:1;margin:0}}
 .task-group{min-width:0;padding:13px 15px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
 .task-group h3{margin:0 0 9px;color:var(--ink);font:700 14px Manrope,sans-serif}
+.task-entry{padding-bottom:5px}
 .task-row{display:block;width:100%;padding:5px 2px;border:0;background:transparent;text-align:left}
 .task-row:hover{color:var(--accent-dark)}
 .task-row-main{display:flex;align-items:flex-start;gap:6px;min-height:20px}
@@ -209,6 +210,8 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-row-step{display:block;padding:1px 0;overflow-wrap:anywhere}
 .task-row-step::before{content:'·';margin-right:5px}
 .task-row-step.is-done{color:#a2aaa4;text-decoration:line-through}
+.task-remove-day{display:block;margin:0 2px 0 auto;padding:1px 0;border:0;background:transparent;color:#986f68;font-size:9px;font-weight:600}
+.task-remove-day:hover{color:#74483f;text-decoration:underline}
 .task-completion{display:flex;align-items:center;gap:11px;margin:16px 0 22px;padding:14px 16px;border:1px solid #e0e8df;border-radius:11px;background:#eff5ee;font-size:13px;font-weight:700;cursor:pointer}
 .task-completion input{width:19px;height:19px;accent-color:#6e9d83}
 .task-manage-card .manage-info small{line-height:1.4}

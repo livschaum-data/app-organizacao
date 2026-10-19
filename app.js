@@ -164,18 +164,21 @@
   }
   function ensureTaskDay(date){
     const isNew=!state.taskHistory[date];
-    if(isNew)state.taskHistory[date]={tasks:{},updatedAt:stamp()};
+    if(isNew)state.taskHistory[date]={tasks:{},excludedTasks:{},updatedAt:stamp()};
     const day=state.taskHistory[date];
     if(!day.tasks)day.tasks={};
+    if(!day.excludedTasks)day.excludedTasks={};
     if(isNew||date>=isoToday())reconcileTaskDay(date,day,state.tasks,isNew);
     return day;
   }
   function reconcileTaskDay(date,day,tasks,includePast=false){
     if(!includePast&&date<isoToday())return false;
+    if(!day.excludedTasks)day.excludedTasks={};
     const scheduled=new Map(tasks.filter(task=>taskIsScheduled(task,date)).map(task=>[task.id,task]));
     const now=stamp();let changed=false;
-    for(const id of Object.keys(day.tasks||{}))if(!scheduled.has(id)){delete day.tasks[id];changed=true;}
+    for(const id of Object.keys(day.tasks||{}))if(!scheduled.has(id)||day.excludedTasks[id]){delete day.tasks[id];changed=true;}
     for(const [id,task] of scheduled){
+      if(day.excludedTasks[id])continue;
       let snapshot=day.tasks[id];
       if(!snapshot){snapshot={taskId:id,items:[],done:false,doneTouched:false,doneChangedAt:now};day.tasks[id]=snapshot;changed=true;}
       for(const [key,value] of Object.entries({name:task.name,description:task.description||'',icon:task.icon,color:task.color,frequency:task.frequency,scheduledTime:task.scheduledTime||''})){
@@ -303,7 +306,7 @@
   }
   function taskRow(task){
     const items=task.items||[];
-    return `<button type="button" class="task-row${task.done?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-row-main"><span class="task-row-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</span>${items.length?`<span class="task-row-steps">${items.map(item=>`<span class="task-row-step${item.done?' is-done':''}">${escapeHTML(item.label)}</span>`).join('')}</span>`:''}</button>`;
+    return `<div class="task-entry"><button type="button" class="task-row${task.done?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-row-main"><span class="task-row-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</span>${items.length?`<span class="task-row-steps">${items.map(item=>`<span class="task-row-step${item.done?' is-done':''}">${escapeHTML(item.label)}</span>`).join('')}</span>`:''}</button><button type="button" class="task-remove-day" data-remove-task-day="${escapeHTML(task.taskId)}">Remover deste dia</button></div>`;
   }
   function taskGroup(day,frequency,planner=false){
     const tasks=taskSnapshots(day,frequency),label=frequency==='biweekly'?'Quinzenais':'Semanais';
@@ -631,6 +634,14 @@
     if(activeRoutineId===routineId){activeRoutineId=null;$('#routine-focus-dialog').close();}
     saveLocal();render();toast('Rotina removida apenas deste dia.');
   }
+  function removeTaskFromDay(taskId){
+    const day=ensureTaskDay(selectedDate),task=day.tasks[taskId];if(!task)return;
+    if(!confirm(`Remover “${task.name}” de ${fmtDate(selectedDate)}? O registro e seus passos serão excluídos somente deste dia. A programação da tarefa continua igual.`))return;
+    day.excludedTasks={...day.excludedTasks,[taskId]:stamp()};
+    delete day.tasks[taskId];day.updatedAt=stamp();
+    if(activeTaskId===taskId&&activeTaskDate===selectedDate)$('#task-focus-dialog').close();
+    saveLocal();render();toast('Tarefa removida apenas deste dia.');
+  }
   function finishDay() {
     const day=ensureDay(selectedDate); if(day.finalized)return;
     if(!confirm('Concluir este dia? Os passos ainda abertos serão registrados como não realizados.'))return;
@@ -731,7 +742,13 @@
     const taskHistory={};
     for(const date of new Set([...Object.keys(a.taskHistory||{}),...Object.keys(b.taskHistory||{})])){
       const x=a.taskHistory?.[date]||{},y=b.taskHistory?.[date]||{},tasksForDay={};
+      const excludedTasks={};
+      for(const id of new Set([...Object.keys(x.excludedTasks||{}),...Object.keys(y.excludedTasks||{})])){
+        const left=x.excludedTasks?.[id]||'',right=y.excludedTasks?.[id]||'';
+        excludedTasks[id]=left>right?left:right;
+      }
       for(const id of new Set([...Object.keys(x.tasks||{}),...Object.keys(y.tasks||{})])){
+        if(excludedTasks[id])continue;
         const p=x.tasks?.[id],q=y.tasks?.[id];
         if(!p||!q){tasksForDay[id]=structuredClone(p||q);continue;}
         const base=(Date.parse(y.updatedAt||'')||0)>=(Date.parse(x.updatedAt||'')||0)?q:p;
@@ -749,7 +766,7 @@
         tasksForDay[id]={...structuredClone(base),items:[...itemMap.values()],done:Boolean(completionChoice.done),doneTouched:completionChoice.doneTouched===true||completionChoice.done===true,doneChangedAt:completionChoice.doneChangedAt||''};
       }
       const updatedAt=new Date(Math.max(Date.parse(x.updatedAt||0)||0,Date.parse(y.updatedAt||0)||0)||Date.now()).toISOString();
-      taskHistory[date]={tasks:tasksForDay,updatedAt};
+      taskHistory[date]={tasks:tasksForDay,excludedTasks,updatedAt};
       if(date>=isoToday())reconcileTaskDay(date,taskHistory[date],tasks);
     }
     return {version:4,routines:[...routines.values()],tasks,areas,anchors,history,taskHistory};
@@ -886,7 +903,10 @@
   $('#task-week-today').onclick=()=>{selectedTaskWeekDate=isoToday();renderTaskWeekly();};
   $('#task-week-date').onchange=e=>{if(e.target.value){selectedTaskWeekDate=e.target.value;renderTaskWeekly();}};
   $('#planner-grid').addEventListener('click',event=>{const button=event.target.closest('[data-planner-routine]');if(button)openFocusRoutine(button.dataset.plannerRoutine);});
-  for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);});
+  for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{
+    const remove=event.target.closest('[data-remove-task-day]');if(remove){removeTaskFromDay(remove.dataset.removeTaskDay);return;}
+    const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);
+  });
   $('#task-week-grid').addEventListener('click',event=>{const button=event.target.closest('[data-task-week-date][data-open-task]');if(button)openTaskFocus(button.dataset.openTask,button.dataset.taskWeekDate,true);});
   $('#task-focus-complete').onchange=event=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task){task.done=event.target.checked;task.doneTouched=true;task.doneChangedAt=stamp();}});
   $('#task-focus-steps').addEventListener('change',event=>{
