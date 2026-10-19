@@ -83,12 +83,14 @@
   let state = loadState();
   let selectedDate = isoToday();
   let selectedWeekDate = isoToday();
+  let selectedTaskWeekDate = isoToday();
   let selectedAnchorArea = '';
   const openManageRoutines = new Set();
   let activeRoutineId = null;
   let activeTaskId = null;
+  let activeTaskDate = null;
   let supabaseClient = null, session = null, syncTimer = null, saving = false, saveAgain = false;
-  let syncKind = 'offline', syncMessage = 'Somente neste aparelho', localRevision = 0;
+  let syncKind = 'offline', syncMessage = 'Somente neste aparelho', localRevision = 0, lastAutoSyncAt = 0;
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
@@ -323,10 +325,10 @@
   }
   function renderTaskFocus(){
     if(!activeTaskId)return;
-    const task=ensureTaskDay(selectedDate).tasks[activeTaskId];
+    const date=activeTaskDate||selectedDate,task=ensureTaskDay(date).tasks[activeTaskId];
     if(!task){$('#task-focus-dialog').close();return;}
     $('#task-focus-dialog').style.setProperty('--routine-color',task.color);
-    $('#task-focus-date').textContent=fmtDate(selectedDate).toLocaleUpperCase('pt-BR');
+    $('#task-focus-date').textContent=fmtDate(date).toLocaleUpperCase('pt-BR');
     $('#task-focus-icon').textContent=task.icon||'✓';
     $('#task-focus-name').textContent=task.name;
     const done=(task.items||[]).filter(item=>item.done).length,total=task.items?.length||0;
@@ -337,12 +339,14 @@
     $('#task-focus-step-section').classList.toggle('hidden',!total);
     $('#task-focus-steps').innerHTML=(task.items||[]).map(item=>`<label class="focus-step ${item.done?'is-done':''}"><input type="checkbox" data-task-item="${escapeHTML(item.id)}" ${item.done?'checked':''}><span class="focus-check"></span><span class="focus-step-copy"><span>${escapeHTML(item.label)}</span>${item.description?`<small>${escapeHTML(item.description)}</small>`:''}</span></label>`).join('');
   }
-  function openTaskFocus(id){
-    if(!ensureTaskDay(selectedDate).tasks[id])return;
-    activeTaskId=id;renderTaskFocus();$('#task-focus-dialog').showModal();
+  function openTaskFocus(id,date=selectedDate,fromWeek=false){
+    if(!ensureTaskDay(date).tasks[id])return;
+    activeTaskId=id;activeTaskDate=date;
+    $('#task-focus-done').textContent=fromWeek?'Voltar à semana':'Voltar ao dia';
+    renderTaskFocus();$('#task-focus-dialog').showModal();
   }
   function mutateTaskDay(fn){
-    const day=ensureTaskDay(selectedDate);fn(day);day.updatedAt=stamp();saveLocal();renderTasks();renderPlanner();renderTaskFocus();
+    const day=ensureTaskDay(activeTaskDate||selectedDate);fn(day);day.updatedAt=stamp();saveLocal();renderTasks();renderPlanner();renderTaskWeekly();renderTaskFocus();
   }
   function orderedAreas(){return state.areas.filter(area=>!area.deleted).sort((a,b)=>(a.order??0)-(b.order??0)||a.name.localeCompare(b.name,'pt-BR'));}
   function scheduledRoutines(day){return Object.values(day.routines||{}).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99'));}
@@ -368,15 +372,21 @@
     $('#planner-grid').innerHTML=`${primaryBlocks.theme}<div class="planner-areas">${primaryBlocks.other||'<p class="planner-empty">Nenhuma área na visão principal.</p>'}</div>${routineBlock}`;
     $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}`;
   }
-  function renderWeekly(){
-    const start=safeDate(selectedWeekDate);
+  function weekDates(selectedDate){
+    const start=safeDate(selectedDate);
     start.setDate(start.getDate()-(start.getDay()+6)%7);
-    const dates=Array.from({length:7},(_,index)=>{const day=new Date(start);day.setDate(start.getDate()+index);return `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;});
+    return Array.from({length:7},(_,index)=>{const day=new Date(start);day.setDate(start.getDate()+index);return `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;});
+  }
+  function weeklyHeaders(dates){
+    return dates.map((date,index)=>`<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}" ${date===isoToday()?'aria-current="date"':''}><strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small></th>`).join('');
+  }
+  function renderWeekly(){
+    const dates=weekDates(selectedWeekDate);
     const areas=orderedAreas();
     $('#weekly-date').value=selectedWeekDate;
     $('#weekly-range-label').textContent=`${fmtDate(dates[0],{day:'numeric',month:'short'})} a ${fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'})}`;
     $('#weekly-today').classList.toggle('hidden',dates.includes(isoToday()));
-    const headers=dates.map((date,index)=>`<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}" ${date===isoToday()?'aria-current="date"':''}><strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small></th>`).join('');
+    const headers=weeklyHeaders(dates);
     const rows=areas.map(area=>{
       const cells=dates.map(date=>{
         const anchors=state.anchors.filter(anchor=>anchor.areaId===area.id&&dayIsScheduled(anchor,date)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
@@ -385,6 +395,28 @@
       return `<tr style="--area-color:${escapeHTML(area.color)}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${AREA_ICONS[area.id]||'✦'}</span><span>${escapeHTML(area.name)}</span></th>${cells}</tr>`;
     }).join('');
     $('#weekly-grid').innerHTML=`<table class="weekly-table"><thead><tr><th scope="col" class="weekly-corner">Área</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  function taskWeekSnapshot(date){
+    const existing=state.taskHistory[date];
+    if(existing&&date<isoToday())return existing;
+    const preview=structuredClone(existing||{tasks:{}});
+    reconcileTaskDay(date,preview,state.tasks,true);
+    return preview;
+  }
+  function renderTaskWeekly(){
+    const dates=weekDates(selectedTaskWeekDate);
+    $('#task-week-date').value=selectedTaskWeekDate;
+    $('#task-week-range-label').textContent=`${fmtDate(dates[0],{day:'numeric',month:'short'})} a ${fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'})}`;
+    $('#task-week-today').classList.toggle('hidden',dates.includes(isoToday()));
+    const snapshots=dates.map(taskWeekSnapshot);
+    const rows=[['weekly','Semanais','#e2eee6','☑'],['biweekly','Quinzenais','#e9e3f0','◫']].map(([frequency,label,color,icon])=>{
+      const cells=snapshots.map((day,index)=>{
+        const tasks=taskSnapshots(day,frequency);
+        return `<td>${tasks.map(task=>`<button type="button" class="weekly-task${task.done?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}" data-task-week-date="${dates[index]}"><span class="task-status" aria-hidden="true">${task.done?'✓':'○'}</span><span class="weekly-task-name"><span aria-hidden="true">${escapeHTML(task.icon||'✓')}</span> ${escapeHTML(task.name)}</span>${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</button>`).join('')}</td>`;
+      }).join('');
+      return `<tr style="--area-color:${color}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${icon}</span><span>${label}</span></th>${cells}</tr>`;
+    }).join('');
+    $('#task-week-grid').innerHTML=`<table class="weekly-table task-week-table"><thead><tr><th scope="col" class="weekly-corner">Tarefas</th>${weeklyHeaders(dates)}</tr></thead><tbody>${rows}</tbody></table>`;
   }
   function renderAnchors(){
     const areas=orderedAreas(),areaById=new Map(areas.map(area=>[area.id,area]));
@@ -395,7 +427,7 @@
     $('#anchor-list').innerHTML=anchors.length?anchors.map(anchor=>`<article class="anchor-card"><span class="anchor-icon">${escapeHTML(anchor.icon||'✦')}</span><div class="anchor-info"><strong>${escapeHTML(anchor.title)}</strong><small>${escapeHTML(areaById.get(anchor.areaId)?.name||'Área indisponível')} · ${anchor.weekdays?.length===7?'Todos os dias':(anchor.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${anchor.monthWeeks?.length?` · semanas ${escapeHTML(anchor.monthWeeks.join(', '))}`:''}${anchor.startDate?` · a partir de ${escapeHTML(fmtDate(anchor.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}${anchor.endDate?` · até ${escapeHTML(fmtDate(anchor.endDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div><button type="button" class="small-edit" data-edit-anchor="${escapeHTML(anchor.id)}">Editar</button></article>`).join(''):selectedAnchorArea?'<div class="empty-state"><h3>Nenhuma âncora nesta área</h3><p>Escolha outra área ou crie uma nova âncora.</p></div>':'<div class="empty-state"><h3>Suas âncoras começam aqui</h3><p>Crie uma âncora para organizar seu dia.</p></div>';
     $('#area-list').innerHTML=areas.map((area,index)=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color)}"></span><strong>${escapeHTML(area.name)}</strong><small class="area-view-tag">${area.dailyView==='secondary'?'Visão secundária':'Visão principal'}</small><div class="area-card-actions"><button type="button" data-move-area="up" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para cima" ${index===0?'disabled':''}>↑</button><button type="button" data-move-area="down" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para baixo" ${index===areas.length-1?'disabled':''}>↓</button><button type="button" class="small-edit" data-edit-area="${escapeHTML(area.id)}">Editar</button></div></article>`).join('');
   }
-  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderPlanner(); renderWeekly(); renderAnchors(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
+  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderPlanner(); renderWeekly(); renderTaskWeekly(); renderAnchors(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
   function setSection(section){
     $$('.workspace-view').forEach(view=>view.classList.toggle('active-workspace',view.id===`${section}-workspace`));
     $$('.sidebar-link').forEach(link=>{const active=link.dataset.section===section;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
@@ -416,7 +448,10 @@
   function setTaskView(view){
     $$('.task-tab').forEach(tab=>tab.classList.toggle('active',tab.dataset.taskView===view));
     $$('.task-view').forEach(section=>section.classList.toggle('active-view',section.id===`task-${view}-view`));
+    $('#task-day-navigator').classList.toggle('hidden',view==='week');
+    $('#task-date-label').classList.toggle('hidden',view==='week');
     if(view==='history'||view==='manage')renderTasks();
+    if(view==='week')renderTaskWeekly();
   }
   function buildWeekdayOptions(selected=[0,1,2,3,4,5,6],target='#weekday-options') {
     $(target).innerHTML = WEEKDAYS.map((day,i)=>`<label class="weekday-option"><input type="checkbox" value="${i}" ${selected.includes(i)?'checked':''}><span>${day}</span></label>`).join('');
@@ -610,6 +645,11 @@
     selectedWeekDate=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
     renderWeekly();
   }
+  function shiftTaskWeek(amount){
+    const date=safeDate(selectedTaskWeekDate);date.setDate(date.getDate()+amount*7);
+    selectedTaskWeekDate=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    renderTaskWeekly();
+  }
   function csvCell(value) { return `"${String(value??'').replace(/"/g,'""')}"`; }
   function exportCSV() {
     const rows=[['Data','Rotina','Ícone','Passo','Status','Dia concluído','Descrição da rotina','Descrição do passo','Horário agendado']];
@@ -744,7 +784,13 @@
         saveAgain=false;let committed=false;
         for(let attempt=0;attempt<7&&!committed;attempt++) {
           const revisionAtStart=localRevision;
-          const remote=await readRemote();state=mergeState(state,remote?.data||{});localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+          const remote=await readRemote(),remoteJson=JSON.stringify(remote?.data||{});
+          state=mergeState(state,remote?.data||{});localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+          if(remote&&JSON.stringify(state)===remoteJson){
+            committed=true;
+            if(localRevision!==revisionAtStart)saveAgain=true;
+            break;
+          }
           const updatedAt=new Date(Math.max(Date.now(),(Date.parse(remote?.updated_at||'')||0)+1)).toISOString();
           let result;
           if(remote) result=await supabaseClient.from(window.ANCORA_SUPABASE.table).update({data:state,updated_at:updatedAt}).eq('user_id',session.user.id).eq('id',window.ANCORA_SUPABASE.recordId).eq('updated_at',remote.updated_at).select('updated_at').maybeSingle();
@@ -777,6 +823,11 @@
     } catch(error){console.error('Falha ao baixar dados:',error);setSyncStatus('error',`Não foi possível baixar: ${error.message||'verifique sua conexão'}`);return false;}
   }
   function scheduleSync() { if(!session?.user)return;clearTimeout(syncTimer);syncTimer=setTimeout(pushSync,900); }
+  function refreshFromCloud(){
+    if(!session?.user||saving||document.hidden||Date.now()-lastAutoSyncAt<2000)return;
+    lastAutoSyncAt=Date.now();
+    pushSync();
+  }
   async function connectAccount(signUp=false) {
     if(!configureSupabase()){updateAccountDialog();return;}
     const email=$('#account-email').value.trim(),password=$('#account-password').value;
@@ -827,8 +878,12 @@
   $('#weekly-prev').onclick=()=>shiftWeek(-1);$('#weekly-next').onclick=()=>shiftWeek(1);
   $('#weekly-today').onclick=()=>{selectedWeekDate=isoToday();renderWeekly();};
   $('#weekly-date').onchange=e=>{if(e.target.value){selectedWeekDate=e.target.value;renderWeekly();}};
+  $('#task-week-prev').onclick=()=>shiftTaskWeek(-1);$('#task-week-next').onclick=()=>shiftTaskWeek(1);
+  $('#task-week-today').onclick=()=>{selectedTaskWeekDate=isoToday();renderTaskWeekly();};
+  $('#task-week-date').onchange=e=>{if(e.target.value){selectedTaskWeekDate=e.target.value;renderTaskWeekly();}};
   $('#planner-grid').addEventListener('click',event=>{const button=event.target.closest('[data-planner-routine]');if(button)openFocusRoutine(button.dataset.plannerRoutine);});
   for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);});
+  $('#task-week-grid').addEventListener('click',event=>{const button=event.target.closest('[data-task-week-date][data-open-task]');if(button)openTaskFocus(button.dataset.openTask,button.dataset.taskWeekDate,true);});
   $('#task-focus-complete').onchange=event=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task){task.done=event.target.checked;task.doneTouched=true;task.doneChangedAt=stamp();}});
   $('#task-focus-steps').addEventListener('change',event=>{
     const input=event.target.closest('[data-task-item]');if(!input)return;
@@ -839,7 +894,7 @@
     });
   });
   $('#close-task-focus').onclick=$('#task-focus-done').onclick=()=>$('#task-focus-dialog').close();
-  $('#task-focus-dialog').addEventListener('close',()=>{activeTaskId=null;});
+  $('#task-focus-dialog').addEventListener('close',()=>{activeTaskId=null;activeTaskDate=null;});
   $('#add-task').onclick=$('#add-task-from-day').onclick=()=>openTaskDialog();
   $('#task-form').addEventListener('submit',saveTask);$('#task-delete').onclick=deleteTask;
   $('#task-frequency').onchange=updateTaskFrequency;$('#task-add-step').onclick=()=>addTaskItemEditor();
@@ -911,5 +966,9 @@
   $('#sync-download').onclick=()=>pullSync();
   $('#sync-upload').onclick=()=>pushSync('Dados enviados para a nuvem.');
   $('#sign-out').onclick=async()=>{try{const {error}=await supabaseClient.auth.signOut();if(error)throw error;session=null;setSyncStatus('offline','Somente neste aparelho');updateAccountDialog();toast('Você saiu da conta.');}catch(error){toast(error.message||'Não foi possível sair da conta.');}};
+  window.addEventListener('focus',refreshFromCloud);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshFromCloud();});
+  window.addEventListener('online',refreshFromCloud);
+  setInterval(refreshFromCloud,60000);
   render();initializeSync();
 })();

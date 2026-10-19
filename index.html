@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js"></script>
+  <script defer src="app.js?v=20261019-task-week"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -113,10 +113,11 @@
 
       <section id="tasks-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">TAREFAS</div><h1>Um compromisso de cada vez.</h1><p id="task-date-label" class="planner-date-label"></p><p>Tarefas semanais e quinzenais, com passos opcionais.</p>
-          <div class="date-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button></div>
+          <div id="task-day-navigator" class="date-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button></div>
         </div>
-        <nav class="tabs" aria-label="Seções de tarefas"><button type="button" class="tab task-tab active" data-task-view="day">Tarefas do dia</button><button type="button" class="tab task-tab" data-task-view="history">Histórico</button><button type="button" class="tab task-tab" data-task-view="manage">Minhas tarefas</button></nav>
+        <nav class="tabs" aria-label="Seções de tarefas"><button type="button" class="tab task-tab active" data-task-view="day">Tarefas do dia</button><button type="button" class="tab task-tab" data-task-view="week">Visão semanal</button><button type="button" class="tab task-tab" data-task-view="history">Histórico</button><button type="button" class="tab task-tab" data-task-view="manage">Minhas tarefas</button></nav>
         <section id="task-day-view" class="view task-view active-view"><div class="section-heading"><div><div class="eyebrow">PARA ESTE DIA</div><h2>Suas tarefas</h2></div><button type="button" class="text-button" id="add-task-from-day">＋ Nova tarefa</button></div><div id="task-day-list" class="task-groups"></div></section>
+        <section id="task-week-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">SEMANA</div><h2>Tarefas da semana</h2><p id="task-week-range-label" class="planner-date-label"></p></div></div><div class="date-navigator task-week-navigator"><button type="button" id="task-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="task-week-date" type="date" aria-label="Escolher semana das tarefas"><button type="button" id="task-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="task-week-today" class="today-button">Esta semana</button></div><div id="task-week-grid" class="weekly-scroll"></div></section>
         <section id="task-history-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">REGISTROS</div><h2>Histórico de tarefas</h2></div><button type="button" class="text-button" id="task-history-export">↓ Exportar CSV</button></div><div id="task-history-list" class="history-list"></div></section>
         <section id="task-manage-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">DO SEU JEITO</div><h2>Minhas tarefas</h2></div><button type="button" class="primary-button" id="add-task">＋ Nova tarefa</button></div><p class="section-intro">Cadastre tarefas com ou sem passos e escolha a repetição semanal ou quinzenal.</p><div id="task-manage-list" class="manage-list"></div></section>
       </section>
