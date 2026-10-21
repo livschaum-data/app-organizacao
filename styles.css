@@ -271,3 +271,64 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .manage-step-list li{padding:2px 0;font-size:11px;line-height:1.35}
 .manage-step-list li::marker{color:var(--routine-color);font-weight:700}
 @media(max-width:650px){.manage-card-main{gap:9px;padding:10px}.manage-step-list{padding-left:60px}}
+
+/* Anotações, resumo e cronograma da visão diária. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.day-status{display:inline-flex;align-items:center;border:1px solid #d79998;background:#fae7e4;color:#9a4549;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:800;white-space:nowrap}
+.date-navigator{flex-wrap:wrap}
+.history-card.is-incomplete{border-left:4px solid #c74d55;background:#fff9f7}
+.weekly-table thead .weekly-incomplete{box-shadow:inset 0 -5px #c74d55,0 0 0 2px #c74d55}
+.weekly-day em{display:inline-block;margin-top:7px;border-radius:999px;padding:2px 6px;background:#fff6f3;color:#a23e46;font:800 9px 'DM Sans',sans-serif;font-style:normal}
+.planner-mode{display:inline-flex;gap:2px;margin:0 0 15px;padding:3px;border:1px solid var(--line);border-radius:10px;background:#ebe7df}
+.planner-mode-button{border:0;border-radius:7px;background:transparent;padding:7px 13px;font-size:11px;font-weight:700;color:#6e7975}
+.planner-mode-button.active{background:var(--paper);color:var(--accent-dark);box-shadow:0 1px 4px #283d4020}
+.planner-notes{margin:0 0 42px}
+.planner-notes .planner-block-body{padding:12px 14px}
+.planner-notes textarea{display:block;width:100%;min-height:130px;border:1px solid #d7d4ce;border-radius:8px;background:#fffdfa;resize:vertical;padding:12px 13px;color:var(--ink);font:12px/1.5 'DM Sans',sans-serif}
+.planner-notes small{display:block;margin-top:7px;color:var(--muted);font-size:10px}
+.planner-timeline{margin:0 0 18px;padding:13px;border:1px solid var(--line);border-radius:10px;background:#fffdfa}
+.timeline-theme{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 11px;margin-bottom:8px;border-radius:7px;background:#e9e1ec;font-size:11px}
+.timeline-theme strong{color:#42545a;text-transform:uppercase;letter-spacing:.5px;font-size:10px}
+.timeline-theme span{font-weight:600}
+.timeline-unscheduled{margin-bottom:13px;border:1px solid #e5e0d8;border-radius:8px;background:#f7f4ef}
+.timeline-unscheduled summary{padding:9px 12px;cursor:pointer;font-size:11px;font-weight:700;color:var(--accent-dark)}
+.timeline-unscheduled>div{display:flex;gap:5px;flex-wrap:wrap;padding:0 10px 10px}
+.timeline-unscheduled button,.timeline-anchor-group{border:1px solid #e5ded5;border-radius:6px;background:#fffdfa;padding:6px 9px;font-size:10px;text-align:left}
+.timeline-unscheduled button:hover{border-color:#8db9a7;color:var(--accent-dark)}
+.timeline-anchor-group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.timeline-anchor-group strong{color:var(--accent-dark)}
+.timeline-anchor-group span+span:before{content:'·';margin-right:6px;color:#b5aba1}
+.timeline-axis{position:relative;min-height:700px;margin-top:8px;background:linear-gradient(to right,transparent 0 69px,#dedbd4 69px 70px,transparent 70px)}
+.timeline-hour{position:absolute;left:0;right:0;border-top:1px solid #e5e5e1;height:1px}
+.timeline-hour time{position:absolute;left:0;top:-7px;color:#8b8782;font-size:10px;font-variant-numeric:tabular-nums}
+.timeline-event{position:absolute;z-index:1;min-height:30px;overflow:hidden;display:flex;align-items:center;gap:8px;text-align:left;border:1px solid color-mix(in srgb,var(--event-color) 35%,#d0c7bd);border-left:5px solid var(--event-color);border-radius:7px;background:color-mix(in srgb,var(--event-color) 22%,white);padding:6px 8px;font-size:11px;line-height:1.25;box-shadow:0 2px 4px #253e4020}
+.timeline-event:hover{filter:brightness(.96);z-index:2}
+.timeline-event time{flex:none;font-size:10px;font-weight:800;color:#475e60}
+.timeline-event span{font-weight:700;overflow-wrap:anywhere}
+.timeline-task{background:#f6ede7}
+.summary-content{padding-bottom:44px}
+.summary-explainer{max-width:640px;margin:-8px 0 17px;color:var(--muted);font-size:11px;line-height:1.5}
+.summary-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 17px}
+.summary-totals article{padding:18px 20px;border:1px solid #e5d7d4;border-radius:10px;background:#f9eeeb}
+.summary-totals article:nth-child(2){border-color:#d9e7df;background:#edf5ef}
+.summary-totals span{display:block;color:#825b5b;font-size:10px;font-weight:800;letter-spacing:1px}
+.summary-totals article:nth-child(2) span{color:#4e7663}
+.summary-totals strong{display:block;margin:6px 0;font:800 33px/1 Manrope,sans-serif;color:var(--ink)}
+.summary-totals p{margin:0;font-size:11px;color:var(--muted)}
+.summary-week-heading{font:800 15px Manrope,sans-serif;margin:28px 0 10px}
+.summary-period{margin:8px 0;border:1px solid var(--line);border-radius:9px;background:var(--paper)}
+.summary-period summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 15px;cursor:pointer;list-style:none;font-size:12px}
+.summary-period summary::-webkit-details-marker{display:none}
+.summary-period summary:before{content:'▸';color:var(--accent);font-size:14px}
+.summary-period[open] summary:before{content:'▾'}
+.summary-period summary span{margin-right:auto;font-weight:800;text-transform:capitalize}
+.summary-period summary strong{color:#915457;font-size:10px;text-align:right}
+.summary-days{padding:3px 15px 13px;border-top:1px solid var(--line)}
+.summary-days>p{font-size:11px;color:var(--muted)}
+.summary-day{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #eeeae4;font-size:11px;text-transform:capitalize}
+.summary-day:last-child{border-bottom:0}
+.summary-day.is-pending>span{font-weight:700;color:#9a4549}
+.summary-day>div{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.summary-day button{border:0;background:#fae7e4;color:#954449;border-radius:6px;padding:5px 8px;font-size:10px;font-weight:700}
+.summary-day button:hover{background:#f1d5d2}
+@media(max-width:560px){.summary-totals article{padding:14px}.summary-period summary{align-items:flex-start;flex-wrap:wrap}.summary-period summary strong{flex:0 0 100%;text-align:left;margin-left:21px}.summary-day{align-items:flex-start;flex-direction:column}.summary-day>div{justify-content:flex-start}.timeline-event{font-size:10px;gap:4px;flex-wrap:wrap}.timeline-event time{font-size:9px}}

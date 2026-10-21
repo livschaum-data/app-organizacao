@@ -22,3 +22,11 @@ O app grava automaticamente um registro de cada rotina e de cada passo por data,
 Cada rotina e passo pode ter uma descrição opcional. Ao abrir uma data do histórico, use “Remover deste dia” diretamente no cartão da rotina; a programação dos demais dias continua igual. A remoção também é sincronizada entre dispositivos e os registros removidos deixam de aparecer no CSV.
 
 Cada rotina também pode ter um horário agendado opcional. Em “Meu dia”, as rotinas com horário aparecem em ordem cronológica, seguidas pelas rotinas sem horário. O horário é incluído no histórico exportado em CSV.
+
+## Visão diária e resumo
+
+Na Visão diária, o seletor Blocos/Cronograma alterna entre os cartões existentes e uma linha do tempo com as rotinas e tarefas que têm horário sugerido. A duração de cada bloco pode ser ajustada na edição da rotina ou tarefa; quando não informada, vale 45 minutos. Âncoras e itens sem horário ficam disponíveis acima da linha do tempo. A escolha do formato é lembrada neste navegador.
+
+As anotações pertencem à data aberta na Visão diária, são salvas automaticamente e seguem a mesma sincronização em nuvem dos demais dados. Também entram na exportação CSV do histórico de rotinas, inclusive quando a data tem apenas anotação.
+
+O Resumo mostra, por mês e por semana, quantos dias têm rotinas ou tarefas pendentes. As semanas podem ser expandidas para abrir diretamente a data correspondente. Datas passadas incompletas aparecem em vermelho nas visões diária, semanal e no histórico. O acompanhamento começa na primeira data com registros existentes; dias anteriores não são contados como pendentes.

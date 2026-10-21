@@ -5,6 +5,7 @@
   const LAST_SYNC_KEY = `${STORAGE_KEY}-last-sync`;
   const PENDING_KEY = `${STORAGE_KEY}-pending-sync`;
   const SIDEBAR_KEY = 'ancora-sidebar-collapsed-v1';
+  const PLANNER_MODE_KEY = 'ancora-planner-mode-v1';
   const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
   const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const SEED = [
@@ -84,6 +85,10 @@
   let selectedDate = isoToday();
   let selectedWeekDate = isoToday();
   let selectedTaskWeekDate = isoToday();
+  let selectedSummaryMonth = isoToday().slice(0,7);
+  let plannerMode = 'blocks';
+  try{if(localStorage.getItem(PLANNER_MODE_KEY)==='timeline')plannerMode='timeline';}catch{}
+  let renderedNotesDate = '';
   let selectedAnchorArea = '';
   const openManageRoutines = new Set();
   const openManageTasks = new Set();
@@ -95,7 +100,7 @@
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:4, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],taskHistory:{},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:4, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],taskHistory:{},dayNotes:{},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',weekdays,monthWeeks:[],startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
@@ -109,6 +114,7 @@
     if(!Array.isArray(data.anchors))data.anchors=[];
     if(!Array.isArray(data.tasks))data.tasks=[];
     if(!data.taskHistory||typeof data.taskHistory!=='object')data.taskHistory={};
+    if(!data.dayNotes||typeof data.dayNotes!=='object')data.dayNotes={};
     data.version=4;
     const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
     for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
@@ -181,7 +187,7 @@
       if(day.excludedTasks[id])continue;
       let snapshot=day.tasks[id];
       if(!snapshot){snapshot={taskId:id,items:[],done:false,doneTouched:false,doneChangedAt:now};day.tasks[id]=snapshot;changed=true;}
-      for(const [key,value] of Object.entries({name:task.name,description:task.description||'',icon:task.icon,color:task.color,frequency:task.frequency,scheduledTime:task.scheduledTime||''})){
+      for(const [key,value] of Object.entries({name:task.name,description:task.description||'',icon:task.icon,color:task.color,frequency:task.frequency,scheduledTime:task.scheduledTime||'',durationMinutes:task.durationMinutes||45})){
         if(snapshot[key]!==value){snapshot[key]=value;changed=true;}
       }
       const previous=new Map((snapshot.items||[]).map(item=>[item.id,item]));
@@ -212,7 +218,7 @@
       if(day.excludedRoutines?.[id])continue;
       let snapshot=day.routines[id];
       if(!snapshot){snapshot={routineId:id,items:[]};day.routines[id]=snapshot;changed=true;}
-      for(const [key,value] of Object.entries({name:routine.name,description:routine.description||'',icon:routine.icon,color:routine.color,scheduledTime:routine.scheduledTime||''})){
+      for(const [key,value] of Object.entries({name:routine.name,description:routine.description||'',icon:routine.icon,color:routine.color,scheduledTime:routine.scheduledTime||'',durationMinutes:routine.durationMinutes||45})){
         if(snapshot[key]!==value){snapshot[key]=value;changed=true;}
       }
       const previous=new Map((snapshot.items||[]).map(item=>[item.id,item]));
@@ -233,7 +239,7 @@
     scheduleSync();
   }
   function mutateDay(fn) {
-    const day = ensureDay(selectedDate); fn(day); day.updatedAt = stamp(); saveLocal(); renderDay(); renderPlanner(); renderFocusRoutine();
+    const day = ensureDay(selectedDate); fn(day); day.updatedAt = stamp(); saveLocal(); renderDay(); renderPlanner(); renderWeekly(); renderSummary(); renderFocusRoutine();
   }
   function renderDateHeader() {
     $('#selected-date').value = selectedDate;
@@ -241,6 +247,7 @@
     $('#today-label').textContent = selectedDate === today ? 'UM PONTO DE APOIO PARA O SEU DIA' : fmtDate(selectedDate).toLocaleUpperCase('pt-BR');
     $('#greeting').textContent = selectedDate === today ? 'Um passo de cada vez.' : fmtDate(selectedDate, {day:'numeric',month:'long'});
     $('#today-button').classList.toggle('hidden', selectedDate === today);
+    renderDayStatus('#routine-day-status',selectedDate,'routines');
   }
   function renderProgress() {
     const day = ensureDay(selectedDate), items = Object.values(day.routines).flatMap(r=>r.items);
@@ -298,7 +305,7 @@
     const days=Object.keys(state.history).filter(date=>Object.values(state.history[date]?.routines||{}).length).sort((a,b)=>b.localeCompare(a));
     $('#history-list').innerHTML = days.length ? days.map(date=>{
       const day=state.history[date], items=Object.values(day.routines||{}).flatMap(r=>r.items||[]), done=items.filter(i=>i.done).length, pct=items.length?Math.round(done/items.length*100):0;
-      return `<button class="history-card" data-history-date="${date}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${done}/${items.length}</strong><small>passos concluídos</small></span><span class="history-meter"><i style="width:${pct}%"></i></span><span class="history-percent">${pct}%</span><span class="history-arrow">→</span></button>`;
+      return `<button class="history-card${date<isoToday()&&dayStatus(date).routinePending?' is-incomplete':''}" data-history-date="${date}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${done}/${items.length}</strong><small>passos concluídos</small></span><span class="history-meter"><i style="width:${pct}%"></i></span><span class="history-percent">${pct}%</span><span class="history-arrow">→</span></button>`;
     }).join('') : '<div class="empty-state"><span>♡</span><h3>Seu histórico vai aparecer aqui</h3><p>Comece uma rotina e seus passos ficam registrados por dia.</p></div>';
   }
   function taskSnapshots(day,frequency){
@@ -317,6 +324,7 @@
     $('#task-date').value=selectedDate;
     $('#task-date-label').textContent=fmtDate(selectedDate);
     $('#task-today').classList.toggle('hidden',selectedDate===isoToday());
+    renderDayStatus('#task-day-status',selectedDate,'tasks');
     const day=ensureTaskDay(selectedDate);
     $('#task-day-list').innerHTML=taskGroup(day,'weekly')+taskGroup(day,'biweekly');
     const tasks=state.tasks.filter(task=>!task.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
@@ -327,7 +335,7 @@
     const dates=Object.keys(state.taskHistory).filter(date=>Object.keys(state.taskHistory[date]?.tasks||{}).length).sort((a,b)=>b.localeCompare(a));
     $('#task-history-list').innerHTML=dates.length?dates.map(date=>{
       const entries=Object.values(state.taskHistory[date].tasks),done=entries.filter(task=>task.done).length;
-      return `<button class="history-card" data-task-history-date="${date}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${done}/${entries.length}</strong><small>tarefas concluídas</small></span><span class="history-arrow">→</span></button>`;
+      return `<button class="history-card${date<isoToday()&&dayStatus(date).taskPending?' is-incomplete':''}" data-task-history-date="${date}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${done}/${entries.length}</strong><small>tarefas concluídas</small></span><span class="history-arrow">→</span></button>`;
     }).join(''):'<div class="empty-state"><span>✓</span><h3>Seu histórico vai aparecer aqui</h3><p>As tarefas programadas ficam registradas por dia.</p></div>';
   }
   function renderTaskFocus(){
@@ -353,10 +361,57 @@
     renderTaskFocus();$('#task-focus-dialog').showModal();
   }
   function mutateTaskDay(fn){
-    const day=ensureTaskDay(activeTaskDate||selectedDate);fn(day);day.updatedAt=stamp();saveLocal();renderTasks();renderPlanner();renderTaskWeekly();renderTaskFocus();
+    const day=ensureTaskDay(activeTaskDate||selectedDate);fn(day);day.updatedAt=stamp();saveLocal();renderTasks();renderPlanner();renderWeekly();renderTaskWeekly();renderSummary();renderTaskFocus();
   }
   function orderedAreas(){return state.areas.filter(area=>!area.deleted).sort((a,b)=>(a.order??0)-(b.order??0)||a.name.localeCompare(b.name,'pt-BR'));}
   function scheduledRoutines(day){return Object.values(day.routines||{}).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99'));}
+  function dayStatus(date){
+    const trackedDates=[...Object.entries(state.history).filter(([,day])=>Object.keys(day.routines||{}).length||day.finalized).map(([key])=>key),...Object.entries(state.taskHistory).filter(([,day])=>Object.keys(day.tasks||{}).length).map(([key])=>key)];
+    const firstTracked=trackedDates.sort()[0]||isoToday();
+    if(date<firstTracked)return {routinePending:false,taskPending:false,hasRoutines:false,hasTasks:false,past:date<isoToday()};
+    const routineDay=state.history[date],taskDay=state.taskHistory[date];
+    const routines=routineDay?Object.values(routineDay.routines||{}):state.routines.filter(routine=>dayIsScheduled(routine,date));
+    const tasks=taskDay?Object.values(taskDay.tasks||{}):state.tasks.filter(task=>taskIsScheduled(task,date));
+    const routinePending=routines.length>0&&!routineDay?.finalized;
+    const taskPending=tasks.some(task=>!task.done);
+    return {routinePending,taskPending,hasRoutines:routines.length>0,hasTasks:tasks.length>0,past:date<isoToday()};
+  }
+  function renderDayStatus(selector,date,kind='both'){
+    const status=dayStatus(date),pending=status.past&&((kind==='routines'&&status.routinePending)||(kind==='tasks'&&status.taskPending)||(kind==='both'&&(status.routinePending||status.taskPending)));
+    const element=$(selector);element.classList.toggle('hidden',!pending);
+    element.textContent=pending?'Dia incompleto':'';
+  }
+  function renderNotes(){
+    $('#planner-notes-date').textContent=fmtDate(selectedDate);
+    const input=$('#planner-notes-input');
+    if(renderedNotesDate!==selectedDate||document.activeElement!==input)input.value=state.dayNotes?.[selectedDate]?.text||'';
+    renderedNotesDate=selectedDate;
+  }
+  function renderTimeline(){
+    const unscheduledOpen=$('#planner-timeline .timeline-unscheduled')?.open||false;
+    const date=selectedDate,day=ensureDay(date),taskDay=ensureTaskDay(date),areas=orderedAreas();
+    const todayTheme=areas.filter(area=>area.id==='area-tema-do-dia').flatMap(area=>state.anchors.filter(anchor=>anchor.areaId===area.id&&dayIsScheduled(anchor,date)));
+    const timed=[...Object.values(day.routines||{}).map(routine=>({...routine,type:'routine',id:routine.routineId})),...Object.values(taskDay.tasks||{}).map(task=>({...task,type:'task',id:task.taskId}))].filter(entry=>/^\d{2}:\d{2}$/.test(entry.scheduledTime||'')).sort((a,b)=>a.scheduledTime.localeCompare(b.scheduledTime));
+    const untimedRoutines=Object.values(day.routines||{}).filter(routine=>!routine.scheduledTime);
+    const untimedTasks=Object.values(taskDay.tasks||{}).filter(task=>!task.scheduledTime);
+    const anchors=areas.filter(area=>area.id!=='area-tema-do-dia').map(area=>({area,entries:state.anchors.filter(anchor=>anchor.areaId===area.id&&dayIsScheduled(anchor,date))})).filter(group=>group.entries.length);
+    const minutes=value=>Number(value.slice(0,2))*60+Number(value.slice(3,5));
+    const startHour=Math.min(5,...timed.map(entry=>Math.floor(minutes(entry.scheduledTime)/60)));
+    const duration=entry=>Math.max(15,Math.min(480,Number(entry.durationMinutes)||45));
+    const endHour=Math.max(23,...timed.map(entry=>Math.ceil((minutes(entry.scheduledTime)+duration(entry))/60)));
+    const hourHeight=70,range=(endHour-startHour)*hourHeight;
+    const lanes=[];
+    const events=timed.map(entry=>{
+      const start=minutes(entry.scheduledTime),lane=lanes.findIndex(end=>end<=start);
+      const index=lane<0?lanes.length:lane;lanes[index]=start+duration(entry);
+      return {...entry,lane:index,top:(start-startHour*60)/60*hourHeight,height:duration(entry)/60*hourHeight};
+    });
+    const markers=Array.from({length:endHour-startHour+1},(_,index)=>`<div class="timeline-hour" style="top:${index*hourHeight}px"><time>${String(startHour+index).padStart(2,'0')}:00</time></div>`).join('');
+    const eventMarkup=events.map(entry=>`<button type="button" class="timeline-event timeline-${entry.type}" style="top:${entry.top}px;height:${Math.max(30,entry.height-4)}px;left:calc(75px + (100% - 85px) * ${entry.lane/Math.max(lanes.length,1)});width:calc((100% - 85px) * ${1/Math.max(lanes.length,1)} - 5px);--event-color:${escapeHTML(entry.color||'#7daaa1')}" data-timeline-${entry.type}="${escapeHTML(entry.id)}"><time>${escapeHTML(entry.scheduledTime)}</time><span>${escapeHTML(entry.icon||'✓')} ${escapeHTML(entry.name)}</span></button>`).join('');
+    const themeMarkup=todayTheme.length?`<div class="timeline-theme"><strong>Tema do dia</strong>${todayTheme.map(anchor=>`<span>${escapeHTML(anchor.icon)} ${escapeHTML(anchor.title)}</span>`).join('')}</div>`:'';
+    const unscheduled=[...untimedRoutines.map(entry=>`<button type="button" data-timeline-routine="${escapeHTML(entry.routineId)}">${escapeHTML(entry.icon)} ${escapeHTML(entry.name)}</button>`),...untimedTasks.map(entry=>`<button type="button" data-timeline-task="${escapeHTML(entry.taskId)}">${escapeHTML(entry.icon||'✓')} ${escapeHTML(entry.name)}</button>`),...anchors.map(({area,entries})=>`<div class="timeline-anchor-group"><strong>${escapeHTML(area.name)}</strong>${entries.map(anchor=>`<span>${escapeHTML(anchor.icon)} ${escapeHTML(anchor.title)}</span>`).join('')}</div>`)];
+    $('#planner-timeline').innerHTML=`${themeMarkup}${unscheduled.length?`<details class="timeline-unscheduled"${unscheduledOpen?' open':''}><summary>Sem horário · ${unscheduled.length} grupos e itens</summary><div>${unscheduled.join('')}</div></details>`:''}<div class="timeline-axis" style="height:${range}px">${markers}${eventMarkup}</div>`;
+  }
   function renderPlanner(){
     $('#planner-date').value=selectedDate;
     $('#planner-date-label').textContent=fmtDate(selectedDate);
@@ -364,6 +419,8 @@
     $('#planner-secondary-date').value=selectedDate;
     $('#planner-secondary-date-label').textContent=fmtDate(selectedDate);
     $('#planner-secondary-today').classList.toggle('hidden',selectedDate===isoToday());
+    renderDayStatus('#planner-day-status',selectedDate);
+    renderDayStatus('#planner-secondary-day-status',selectedDate);
     const areas=orderedAreas(),day=ensureDay(selectedDate);
     const areaBlocks=new Map(areas.map(area=>{
       const anchors=state.anchors.filter(anchor=>anchor.areaId===area.id&&dayIsScheduled(anchor,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
@@ -378,14 +435,34 @@
     const routineBlock=`<section class="planner-block planner-routines"><h2><span class="planner-heading-icon" aria-hidden="true">☑</span><span>Rotinas do dia</span></h2><div class="planner-block-body">${routines.length?routines.map(r=>`<button type="button" class="planner-routine" data-planner-routine="${escapeHTML(r.routineId)}"><span>${escapeHTML(r.icon)}</span><strong>${escapeHTML(r.name)}</strong>${r.scheduledTime?`<time class="planner-routine-time">${escapeHTML(r.scheduledTime)}</time>`:''}</button>`).join(''):'<p class="planner-empty">Nenhuma rotina neste dia.</p>'}</div></section>`;
     $('#planner-grid').innerHTML=`${primaryBlocks.theme}<div class="planner-areas">${primaryBlocks.other||'<p class="planner-empty">Nenhuma área na visão principal.</p>'}</div>${routineBlock}`;
     $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}`;
+    $('#planner-grid').classList.toggle('hidden',plannerMode==='timeline');
+    $('#planner-timeline').classList.toggle('hidden',plannerMode!=='timeline');
+    $$('.planner-mode-button').forEach(button=>{const active=button.dataset.plannerMode===plannerMode;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
+    if(plannerMode==='timeline')renderTimeline();
+    renderNotes();
   }
   function weekDates(selectedDate){
     const start=safeDate(selectedDate);
     start.setDate(start.getDate()-(start.getDay()+6)%7);
     return Array.from({length:7},(_,index)=>{const day=new Date(start);day.setDate(start.getDate()+index);return `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;});
   }
-  function weeklyHeaders(dates){
-    return dates.map((date,index)=>`<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}" ${date===isoToday()?'aria-current="date"':''}><strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small></th>`).join('');
+  function renderSummary(){
+    const openPeriods=new Set($$('#summary-content .summary-period[open]').map(period=>period.dataset.summaryPeriod));
+    $('#summary-date').value=selectedSummaryMonth;
+    $('#summary-today').classList.toggle('hidden',selectedSummaryMonth===isoToday().slice(0,7));
+    const [year,month]=selectedSummaryMonth.split('-').map(Number),length=new Date(year,month,0).getDate();
+    const dates=Array.from({length},(_,index)=>`${selectedSummaryMonth}-${String(index+1).padStart(2,'0')}`).filter(date=>date<=isoToday());
+    const details=dates.map(date=>({date,...dayStatus(date)}));
+    const pending=details.filter(day=>day.routinePending||day.taskPending);
+    const counts=days=>({routines:days.filter(day=>day.routinePending).length,tasks:days.filter(day=>day.taskPending).length});
+    const monthCounts=counts(details);
+    const dayRow=day=>`<div class="summary-day${day.routinePending||day.taskPending?' is-pending':''}"><span>${escapeHTML(fmtDate(day.date,{weekday:'short',day:'numeric',month:'short'}))}</span><div>${day.routinePending?`<button type="button" data-summary-date="${day.date}" data-summary-section="routines">Rotinas pendentes →</button>`:''}${day.taskPending?`<button type="button" data-summary-date="${day.date}" data-summary-section="tasks">Tarefas pendentes →</button>`:''}</div></div>`;
+    const weeks=new Map();
+    for(const day of details){const monday=weekDates(day.date)[0];if(!weeks.has(monday))weeks.set(monday,[]);weeks.get(monday).push(day);}
+    $('#summary-content').innerHTML=`<div class="summary-totals"><article><span>ROTINAS</span><strong>${monthCounts.routines}</strong><p>${monthCounts.routines===1?'dia incompleto':'dias incompletos'} no mês</p></article><article><span>TAREFAS</span><strong>${monthCounts.tasks}</strong><p>${monthCounts.tasks===1?'dia incompleto':'dias incompletos'} no mês</p></article></div><details class="summary-period" data-summary-period="month"${openPeriods.has('month')?' open':''}><summary><span>Mês de ${escapeHTML(fmtDate(`${selectedSummaryMonth}-01`,{month:'long',year:'numeric'}))}</span><strong>${pending.length} ${pending.length===1?'dia pendente':'dias pendentes'}</strong></summary><div class="summary-days">${pending.length?pending.map(dayRow).join(''):'<p>Nenhum dia incompleto até agora.</p>'}</div></details><h2 class="summary-week-heading">Por semana</h2>${[...weeks].map(([monday,days])=>{const total=counts(days),pendingDays=days.filter(day=>day.routinePending||day.taskPending);return `<details class="summary-period" data-summary-period="${monday}"${openPeriods.has(monday)?' open':''}><summary><span>${escapeHTML(fmtDate(days[0].date,{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(days[days.length-1].date,{day:'numeric',month:'short'}))}</span><strong>${total.routines} rotinas · ${total.tasks} tarefas</strong></summary><div class="summary-days">${pendingDays.length?pendingDays.map(dayRow).join(''):'<p>Nenhum dia incompleto nesta semana.</p>'}</div></details>`;}).join('')}`;
+  }
+  function weeklyHeaders(dates,kind='both'){
+    return dates.map((date,index)=>{const status=dayStatus(date),incomplete=status.past&&(kind==='tasks'?status.taskPending:status.routinePending||status.taskPending);return `<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}${incomplete?' weekly-incomplete':''}" ${date===isoToday()?'aria-current="date"':''}><strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small>${incomplete?'<em>Incompleto</em>':''}</th>`;}).join('');
   }
   function renderWeekly(){
     const dates=weekDates(selectedWeekDate);
@@ -423,7 +500,7 @@
       }).join('');
       return `<tr style="--area-color:${color}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${icon}</span><span>${label}</span></th>${cells}</tr>`;
     }).join('');
-    $('#task-week-grid').innerHTML=`<table class="weekly-table task-week-table"><thead><tr><th scope="col" class="weekly-corner">Tarefas</th>${weeklyHeaders(dates)}</tr></thead><tbody>${rows}</tbody></table>`;
+    $('#task-week-grid').innerHTML=`<table class="weekly-table task-week-table"><thead><tr><th scope="col" class="weekly-corner">Tarefas</th>${weeklyHeaders(dates,'tasks')}</tr></thead><tbody>${rows}</tbody></table>`;
   }
   function renderAnchors(){
     const areas=orderedAreas(),areaById=new Map(areas.map(area=>[area.id,area]));
@@ -434,7 +511,7 @@
     $('#anchor-list').innerHTML=anchors.length?anchors.map(anchor=>`<article class="anchor-card"><span class="anchor-icon">${escapeHTML(anchor.icon||'✦')}</span><div class="anchor-info"><strong>${escapeHTML(anchor.title)}</strong><small>${escapeHTML(areaById.get(anchor.areaId)?.name||'Área indisponível')} · ${anchor.weekdays?.length===7?'Todos os dias':(anchor.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${anchor.monthWeeks?.length?` · semanas ${escapeHTML(anchor.monthWeeks.join(', '))}`:''}${anchor.startDate?` · a partir de ${escapeHTML(fmtDate(anchor.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}${anchor.endDate?` · até ${escapeHTML(fmtDate(anchor.endDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div><button type="button" class="small-edit" data-edit-anchor="${escapeHTML(anchor.id)}">Editar</button></article>`).join(''):selectedAnchorArea?'<div class="empty-state"><h3>Nenhuma âncora nesta área</h3><p>Escolha outra área ou crie uma nova âncora.</p></div>':'<div class="empty-state"><h3>Suas âncoras começam aqui</h3><p>Crie uma âncora para organizar seu dia.</p></div>';
     $('#area-list').innerHTML=areas.map((area,index)=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color)}"></span><strong>${escapeHTML(area.name)}</strong><small class="area-view-tag">${area.dailyView==='secondary'?'Visão secundária':'Visão principal'}</small><div class="area-card-actions"><button type="button" data-move-area="up" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para cima" ${index===0?'disabled':''}>↑</button><button type="button" data-move-area="down" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para baixo" ${index===areas.length-1?'disabled':''}>↓</button><button type="button" class="small-edit" data-edit-area="${escapeHTML(area.id)}">Editar</button></div></article>`).join('');
   }
-  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderPlanner(); renderWeekly(); renderTaskWeekly(); renderAnchors(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
+  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderPlanner(); renderWeekly(); renderTaskWeekly(); renderSummary(); renderAnchors(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
   function setSection(section){
     $$('.workspace-view').forEach(view=>view.classList.toggle('active-workspace',view.id===`${section}-workspace`));
     $$('.sidebar-link').forEach(link=>{const active=link.dataset.section===section;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
@@ -484,7 +561,7 @@
   function openRoutineDialog(id=null) {
     const r=state.routines.find(x=>x.id===id && !x.deleted);
     $('#routine-form').reset(); $('#routine-id').value=r?.id||''; $('#routine-dialog-title').textContent=r?'Editar rotina':'Nova rotina';
-    $('#routine-name').value=r?.name||''; $('#routine-description').value=r?.description||''; $('#routine-icon').value=r?.icon||'✨'; $('#routine-color').value=r?.color||'#e8a59c';$('#routine-time').value=r?.scheduledTime||'';
+    $('#routine-name').value=r?.name||''; $('#routine-description').value=r?.description||''; $('#routine-icon').value=r?.icon||'✨'; $('#routine-color').value=r?.color||'#e8a59c';$('#routine-time').value=r?.scheduledTime||'';$('#routine-duration').value=r?.durationMinutes||'';
     $('#routine-start').value=r?.startDate||''; $('#routine-end').value=r?.endDate||'';
     buildWeekdayOptions(r?.weekdays||[0,1,2,3,4,5,6]);
     $('#routine-items-editor').innerHTML=''; (r?.items.filter(i=>i.active!==false)||['']).forEach(addItemEditor);
@@ -500,7 +577,7 @@
     if(!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}
     if($('#routine-end').value && $('#routine-start').value && $('#routine-end').value < $('#routine-start').value){toast('A data final precisa ser igual ou posterior à data inicial.');return;}
     const previousItems=new Map((existing?.items||[]).map(item=>[item.id,item]));
-    const next={id,name,description:$('#routine-description').value.trim(),icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,scheduledTime:$('#routine-time').value,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
+    const next={id,name,description:$('#routine-description').value.trim(),icon:$('#routine-icon').value.trim()||'✨',color:$('#routine-color').value,scheduledTime:$('#routine-time').value,durationMinutes:Number($('#routine-duration').value)||45,weekdays,startDate:$('#routine-start').value,endDate:$('#routine-end').value,items:items.map(item=>({...previousItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
     if(existing)state.routines=state.routines.map(x=>x.id===id?next:x);else state.routines.push(next);
     for(const [date,day] of Object.entries(state.history))if(date>=isoToday()&&!day.finalized)reconcileDay(date,day,state.routines);
     saveLocal(); $('#routine-dialog').close(); render(); toast('Rotina salva.');
@@ -528,7 +605,7 @@
     $('#task-dialog-title').textContent=task?'Editar tarefa':'Nova tarefa';
     $('#task-name').value=task?.name||'';$('#task-description').value=task?.description||'';
     $('#task-icon').value=task?.icon||'✓';$('#task-color').value=task?.color||'#87aaa2';
-    $('#task-time').value=task?.scheduledTime||'';$('#task-frequency').value=task?.frequency||'weekly';
+    $('#task-time').value=task?.scheduledTime||'';$('#task-duration').value=task?.durationMinutes||'';$('#task-frequency').value=task?.frequency||'weekly';
     $('#task-start').value=task?.startDate||'';$('#task-end').value=task?.endDate||'';
     buildWeekdayOptions(task?.weekdays||[safeDate(selectedDate).getDay()],'#task-weekday-options');
     $('#task-items-editor').innerHTML='';(task?.items||[]).filter(item=>item.active!==false).forEach(addTaskItemEditor);
@@ -544,7 +621,7 @@
     if(frequency==='biweekly'&&!$('#task-start').value){toast('Escolha a data inicial da tarefa quinzenal.');return;}
     if($('#task-end').value&&$('#task-start').value&&$('#task-end').value<$('#task-start').value){toast('A data final precisa ser igual ou posterior à inicial.');return;}
     const oldItems=new Map((existing?.items||[]).map(item=>[item.id,item]));
-    const next={id,name,description:$('#task-description').value.trim(),icon:$('#task-icon').value.trim()||'✓',color:$('#task-color').value,scheduledTime:$('#task-time').value,frequency,weekdays,startDate:$('#task-start').value,endDate:$('#task-end').value,items:items.map(item=>({...oldItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
+    const next={id,name,description:$('#task-description').value.trim(),icon:$('#task-icon').value.trim()||'✓',color:$('#task-color').value,scheduledTime:$('#task-time').value,durationMinutes:Number($('#task-duration').value)||45,frequency,weekdays,startDate:$('#task-start').value,endDate:$('#task-end').value,items:items.map(item=>({...oldItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
     if(existing)state.tasks=state.tasks.map(task=>task.id===id?next:task);else state.tasks.push(next);
     for(const [date,day] of Object.entries(state.taskHistory))if(date>=isoToday())reconcileTaskDay(date,day,state.tasks);
     saveLocal();$('#task-dialog').close();render();toast('Tarefa salva.');
@@ -646,10 +723,10 @@
     const day=ensureDay(selectedDate); if(day.finalized)return;
     if(!confirm('Concluir este dia? Os passos ainda abertos serão registrados como não realizados.'))return;
     for(const r of Object.values(day.routines))for(const i of r.items)if(!i.done){i.done=false;i.changedAt=stamp();}
-    day.finalized=true;day.updatedAt=stamp();saveLocal();renderDay();renderPlanner();renderHistory();toast('Dia registrado no histórico.');
+    day.finalized=true;day.updatedAt=stamp();saveLocal();renderDay();renderPlanner();renderWeekly();renderTaskWeekly();renderSummary();renderHistory();toast('Dia registrado no histórico.');
   }
   function setSelectedDate(date) {
-    if(!date)return; selectedDate=date;ensureDay(date);ensureTaskDay(date);saveLocal();renderDay();renderTasks();renderPlanner();
+    if(!date)return; selectedDate=date;ensureDay(date);ensureTaskDay(date);saveLocal();renderDay();renderTasks();renderPlanner();renderWeekly();renderTaskWeekly();renderSummary();
   }
   function shiftSelectedDate(amount){
     const date=safeDate(selectedDate);date.setDate(date.getDate()+amount);
@@ -667,21 +744,23 @@
   }
   function csvCell(value) { return `"${String(value??'').replace(/"/g,'""')}"`; }
   function exportCSV() {
-    const rows=[['Data','Rotina','Ícone','Passo','Status','Dia concluído','Descrição da rotina','Descrição do passo','Horário agendado']];
-    for(const date of Object.keys(state.history).sort()) {
-      const day=state.history[date];
-      for(const routine of Object.values(day.routines||{}))for(const item of routine.items||[]) rows.push([date,routine.name,routine.icon,item.label,item.done?'Realizado':'Não realizado',day.finalized?'Sim':'Não',routine.description||'',item.description||'',routine.scheduledTime||'']);
+    const rows=[['Data','Rotina','Ícone','Passo','Status','Dia concluído','Descrição da rotina','Descrição do passo','Horário agendado','Duração (minutos)','Anotações do dia']];
+    for(const date of new Set([...Object.keys(state.history),...Object.keys(state.dayNotes||{})].sort())) {
+      const day=state.history[date]||{},note=state.dayNotes?.[date]?.text||'';
+      const previous=rows.length;
+      for(const routine of Object.values(day.routines||{}))for(const item of routine.items||[]) rows.push([date,routine.name,routine.icon,item.label,item.done?'Realizado':'Não realizado',day.finalized?'Sim':'Não',routine.description||'',item.description||'',routine.scheduledTime||'',routine.durationMinutes||45,note]);
+      if(previous===rows.length&&note)rows.push([date,'','','','','','','','','',note]);
     }
     if(rows.length===1){toast('Ainda não há registros para exportar.');return;}
     const csv='\ufeff'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=`ancora-historico-${isoToday()}.csv`;a.click();URL.revokeObjectURL(url);toast('Histórico exportado em CSV.');
   }
   function exportTaskCSV(){
-    const rows=[['Data','Frequência','Tarefa','Ícone','Tarefa concluída','Passo','Passo realizado','Descrição da tarefa','Descrição do passo','Horário sugerido']];
+    const rows=[['Data','Frequência','Tarefa','Ícone','Tarefa concluída','Passo','Passo realizado','Descrição da tarefa','Descrição do passo','Horário sugerido','Duração (minutos)']];
     for(const date of Object.keys(state.taskHistory).sort())for(const task of Object.values(state.taskHistory[date].tasks||{})){
       const base=[date,task.frequency==='biweekly'?'Quinzenal':'Semanal',task.name,task.icon,task.done?'Sim':'Não'];
-      if(!task.items?.length)rows.push([...base,'','',task.description||'','',task.scheduledTime||'']);
-      else for(const item of task.items)rows.push([...base,item.label,item.done?'Sim':'Não',task.description||'',item.description||'',task.scheduledTime||'']);
+      if(!task.items?.length)rows.push([...base,'','',task.description||'','',task.scheduledTime||'',task.durationMinutes||45]);
+      else for(const item of task.items)rows.push([...base,item.label,item.done?'Sim':'Não',task.description||'',item.description||'',task.scheduledTime||'',task.durationMinutes||45]);
     }
     if(rows.length===1){toast('Ainda não há tarefas no histórico.');return;}
     const csv='\ufeff'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
@@ -769,7 +848,12 @@
       taskHistory[date]={tasks:tasksForDay,excludedTasks,updatedAt};
       if(date>=isoToday())reconcileTaskDay(date,taskHistory[date],tasks);
     }
-    return {version:4,routines:[...routines.values()],tasks,areas,anchors,history,taskHistory};
+    const dayNotes={};
+    for(const date of new Set([...Object.keys(a.dayNotes||{}),...Object.keys(b.dayNotes||{})])){
+      const left=a.dayNotes?.[date],right=b.dayNotes?.[date];
+      dayNotes[date]=structuredClone(!left?right:!right?left:(right.updatedAt||'')>=(left.updatedAt||'')?right:left);
+    }
+    return {version:4,routines:[...routines.values()],tasks,areas,anchors,history,taskHistory,dayNotes};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -895,7 +979,17 @@
   $('#today-button').onclick=()=>setSelectedDate(isoToday());$('#selected-date').onchange=e=>setSelectedDate(e.target.value);
   $('#planner-today').onclick=()=>setSelectedDate(isoToday());$('#planner-date').onchange=e=>setSelectedDate(e.target.value);
   $('#planner-secondary-today').onclick=()=>setSelectedDate(isoToday());$('#planner-secondary-date').onchange=e=>setSelectedDate(e.target.value);
+  $$('.planner-mode-button').forEach(button=>button.onclick=()=>{plannerMode=button.dataset.plannerMode;try{localStorage.setItem(PLANNER_MODE_KEY,plannerMode);}catch{}renderPlanner();});
+  $('#planner-notes-input').addEventListener('input',event=>{
+    state.dayNotes[selectedDate]={text:event.target.value,updatedAt:stamp()};
+    saveLocal();
+  });
   $('#task-today').onclick=()=>setSelectedDate(isoToday());$('#task-date').onchange=e=>setSelectedDate(e.target.value);
+  const shiftSummaryMonth=amount=>{const [year,month]=selectedSummaryMonth.split('-').map(Number);const date=new Date(year,month-1+amount,1);selectedSummaryMonth=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;renderSummary();};
+  $('#summary-prev-month').onclick=()=>shiftSummaryMonth(-1);$('#summary-next-month').onclick=()=>shiftSummaryMonth(1);
+  $('#summary-today').onclick=()=>{selectedSummaryMonth=isoToday().slice(0,7);renderSummary();};
+  $('#summary-date').onchange=event=>{if(event.target.value){selectedSummaryMonth=event.target.value;renderSummary();}};
+  $('#summary-content').addEventListener('click',event=>{const button=event.target.closest('[data-summary-date][data-summary-section]');if(!button)return;setSelectedDate(button.dataset.summaryDate);setSection(button.dataset.summarySection==='tasks'?'tasks':'routines');if(button.dataset.summarySection==='tasks')setTaskView('day');else setView('day');});
   $('#weekly-prev').onclick=()=>shiftWeek(-1);$('#weekly-next').onclick=()=>shiftWeek(1);
   $('#weekly-today').onclick=()=>{selectedWeekDate=isoToday();renderWeekly();};
   $('#weekly-date').onchange=e=>{if(e.target.value){selectedWeekDate=e.target.value;renderWeekly();}};
@@ -903,6 +997,7 @@
   $('#task-week-today').onclick=()=>{selectedTaskWeekDate=isoToday();renderTaskWeekly();};
   $('#task-week-date').onchange=e=>{if(e.target.value){selectedTaskWeekDate=e.target.value;renderTaskWeekly();}};
   $('#planner-grid').addEventListener('click',event=>{const button=event.target.closest('[data-planner-routine]');if(button)openFocusRoutine(button.dataset.plannerRoutine);});
+  $('#planner-timeline').addEventListener('click',event=>{const routine=event.target.closest('[data-timeline-routine]'),task=event.target.closest('[data-timeline-task]');if(routine)openFocusRoutine(routine.dataset.timelineRoutine);else if(task)openTaskFocus(task.dataset.timelineTask);});
   for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{
     const remove=event.target.closest('[data-remove-task-day]');if(remove){removeTaskFromDay(remove.dataset.removeTaskDay);return;}
     const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);

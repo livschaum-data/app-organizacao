@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261019-task-remove-tab">
+  <link rel="stylesheet" href="styles.css?v=20261021-summary-timeline">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261019-task-remove-tab"></script>
+  <script defer src="app.js?v=20261021-summary-timeline"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -21,6 +21,7 @@
         <button type="button" class="sidebar-link active" data-section="planner" aria-current="page"><span>▦</span> Visão diária</button>
         <button type="button" class="sidebar-link" data-section="planner-secondary"><span>▧</span> Visão secundária</button>
         <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
+        <button type="button" class="sidebar-link" data-section="summary"><span>◷</span> Resumo</button>
         <button type="button" class="sidebar-link" data-section="anchors"><span>⚓</span> Âncoras</button>
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
         <button type="button" class="sidebar-link" data-section="tasks"><span>✓</span> Tarefas</button>
@@ -40,14 +41,17 @@
     <main>
       <section id="planner-workspace" class="workspace-view active-workspace">
         <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA</div><h1>Seu dia, em perspectiva.</h1><p id="planner-date-label" class="planner-date-label"></p><p>Suas âncoras e rotinas reunidas em um só lugar.</p>
-          <div class="date-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button></div>
+          <div class="date-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button><span id="planner-day-status" class="day-status hidden"></span></div>
         </div>
+        <div class="planner-mode" role="group" aria-label="Formato da visão diária"><button type="button" class="planner-mode-button active" data-planner-mode="blocks" aria-pressed="true">Blocos</button><button type="button" class="planner-mode-button" data-planner-mode="timeline" aria-pressed="false">Cronograma</button></div>
         <div id="planner-grid" class="planner-grid"></div>
+        <div id="planner-timeline" class="planner-timeline hidden"></div>
+        <section class="planner-notes planner-block" style="--area-color:#efe6dc;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✎</span><span>Anotações do dia</span></h2><div class="planner-block-body"><label class="sr-only" for="planner-notes-input">Anotações de <span id="planner-notes-date"></span></label><textarea id="planner-notes-input" maxlength="10000" placeholder="Ideias, lembretes ou algo que você queira guardar sobre este dia…"></textarea><small>Salvas automaticamente e sincronizadas com a sua conta.</small></div></section>
       </section>
 
       <section id="planner-secondary-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA SECUNDÁRIA</div><h1>Outro olhar para o dia.</h1><p id="planner-secondary-date-label" class="planner-date-label"></p><p>As âncoras das áreas escolhidas para esta visão.</p>
-          <div class="date-navigator"><button type="button" id="planner-secondary-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-secondary-date" type="date" aria-label="Escolher dia da visão secundária"><button type="button" id="planner-secondary-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-secondary-today" class="today-button">Hoje</button></div>
+          <div class="date-navigator"><button type="button" id="planner-secondary-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-secondary-date" type="date" aria-label="Escolher dia da visão secundária"><button type="button" id="planner-secondary-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-secondary-today" class="today-button">Hoje</button><span id="planner-secondary-day-status" class="day-status hidden"></span></div>
         </div>
         <div id="planner-secondary-grid" class="planner-secondary-grid"></div>
       </section>
@@ -57,6 +61,12 @@
           <div class="date-navigator"><button type="button" id="weekly-prev" class="round-button" aria-label="Semana anterior">←</button><input id="weekly-date" type="date" aria-label="Escolher semana"><button type="button" id="weekly-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="weekly-today" class="today-button">Esta semana</button></div>
         </div>
         <div id="weekly-grid" class="weekly-scroll"></div>
+      </section>
+
+      <section id="summary-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">ACOMPANHAMENTO</div><h1>Resumo dos seus dias.</h1><p>Veja quantos dias ainda têm rotinas ou tarefas pendentes.</p><div class="date-navigator"><button type="button" id="summary-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="summary-date" type="month" aria-label="Escolher mês do resumo"><button type="button" id="summary-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="summary-today" class="today-button">Mês atual</button></div></div>
+        <p class="summary-explainer">Rotinas contam como registradas ao concluir o dia. Tarefas contam quando são marcadas como concluídas. Dias futuros não entram no resumo.</p>
+        <div id="summary-content" class="summary-content"></div>
       </section>
 
       <section id="anchors-workspace" class="workspace-view">
@@ -77,7 +87,7 @@
           <button id="prev-day" class="round-button" aria-label="Dia anterior">←</button>
           <input id="selected-date" type="date" aria-label="Escolher dia">
           <button id="next-day" class="round-button" aria-label="Próximo dia">→</button>
-          <button id="today-button" class="today-button">Hoje</button>
+          <button id="today-button" class="today-button">Hoje</button><span id="routine-day-status" class="day-status hidden"></span>
         </div>
         <div class="progress-wrap">
           <div class="progress-copy"><span id="progress-label">Seu progresso</span><strong id="progress-value">0%</strong></div>
@@ -113,7 +123,7 @@
 
       <section id="tasks-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">TAREFAS</div><h1>Um compromisso de cada vez.</h1><p id="task-date-label" class="planner-date-label"></p><p>Tarefas semanais e quinzenais, com passos opcionais.</p>
-          <div id="task-day-navigator" class="date-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button></div>
+          <div id="task-day-navigator" class="date-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button><span id="task-day-status" class="day-status hidden"></span></div>
         </div>
         <div class="task-tab-bar"><nav class="tabs" aria-label="Seções de tarefas"><button type="button" class="tab task-tab active" data-task-view="day">Tarefas do dia</button><button type="button" class="tab task-tab" data-task-view="week">Visão semanal</button><button type="button" class="tab task-tab" data-task-view="history">Histórico</button><button type="button" class="tab task-tab" data-task-view="manage">Minhas tarefas</button></nav><button type="button" class="text-button task-add-button" id="add-task">＋ Nova tarefa</button></div>
         <section id="task-day-view" class="view task-view active-view"><div class="section-heading"><div><div class="eyebrow">PARA ESTE DIA</div><h2>Suas tarefas</h2></div></div><div id="task-day-list" class="task-groups"></div></section>
@@ -152,6 +162,7 @@
       <input type="hidden" id="task-id"><label class="field-label" for="task-name">Nome da tarefa</label><input class="text-input" id="task-name" maxlength="80" required placeholder="Ex.: Organizar documentos"><label class="field-label" for="task-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="task-description" maxlength="500" rows="2"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="task-icon">Ícone</label><input class="text-input icon-input" id="task-icon" maxlength="8" value="✓"></div><div class="field"><label class="field-label" for="task-color">Cor</label><input class="color-input" id="task-color" type="color" value="#87aaa2"></div></div>
       <label class="field-label" for="task-time">Horário sugerido <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="task-time" type="time">
+      <label class="field-label" for="task-duration">Duração no cronograma <span class="optional">(minutos, opcional)</span></label><input class="text-input routine-time-input" id="task-duration" type="number" min="15" max="480" step="15" placeholder="45">
       <label class="field-label" for="task-frequency">Frequência</label><select class="text-input" id="task-frequency"><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option></select>
       <fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="task-weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="task-start">Começa em</label><input class="text-input" id="task-start" type="date"></div><div class="field"><label class="field-label" for="task-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="task-end" type="date"></div></div><p id="task-biweekly-hint" class="schedule-hint hidden">A repetição quinzenal conta a partir da semana da data inicial, de segunda a domingo.</p>
@@ -168,6 +179,7 @@
       <label class="field-label" for="routine-description">Descrição da rotina <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="routine-description" maxlength="500" rows="2" placeholder="O que faz parte deste momento?"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="routine-icon">Ícone</label><input class="text-input icon-input" id="routine-icon" maxlength="8" value="✨" aria-label="Ícone"></div><div class="field"><label class="field-label" for="routine-color">Cor</label><input class="color-input" id="routine-color" type="color" value="#e8a59c"></div></div>
       <label class="field-label" for="routine-time">Horário agendado <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="routine-time" type="time">
+      <label class="field-label" for="routine-duration">Duração no cronograma <span class="optional">(minutos, opcional)</span></label><input class="text-input routine-time-input" id="routine-duration" type="number" min="15" max="480" step="15" placeholder="45">
       <fieldset class="weekday-field"><legend class="field-label">Repetir em</legend><div id="weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="routine-start">Começa em</label><input class="text-input" id="routine-start" type="date"></div><div class="field"><label class="field-label" for="routine-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="routine-end" type="date"></div></div>
       <div class="items-editor-head"><label class="field-label">Passos da rotina</label><button class="text-button" type="button" id="add-item">＋ Adicionar passo</button></div>
