@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261022-catalog-notes">
+  <link rel="stylesheet" href="styles.css?v=20261022-anchor-time">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261022-catalog-notes"></script>
+  <script defer src="app.js?v=20261022-anchor-time"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -207,6 +207,8 @@
       <label class="field-label" for="anchor-title">Nome da âncora</label><input class="text-input" id="anchor-title" maxlength="120" required placeholder="Ex.: Leitura">
       <div class="form-row"><div class="field"><label class="field-label" for="anchor-icon">Ícone</label><input class="text-input icon-input" id="anchor-icon" maxlength="8" value="✨"></div><div class="field"><label class="field-label" for="anchor-area">Área</label><select class="text-input" id="anchor-area" required></select></div></div>
       <label class="field-label" for="anchor-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="anchor-description" maxlength="500" rows="3" placeholder="Detalhes desta âncora"></textarea>
+      <label class="field-label" for="anchor-time">Horário sugerido <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="anchor-time" type="time">
+      <label class="field-label" for="anchor-duration">Duração no cronograma <span class="optional">(minutos, opcional)</span></label><input class="text-input routine-time-input" id="anchor-duration" type="number" min="15" max="480" step="15" placeholder="45">
       <label class="field-label" for="anchor-repeat-mode">Frequência</label><select class="text-input" id="anchor-repeat-mode"><option value="every-week">Todas as semanas</option><option value="month-weeks">Semanas específicas do mês</option></select>
       <fieldset id="anchor-month-weeks-field" class="weekday-field hidden"><legend class="field-label">Semanas do mês</legend><div id="anchor-month-week-options" class="weekday-options month-week-options"></div><p class="schedule-hint">As semanas vão de segunda a domingo. A semana 1 é a primeira com pelo menos quatro dias no mês.</p></fieldset>
       <fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="anchor-weekday-options" class="weekday-options"></div></fieldset>
