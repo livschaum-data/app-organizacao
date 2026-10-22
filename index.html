@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261022-block-results">
+  <link rel="stylesheet" href="styles.css?v=20261022-catalog-notes">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261022-block-results"></script>
+  <script defer src="app.js?v=20261022-catalog-notes"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -176,6 +176,7 @@
       <fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="task-weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="task-start">Começa em</label><input class="text-input" id="task-start" type="date"></div><div class="field"><label class="field-label" for="task-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="task-end" type="date"></div></div><p id="task-biweekly-hint" class="schedule-hint hidden">A repetição quinzenal conta a partir da semana da data inicial, de segunda a domingo.</p>
       <div class="items-editor-head"><label class="field-label">Passos <span class="optional">(opcionais)</span></label><button type="button" class="text-button" id="task-add-step">＋ Adicionar passo</button></div><div id="task-items-editor" class="routine-items-editor"></div>
+      <div id="task-notes-field" class="catalog-notes-field hidden"><label class="field-label" for="task-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input catalog-notes" id="task-notes" maxlength="20000" rows="8" placeholder="Anotações sobre esta tarefa"></textarea></div>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="task-delete">Excluir tarefa</button><span></span><button type="button" class="secondary-button" data-close="task-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar tarefa</button></div>
     </form>
   </dialog>
@@ -194,6 +195,7 @@
       <div class="items-editor-head"><label class="field-label">Passos da rotina</label><button class="text-button" type="button" id="add-item">＋ Adicionar passo</button></div>
       <p class="item-order-hint">Use as setas para mudar a ordem dos passos.</p>
       <div id="routine-items-editor" class="routine-items-editor"></div>
+      <div id="routine-notes-field" class="catalog-notes-field hidden"><label class="field-label" for="routine-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input catalog-notes" id="routine-notes" maxlength="20000" rows="8" placeholder="Anotações sobre esta rotina"></textarea></div>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-routine">Excluir rotina</button><span></span><button type="button" class="secondary-button" data-close="routine-dialog">Cancelar</button><button class="primary-button" type="submit">Salvar rotina</button></div>
     </form>
   </dialog>
@@ -209,6 +211,7 @@
       <fieldset id="anchor-month-weeks-field" class="weekday-field hidden"><legend class="field-label">Semanas do mês</legend><div id="anchor-month-week-options" class="weekday-options month-week-options"></div><p class="schedule-hint">As semanas vão de segunda a domingo. A semana 1 é a primeira com pelo menos quatro dias no mês.</p></fieldset>
       <fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="anchor-weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="anchor-start">Começa em <span class="optional">(opcional)</span></label><input class="text-input" id="anchor-start" type="date"></div><div class="field"><label class="field-label" for="anchor-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="anchor-end" type="date"></div></div>
+      <div id="anchor-notes-field" class="catalog-notes-field hidden"><label class="field-label" for="anchor-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input catalog-notes" id="anchor-notes" maxlength="20000" rows="8" placeholder="Anotações sobre esta âncora"></textarea></div>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-anchor">Excluir âncora</button><span></span><button type="button" class="secondary-button" data-close="anchor-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar âncora</button></div>
     </form>
   </dialog>

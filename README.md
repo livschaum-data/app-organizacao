@@ -37,4 +37,6 @@ No cadastro de tarefas, o tipo **Bloco** mantém frequência, agendamento, passo
 
 Ao abrir um bloco, o resultado pode ser **Realizado**, **Realizado parcialmente** ou **Não realizado**. Qualquer uma dessas respostas registra o bloco para o dia; sem resposta, ele continua pendente. Os passos podem ser marcados separadamente, mas não escolhem o resultado automaticamente. O resultado é sincronizado e exportado com o histórico.
 
+Âncoras, tarefas e rotinas têm um campo opcional de **Notas**, com até 20.000 caracteres. Ele aparece apenas ao editar um cadastro já existente. As notas ficam no registro do item e seguem a sincronização em nuvem; não aparecem nas listas nem na visualização do dia.
+
 A **Visão mensal** organiza as âncoras com semanas específicas nas colunas Semana 1 a Semana 5 e as áreas nas linhas. Âncoras configuradas para todas as semanas não entram nessa visão. As semanas seguem a mesma regra do cadastro de âncoras: de segunda a domingo, com a Semana 1 sendo a primeira que tem pelo menos quatro dias no mês escolhido. Os cabeçalhos usam a paleta azul enviada como referência.

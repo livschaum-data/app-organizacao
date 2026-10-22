@@ -214,6 +214,8 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-row-step.is-done{color:#a2aaa4;text-decoration:line-through}
 .task-consultation-badge{flex:none;padding:2px 5px;border-radius:5px;background:#e9ece4;color:#557168;font-size:9px;font-weight:700;white-space:nowrap}
 .task-block-frequency{flex:none;padding:2px 5px;border-radius:5px;background:#e3edf3;color:#46647a;font-size:9px;font-weight:700;white-space:nowrap}
+.catalog-notes-field{margin-top:16px}
+.catalog-notes{min-height:150px;resize:vertical;line-height:1.5}
 .block-result-badge{flex:none;padding:2px 5px;border-radius:5px;font-size:9px;font-weight:700;white-space:nowrap}
 .block-result-badge.is-realized,.weekly-block-result.is-realized{background:#dceee0;color:#3b7656}
 .block-result-badge.is-partial,.weekly-block-result.is-partial{background:#fff0cf;color:#916923}
