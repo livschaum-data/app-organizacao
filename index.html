@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261021-summary-timeline">
+  <link rel="stylesheet" href="styles.css?v=20261022-monthly-color-card">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261021-summary-timeline"></script>
+  <script defer src="app.js?v=20261022-monthly-view"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -21,6 +21,7 @@
         <button type="button" class="sidebar-link active" data-section="planner" aria-current="page"><span>▦</span> Visão diária</button>
         <button type="button" class="sidebar-link" data-section="planner-secondary"><span>▧</span> Visão secundária</button>
         <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
+        <button type="button" class="sidebar-link" data-section="monthly"><span>▦</span> Visão mensal</button>
         <button type="button" class="sidebar-link" data-section="summary"><span>◷</span> Resumo</button>
         <button type="button" class="sidebar-link" data-section="anchors"><span>⚓</span> Âncoras</button>
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
@@ -61,6 +62,13 @@
           <div class="date-navigator"><button type="button" id="weekly-prev" class="round-button" aria-label="Semana anterior">←</button><input id="weekly-date" type="date" aria-label="Escolher semana"><button type="button" id="weekly-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="weekly-today" class="today-button">Esta semana</button></div>
         </div>
         <div id="weekly-grid" class="weekly-scroll"></div>
+      </section>
+
+      <section id="monthly-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">VISÃO MENSAL</div><h1>Suas semanas do mês.</h1><p id="monthly-range-label" class="planner-date-label"></p><p>Âncoras programadas para semanas específicas, organizadas por área.</p>
+          <div class="date-navigator"><button type="button" id="monthly-prev" class="round-button" aria-label="Mês anterior">←</button><input id="monthly-date" type="month" aria-label="Escolher mês da visão mensal"><button type="button" id="monthly-next" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="monthly-today" class="today-button">Este mês</button></div>
+        </div>
+        <div id="monthly-grid" class="weekly-scroll"></div>
       </section>
 
       <section id="summary-workspace" class="workspace-view">
@@ -164,6 +172,7 @@
       <label class="field-label" for="task-time">Horário sugerido <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="task-time" type="time">
       <label class="field-label" for="task-duration">Duração no cronograma <span class="optional">(minutos, opcional)</span></label><input class="text-input routine-time-input" id="task-duration" type="number" min="15" max="480" step="15" placeholder="45">
       <label class="field-label" for="task-frequency">Frequência</label><select class="text-input" id="task-frequency"><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option></select>
+      <label class="task-consultation-option"><input type="checkbox" id="task-consultation"><span><strong>Tarefa de consulta</strong><small>Aparece nos dias agendados e desaparece quando o dia passa, sem exigir conclusão.</small></span></label>
       <fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="task-weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="task-start">Começa em</label><input class="text-input" id="task-start" type="date"></div><div class="field"><label class="field-label" for="task-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="task-end" type="date"></div></div><p id="task-biweekly-hint" class="schedule-hint hidden">A repetição quinzenal conta a partir da semana da data inicial, de segunda a domingo.</p>
       <div class="items-editor-head"><label class="field-label">Passos <span class="optional">(opcionais)</span></label><button type="button" class="text-button" id="task-add-step">＋ Adicionar passo</button></div><div id="task-items-editor" class="routine-items-editor"></div>

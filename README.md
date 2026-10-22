@@ -30,3 +30,7 @@ Na Visão diária, o seletor Blocos/Cronograma alterna entre os cartões existen
 As anotações pertencem à data aberta na Visão diária, são salvas automaticamente e seguem a mesma sincronização em nuvem dos demais dados. Também entram na exportação CSV do histórico de rotinas, inclusive quando a data tem apenas anotação.
 
 O Resumo mostra, por mês e por semana, quantos dias têm rotinas ou tarefas pendentes. As semanas podem ser expandidas para abrir diretamente a data correspondente. Datas passadas incompletas aparecem em vermelho nas visões diária, semanal e no histórico. O acompanhamento começa na primeira data com registros existentes; dias anteriores não são contados como pendentes.
+
+Uma tarefa pode ser marcada como **tarefa de consulta** no cadastro. Ela aparece normalmente nos dias agendados e seus passos podem ser lidos ao abri-la, sem caixas de conclusão. Quando a data passa, deixa de aparecer nas visões do dia, da semana e no histórico visível, e não entra nas contagens de pendências. Os registros continuam preservados na sincronização e na exportação CSV caso a marcação seja alterada depois.
+
+A **Visão mensal** organiza as âncoras com semanas específicas nas colunas Semana 1 a Semana 5 e as áreas nas linhas. Âncoras configuradas para todas as semanas não entram nessa visão. As semanas seguem a mesma regra do cadastro de âncoras: de segunda a domingo, com a Semana 1 sendo a primeira que tem pelo menos quatro dias no mês escolhido. Os cabeçalhos usam a paleta azul enviada como referência.

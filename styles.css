@@ -210,6 +210,26 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-row-step{display:block;padding:1px 0;overflow-wrap:anywhere}
 .task-row-step::before{content:'·';margin-right:5px}
 .task-row-step.is-done{color:#a2aaa4;text-decoration:line-through}
+.task-consultation-badge{flex:none;padding:2px 5px;border-radius:5px;background:#e9ece4;color:#557168;font-size:9px;font-weight:700;white-space:nowrap}
+.task-consultation-option{display:flex;align-items:flex-start;gap:10px;margin:16px 0 18px;padding:12px;border:1px solid #dce6dc;border-radius:9px;background:#f1f5ee;cursor:pointer}
+.task-consultation-option input{flex:none;margin:2px 0 0;width:16px;height:16px;accent-color:#5f8d7d}
+.task-consultation-option span{display:grid;gap:3px}.task-consultation-option strong{font-size:11px}.task-consultation-option small{font-size:10px;line-height:1.4;color:var(--muted)}
+.consultation-step{padding:8px 0;color:var(--ink);font-size:12px;line-height:1.4}
+.consultation-step+.consultation-step{border-top:1px solid #eae6e0}
+.consultation-step small{display:block;margin-top:2px;color:var(--muted);font-size:10px;white-space:pre-wrap}
+
+/* Visão mensal por semana, com a paleta azul do planejamento. */
+.monthly-table{min-width:800px}
+.monthly-table thead .monthly-week{background:var(--week-color);color:var(--week-ink);padding:10px 9px 12px}
+.monthly-week-pill{display:inline-block;color:inherit;font:800 10px/1.2 'DM Sans',sans-serif;text-transform:lowercase;white-space:nowrap}
+.monthly-table .monthly-week small{display:block;margin-top:7px;color:inherit;opacity:.8;font-size:9px;font-weight:500;text-transform:capitalize}
+.monthly-week-1{--week-color:#c5eef5;--week-ink:#17424c}
+.monthly-week-2{--week-color:#78d4e3;--week-ink:#153d45}
+.monthly-week-3{--week-color:#00afca;--week-ink:#052c34}
+.monthly-week-4{--week-color:#087ec5;--week-ink:#fff}
+.monthly-week-5{--week-color:#1826b8;--week-ink:#fff}
+.monthly-anchor small{display:block;margin-top:3px;color:#5f7576;font-size:9px;line-height:1.25;text-transform:capitalize}
+.monthly-table tbody .monthly-empty{padding:28px 12px;text-align:center;background:#f5f2ed;color:var(--muted);font-size:11px}
 .task-remove-day{display:block;margin:0 2px 0 auto;padding:1px 0;border:0;background:transparent;color:#986f68;font-size:9px;font-weight:600}
 .task-remove-day:hover{color:#74483f;text-decoration:underline}
 .task-completion{display:flex;align-items:center;gap:11px;margin:16px 0 22px;padding:14px 16px;border:1px solid #e0e8df;border-radius:11px;background:#eff5ee;font-size:13px;font-weight:700;cursor:pointer}
