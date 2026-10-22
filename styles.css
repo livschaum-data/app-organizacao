@@ -191,6 +191,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-routine-time{flex:none;margin-left:auto;padding-left:7px;color:#5c7376;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .planner-task-block{--area-color:#e2eee6}
 .planner-task-biweekly{--area-color:#e9e3f0}
+.planner-block-tasks{--area-color:#d9e7f0}
 .task-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .task-tab-bar{display:flex;align-items:flex-end;gap:14px;border-bottom:1px solid var(--line)}
 .task-tab-bar .tabs{flex:1;min-width:0;margin-top:12px;border-bottom:0;white-space:nowrap}
@@ -198,6 +199,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 @media(max-width:700px){.task-tab-bar{flex-wrap:wrap;justify-content:flex-end;gap:0}.task-tab-bar .tabs{order:2;flex:0 0 100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}.task-tab-bar .tabs::-webkit-scrollbar{display:none}.task-add-button{order:1;margin:0}}
 .task-group{min-width:0;padding:13px 15px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
 .task-group h3{margin:0 0 9px;color:var(--ink);font:700 14px Manrope,sans-serif}
+.task-block-group{grid-column:1/-1;background:#f0f5f8;border-color:#d6e3ec}
 .task-entry.has-remove{padding-bottom:5px}
 .task-row{display:block;width:100%;padding:5px 2px;border:0;background:transparent;text-align:left}
 .task-row:hover{color:var(--accent-dark)}
@@ -211,9 +213,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-row-step::before{content:'·';margin-right:5px}
 .task-row-step.is-done{color:#a2aaa4;text-decoration:line-through}
 .task-consultation-badge{flex:none;padding:2px 5px;border-radius:5px;background:#e9ece4;color:#557168;font-size:9px;font-weight:700;white-space:nowrap}
-.task-consultation-option{display:flex;align-items:flex-start;gap:10px;margin:16px 0 18px;padding:12px;border:1px solid #dce6dc;border-radius:9px;background:#f1f5ee;cursor:pointer}
-.task-consultation-option input{flex:none;margin:2px 0 0;width:16px;height:16px;accent-color:#5f8d7d}
-.task-consultation-option span{display:grid;gap:3px}.task-consultation-option strong{font-size:11px}.task-consultation-option small{font-size:10px;line-height:1.4;color:var(--muted)}
+.task-block-frequency{flex:none;padding:2px 5px;border-radius:5px;background:#e3edf3;color:#46647a;font-size:9px;font-weight:700;white-space:nowrap}
 .consultation-step{padding:8px 0;color:var(--ink);font-size:12px;line-height:1.4}
 .consultation-step+.consultation-step{border-top:1px solid #eae6e0}
 .consultation-step small{display:block;margin-top:2px;color:var(--muted);font-size:10px;white-space:pre-wrap}
@@ -228,7 +228,6 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .monthly-week-3{--week-color:#00afca;--week-ink:#052c34}
 .monthly-week-4{--week-color:#087ec5;--week-ink:#fff}
 .monthly-week-5{--week-color:#1826b8;--week-ink:#fff}
-.monthly-anchor small{display:block;margin-top:3px;color:#5f7576;font-size:9px;line-height:1.25;text-transform:capitalize}
 .monthly-table tbody .monthly-empty{padding:28px 12px;text-align:center;background:#f5f2ed;color:var(--muted);font-size:11px}
 .task-remove-day{display:block;margin:0 2px 0 auto;padding:1px 0;border:0;background:transparent;color:#986f68;font-size:9px;font-weight:600}
 .task-remove-day:hover{color:#74483f;text-decoration:underline}
@@ -326,6 +325,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .timeline-event time{flex:none;font-size:10px;font-weight:800;color:#475e60}
 .timeline-event span{font-weight:700;overflow-wrap:anywhere}
 .timeline-task{background:#f6ede7}
+.timeline-block{background:color-mix(in srgb,var(--event-color) 32%,#edf4f8)}
 .summary-content{padding-bottom:44px}
 .summary-explainer{max-width:640px;margin:-8px 0 17px;color:var(--muted);font-size:11px;line-height:1.5}
 .summary-totals{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0 0 17px}
