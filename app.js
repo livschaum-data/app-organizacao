@@ -256,6 +256,7 @@
   }
   function renderDateHeader() {
     $('#selected-date').value = selectedDate;
+    $('#routine-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
     const d = safeDate(selectedDate), today = isoToday();
     $('#today-label').textContent = selectedDate === today ? 'UM PONTO DE APOIO PARA O SEU DIA' : fmtDate(selectedDate).toLocaleUpperCase('pt-BR');
     $('#greeting').textContent = selectedDate === today ? 'Um passo de cada vez.' : fmtDate(selectedDate, {day:'numeric',month:'long'});
@@ -340,6 +341,7 @@
   }
   function renderTasks(){
     $('#task-date').value=selectedDate;
+    $('#task-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
     $('#task-date-label').textContent=fmtDate(selectedDate);
     $('#task-today').classList.toggle('hidden',selectedDate===isoToday());
     renderDayStatus('#task-day-status',selectedDate,'tasks');
@@ -449,9 +451,11 @@
   function renderPlanner(){
     $('#planner-date').value=selectedDate;
     $('#planner-date-label').textContent=fmtDate(selectedDate);
+    $('#planner-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
     $('#planner-today').classList.toggle('hidden',selectedDate===isoToday());
     $('#planner-secondary-date').value=selectedDate;
     $('#planner-secondary-date-label').textContent=fmtDate(selectedDate);
+    $('#planner-secondary-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
     $('#planner-secondary-today').classList.toggle('hidden',selectedDate===isoToday());
     renderDayStatus('#planner-day-status',selectedDate);
     renderDayStatus('#planner-secondary-day-status',selectedDate);

@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261022-anchor-time">
+  <link rel="stylesheet" href="styles.css?v=20261022-planner-weekday">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261022-anchor-time"></script>
+  <script defer src="app.js?v=20261022-all-weekdays"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -42,7 +42,7 @@
     <main>
       <section id="planner-workspace" class="workspace-view active-workspace">
         <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA</div><h1>Seu dia, em perspectiva.</h1><p id="planner-date-label" class="planner-date-label"></p><p>Suas âncoras e rotinas reunidas em um só lugar.</p>
-          <div class="date-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button><span id="planner-day-status" class="day-status hidden"></span></div>
+          <div class="date-navigator planner-day-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><span id="planner-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button><span id="planner-day-status" class="day-status hidden"></span></div>
         </div>
         <div class="planner-mode" role="group" aria-label="Formato da visão diária"><button type="button" class="planner-mode-button active" data-planner-mode="blocks" aria-pressed="true">Blocos</button><button type="button" class="planner-mode-button" data-planner-mode="timeline" aria-pressed="false">Cronograma</button></div>
         <div id="planner-grid" class="planner-grid"></div>
@@ -52,7 +52,7 @@
 
       <section id="planner-secondary-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA SECUNDÁRIA</div><h1>Outro olhar para o dia.</h1><p id="planner-secondary-date-label" class="planner-date-label"></p><p>As âncoras das áreas escolhidas para esta visão.</p>
-          <div class="date-navigator"><button type="button" id="planner-secondary-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="planner-secondary-date" type="date" aria-label="Escolher dia da visão secundária"><button type="button" id="planner-secondary-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-secondary-today" class="today-button">Hoje</button><span id="planner-secondary-day-status" class="day-status hidden"></span></div>
+          <div class="date-navigator planner-day-navigator"><button type="button" id="planner-secondary-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="planner-secondary-date" type="date" aria-label="Escolher dia da visão secundária"><span id="planner-secondary-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="planner-secondary-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-secondary-today" class="today-button">Hoje</button><span id="planner-secondary-day-status" class="day-status hidden"></span></div>
         </div>
         <div id="planner-secondary-grid" class="planner-secondary-grid"></div>
       </section>
@@ -91,9 +91,9 @@
         <div class="eyebrow" id="today-label">UM PONTO DE APOIO PARA O SEU DIA</div>
         <h1 id="greeting">Um passo de cada vez.</h1>
         <p>Um espaço tranquilo para acompanhar cada cuidado, um passo de cada vez.</p>
-        <div class="date-navigator">
+        <div class="date-navigator planner-day-navigator">
           <button id="prev-day" class="round-button" aria-label="Dia anterior">←</button>
-          <input id="selected-date" type="date" aria-label="Escolher dia">
+          <span class="planner-date-with-weekday"><input id="selected-date" type="date" aria-label="Escolher dia"><span id="routine-weekday" class="planner-weekday" aria-live="polite"></span></span>
           <button id="next-day" class="round-button" aria-label="Próximo dia">→</button>
           <button id="today-button" class="today-button">Hoje</button><span id="routine-day-status" class="day-status hidden"></span>
         </div>
@@ -131,7 +131,7 @@
 
       <section id="tasks-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">TAREFAS</div><h1>Um compromisso de cada vez.</h1><p id="task-date-label" class="planner-date-label"></p><p>Tarefas semanais e quinzenais, com passos opcionais.</p>
-          <div id="task-day-navigator" class="date-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button><span id="task-day-status" class="day-status hidden"></span></div>
+          <div id="task-day-navigator" class="date-navigator planner-day-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><span id="task-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button><span id="task-day-status" class="day-status hidden"></span></div>
         </div>
         <div class="task-tab-bar"><nav class="tabs" aria-label="Seções de tarefas"><button type="button" class="tab task-tab active" data-task-view="day">Tarefas do dia</button><button type="button" class="tab task-tab" data-task-view="week">Visão semanal</button><button type="button" class="tab task-tab" data-task-view="history">Histórico</button><button type="button" class="tab task-tab" data-task-view="manage">Minhas tarefas</button></nav><button type="button" class="text-button task-add-button" id="add-task">＋ Nova tarefa</button></div>
         <section id="task-day-view" class="view task-view active-view"><div class="section-heading"><div><div class="eyebrow">PARA ESTE DIA</div><h2>Suas tarefas</h2></div></div><div id="task-day-list" class="task-groups"></div></section>
