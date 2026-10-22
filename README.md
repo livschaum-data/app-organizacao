@@ -35,4 +35,6 @@ Uma tarefa pode ter o tipo **Consulta** no cadastro. Ela aparece normalmente nos
 
 No cadastro de tarefas, o tipo **Bloco** mantém frequência, agendamento, passos e conclusão das tarefas comuns. Os blocos aparecem em cartões próprios na visão secundária e em Tarefas do dia, além de uma linha separada na visão semanal de tarefas. Sua conclusão entra no histórico, no resumo e na exportação CSV.
 
+Ao abrir um bloco, o resultado pode ser **Realizado**, **Realizado parcialmente** ou **Não realizado**. Qualquer uma dessas respostas registra o bloco para o dia; sem resposta, ele continua pendente. Os passos podem ser marcados separadamente, mas não escolhem o resultado automaticamente. O resultado é sincronizado e exportado com o histórico.
+
 A **Visão mensal** organiza as âncoras com semanas específicas nas colunas Semana 1 a Semana 5 e as áreas nas linhas. Âncoras configuradas para todas as semanas não entram nessa visão. As semanas seguem a mesma regra do cadastro de âncoras: de segunda a domingo, com a Semana 1 sendo a primeira que tem pelo menos quatro dias no mês escolhido. Os cabeçalhos usam a paleta azul enviada como referência.

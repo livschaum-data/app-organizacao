@@ -214,6 +214,10 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-row-step.is-done{color:#a2aaa4;text-decoration:line-through}
 .task-consultation-badge{flex:none;padding:2px 5px;border-radius:5px;background:#e9ece4;color:#557168;font-size:9px;font-weight:700;white-space:nowrap}
 .task-block-frequency{flex:none;padding:2px 5px;border-radius:5px;background:#e3edf3;color:#46647a;font-size:9px;font-weight:700;white-space:nowrap}
+.block-result-badge{flex:none;padding:2px 5px;border-radius:5px;font-size:9px;font-weight:700;white-space:nowrap}
+.block-result-badge.is-realized,.weekly-block-result.is-realized{background:#dceee0;color:#3b7656}
+.block-result-badge.is-partial,.weekly-block-result.is-partial{background:#fff0cf;color:#916923}
+.block-result-badge.is-not-realized,.weekly-block-result.is-not-realized{background:#f8e0dc;color:#a3544c}
 .consultation-step{padding:8px 0;color:var(--ink);font-size:12px;line-height:1.4}
 .consultation-step+.consultation-step{border-top:1px solid #eae6e0}
 .consultation-step small{display:block;margin-top:2px;color:var(--muted);font-size:10px;white-space:pre-wrap}
@@ -233,6 +237,12 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-remove-day:hover{color:#74483f;text-decoration:underline}
 .task-completion{display:flex;align-items:center;gap:11px;margin:16px 0 22px;padding:14px 16px;border:1px solid #e0e8df;border-radius:11px;background:#eff5ee;font-size:13px;font-weight:700;cursor:pointer}
 .task-completion input{width:19px;height:19px;accent-color:#6e9d83}
+.block-result{display:grid;gap:7px;margin:16px 0 22px;padding:0;border:0}
+.block-result legend{margin-bottom:8px;color:var(--accent-dark);font-size:11px;font-weight:700}
+.block-result label{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #dce5e7;border-radius:9px;background:#f9fbfb;font-size:12px;cursor:pointer}
+.block-result label:has(input:checked){border-color:#79a7ad;background:#e9f2f3;font-weight:700}
+.block-result input{width:17px;height:17px;margin:0;accent-color:var(--accent-dark)}
+.block-result .text-button{justify-self:start;padding:4px 0}
 .task-manage-card .manage-info small{line-height:1.4}
 .weekly-scroll{max-width:100%;overflow-x:auto;padding-bottom:18px;margin-bottom:25px}
 .weekly-table{width:100%;min-width:1030px;table-layout:fixed;border-collapse:separate;border-spacing:5px;color:var(--ink)}
@@ -258,8 +268,10 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-week-table tbody td{vertical-align:top}
 .weekly-task{width:100%;border:0;border-radius:0;background:transparent;text-align:left;color:var(--ink);font-family:'DM Sans',sans-serif;font-weight:400;cursor:pointer}
 .weekly-task:hover{color:var(--accent-dark)}
-.weekly-task>span:last-child{min-width:0;overflow-wrap:anywhere}
-.weekly-task.is-done>span:last-child{color:#75847d;text-decoration:line-through}
+.weekly-task{flex-wrap:wrap}
+.weekly-task>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+.weekly-task.is-done>span:nth-child(2){color:#75847d;text-decoration:line-through}
+.weekly-block-result{flex:1 0 calc(100% - 16px);width:max-content;margin-left:16px;padding:2px 4px;border-radius:4px;font-size:9px;font-weight:700}
 .workspace-heading{padding-top:47px}.area-heading{margin-top:42px}
 .anchor-filter{display:flex;align-items:center;gap:10px;margin:-4px 0 17px;color:var(--muted);font-size:11px;font-weight:600}
 .anchor-filter select{min-width:175px;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);padding:9px 31px 9px 11px;font-size:11px}
