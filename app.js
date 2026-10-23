@@ -405,9 +405,14 @@
     return {routinePending,taskPending,hasRoutines:routines.length>0,hasTasks:tasks.length>0,past:date<isoToday()};
   }
   function renderDayStatus(selector,date,kind='both'){
-    const status=dayStatus(date),pending=status.past&&((kind==='routines'&&status.routinePending)||(kind==='tasks'&&status.taskPending)||(kind==='both'&&(status.routinePending||status.taskPending)));
-    const element=$(selector);element.classList.toggle('hidden',!pending);
-    element.textContent=pending?'Dia incompleto':'';
+    const status=dayStatus(date);
+    const hasItems=kind==='routines'?status.hasRoutines:kind==='tasks'?status.hasTasks:status.hasRoutines||status.hasTasks;
+    const hasPending=kind==='routines'?status.routinePending:kind==='tasks'?status.taskPending:status.routinePending||status.taskPending;
+    const pending=status.past&&hasPending,complete=date<=isoToday()&&hasItems&&!hasPending;
+    const element=$(selector);
+    element.classList.toggle('hidden',!pending&&!complete);
+    element.classList.toggle('is-complete',complete);
+    element.textContent=pending?'Dia incompleto':complete?'Dia completo':'';
   }
   function renderNotes(){
     $('#planner-notes-date').textContent=fmtDate(selectedDate);

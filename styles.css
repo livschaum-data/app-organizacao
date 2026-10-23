@@ -314,6 +314,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 /* Anotações, resumo e cronograma da visão diária. */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .day-status{display:inline-flex;align-items:center;border:1px solid #d79998;background:#fae7e4;color:#9a4549;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:800;white-space:nowrap}
+.day-status.is-complete{border-color:#8cba9c;background:#e8f4eb;color:#306849}
 .date-navigator{flex-wrap:wrap}
 .history-card.is-incomplete{border-left:4px solid #c74d55;background:#fff9f7}
 .weekly-table thead .weekly-incomplete{box-shadow:inset 0 -5px #c74d55,0 0 0 2px #c74d55}
