@@ -575,7 +575,9 @@
     $('#planner-grid').innerHTML=`${primaryBlocks.theme}<div class="planner-areas">${primaryBlocks.other||'<p class="planner-empty">Nenhuma área na visão principal.</p>'}</div>${routineBlock}`;
     const actions=state.actions.filter(action=>actionIsScheduled(action,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const actionBlock=actions.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${actions.map(action=>{const area=state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted);return `<div class="planner-item planner-action-item"><button type="button" class="planner-action-link" data-open-action="${escapeHTML(action.id)}">${escapeHTML(action.title)}</button>${area?`<span class="planner-action-area-tag" style="--tag-color:${escapeHTML(area.color||'#dcebe7')};--tag-ink:${plannerHeadingInk(area.color)}">${escapeHTML(area.name)}</span>`:''}</div>`;}).join('')}</div></section>`:'';
-    $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}${blockGroup(taskDay,true)}${actionBlock}`;
+    const occurrences=state.occurrences.filter(item=>occurrenceIsScheduled(item,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    const occurrenceBlock=occurrences.length?`<section class="planner-block planner-block-occurrences"><h2><span class="planner-heading-icon" aria-hidden="true">◉</span><span>Acontecimentos</span></h2><div class="planner-block-body">${occurrences.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder;return `<div class="planner-item planner-action-item"><span class="planner-item-icon" aria-hidden="true">${escapeHTML(item.icon||kind.icon)}</span><button type="button" class="planner-action-link" data-open-occurrence="${escapeHTML(item.id)}">${escapeHTML(item.title)}</button><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span></div>`;}).join('')}</div></section>`:'';
+    $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}${blockGroup(taskDay,true)}${actionBlock}${occurrenceBlock}`;
     if($('#timeline-workspace').classList.contains('active-workspace'))renderTimeline();
     renderNotes();
     renderEntries();
@@ -836,7 +838,7 @@
   function occurrenceIsScheduled(item,date){
     if(item.deleted)return false;
     if(item.type==='birthday')return Boolean(item.scheduledDate)&&item.scheduledDate.slice(5)===date.slice(5);
-    if(item.schedule==='date')return item.scheduledDate===date;
+    if(item.schedule==='date')return Boolean(item.scheduledDate)&&date>=item.scheduledDate&&date<=(item.scheduledEndDate||item.scheduledDate);
     if(item.schedule==='month')return item.scheduledMonth===date.slice(0,7)&&(!item.week||Number(item.week)===monthWeekNumber(date));
     if(item.schedule!=='recurrence'||item.type!=='reminder')return false;
     if(item.startDate&&date<item.startDate)return false;
@@ -856,7 +858,7 @@
   }
   function occurrenceScheduleLabel(item){
     if(item.type==='birthday'&&item.scheduledDate)return `Todo ano em ${fmtDate(item.scheduledDate,{day:'numeric',month:'long'})}`;
-    if(item.schedule==='date'&&item.scheduledDate)return fmtDate(item.scheduledDate,{day:'numeric',month:'short',year:'numeric'});
+    if(item.schedule==='date'&&item.scheduledDate){const start=fmtDate(item.scheduledDate,{day:'numeric',month:'short',year:'numeric'});return item.scheduledEndDate&&item.scheduledEndDate!==item.scheduledDate?`${start} a ${fmtDate(item.scheduledEndDate,{day:'numeric',month:'short',year:'numeric'})}`:start;}
     if(item.schedule==='month')return `${item.week?`Semana ${item.week} · `:''}${fmtDate(`${item.scheduledMonth}-01`,{month:'long',year:'numeric'})}`;
     const days=(item.weekdays||[]).map(day=>WEEKDAYS[day]).join(', '),weeks=item.monthWeeks?.length?` · semanas ${item.monthWeeks.join(', ')}`:'';
     return `${days||'Sem dias'}${weeks}`;
@@ -867,7 +869,7 @@
   }
   function renderOccurrenceList(items){
     const search=$('#occurrence-filter-search').value.trim().toLocaleLowerCase('pt-BR'),type=$('#occurrence-filter-type').value,schedule=$('#occurrence-filter-schedule').value,month=$('#occurrence-filter-month').value;
-    const filtered=items.filter(item=>(!search||[item.title,item.description,item.notes].some(value=>String(value||'').toLocaleLowerCase('pt-BR').includes(search)))&&(!type||item.type===type)&&(!schedule||(item.type==='birthday'?schedule==='recurrence':item.schedule===schedule))&&(!month||(item.schedule==='recurrence'?occurrenceDatesInMonth(item,month).length>0:occurrenceMonth(item,Number(month.slice(0,4)))===month)));
+    const filtered=items.filter(item=>(!search||[item.title,item.description,item.notes].some(value=>String(value||'').toLocaleLowerCase('pt-BR').includes(search)))&&(!type||item.type===type)&&(!schedule||(item.type==='birthday'?schedule==='recurrence':item.schedule===schedule))&&(!month||(item.schedule==='month'?occurrenceMonth(item,Number(month.slice(0,4)))===month:occurrenceDatesInMonth(item,month).length>0)));
     const sortBy=$('#occurrence-sort-by').value,direction=$('#occurrence-sort-direction').value==='desc'?-1:1;
     const sortValue=item=>({date:item.type==='birthday'?item.scheduledDate?.slice(5)||'':item.scheduledDate||item.scheduledMonth||item.startDate||'',title:item.title,type:OCCURRENCE_TYPES[item.type]?.label||'',created:(item.createdAt||'').slice(0,10)})[sortBy]||'';
     filtered.sort((a,b)=>direction*sortValue(a).localeCompare(sortValue(b),'pt-BR',{numeric:true})||a.title.localeCompare(b.title,'pt-BR'));
@@ -882,7 +884,7 @@
     $$('.occurrence-tab').forEach(button=>{const active=button.dataset.occurrenceView===occurrenceView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const items=state.occurrences.filter(item=>!item.deleted),[year,month]=selectedOccurrenceMonth.split('-').map(Number);
     if(occurrenceView==='month'){
-      const columns=Array.from({length:12},(_,index)=>{const key=`${year}-${String(index+1).padStart(2,'0')}`;const entries=items.filter(item=>item.schedule==='recurrence'?occurrenceDatesInMonth(item,key).length>0:occurrenceMonth(item,year)===key).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));return `<section class="action-month-column occurrence-month-column${key===selectedOccurrenceMonth?' is-selected':''}"><header><span>${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span><b>${entries.length}</b></header><div class="action-card-list">${entries.map(occurrenceCard).join('')}<button type="button" class="action-add-inline" data-add-occurrence-month="${key}">＋ Adicionar acontecimento</button></div></section>`;});
+      const columns=Array.from({length:12},(_,index)=>{const key=`${year}-${String(index+1).padStart(2,'0')}`;const entries=items.filter(item=>item.schedule==='month'?occurrenceMonth(item,year)===key:occurrenceDatesInMonth(item,key).length>0).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));return `<section class="action-month-column occurrence-month-column${key===selectedOccurrenceMonth?' is-selected':''}"><header><span>${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span><b>${entries.length}</b></header><div class="action-card-list">${entries.map(occurrenceCard).join('')}<button type="button" class="action-add-inline" data-add-occurrence-month="${key}">＋ Adicionar acontecimento</button></div></section>`;});
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Acontecimentos por mês" tabindex="0">${columns.join('')}</div>`;
       const board=$('#occurrences-content .action-month-board'),selected=$('#occurrences-content .action-month-column.is-selected');if(selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);
     }else if(occurrenceView==='date'){
@@ -903,6 +905,7 @@
     schedule.disabled=type==='birthday';
     const mode=schedule.value;
     $('#occurrence-month-field').classList.toggle('hidden',mode!=='month');$('#occurrence-date-field').classList.toggle('hidden',mode!=='date');$('#occurrence-recurrence-field').classList.toggle('hidden',mode!=='recurrence');
+    $('#occurrence-end-date-field').classList.toggle('hidden',mode!=='date'||!['event','holiday'].includes(type));
     $('#occurrence-annual-hint').classList.toggle('hidden',type!=='birthday');
     $('#occurrence-month-weeks-field').classList.toggle('hidden',mode!=='recurrence'||$('#occurrence-repeat-mode').value!=='month-weeks');
   }
@@ -910,16 +913,17 @@
     const item=state.occurrences.find(entry=>entry.id===id&&!entry.deleted);
     $('#occurrence-form').reset();$('#occurrence-id').value=item?.id||'';$('#occurrence-dialog-title').textContent=item?'Editar acontecimento':'Novo acontecimento';
     $('#occurrence-title').value=item?.title||'';$('#occurrence-type').value=item?.type||'reminder';$('#occurrence-description').value=item?.description||'';$('#occurrence-icon').value=item?.icon||'';$('#occurrence-color').value=item?.color||'#5DFF5D';
-    $('#occurrence-schedule').value=item?.schedule||'date';$('#occurrence-scheduled-month').value=item?.scheduledMonth||selectedOccurrenceMonth;$('#occurrence-scheduled-date').value=item?.scheduledDate||selectedDate;$('#occurrence-week').value=item?.week||'';
+    $('#occurrence-schedule').value=item?.schedule||'date';$('#occurrence-scheduled-month').value=item?.scheduledMonth||selectedOccurrenceMonth;$('#occurrence-scheduled-date').value=item?.scheduledDate||selectedDate;$('#occurrence-scheduled-end-date').value=item?.scheduledEndDate||'';$('#occurrence-week').value=item?.week||'';
     $('#occurrence-repeat-mode').value=item?.monthWeeks?.length?'month-weeks':'every-week';$('#occurrence-start').value=item?.startDate||'';$('#occurrence-end').value=item?.endDate||'';$('#occurrence-notes').value=item?.notes||'';
     buildOccurrenceOptions(item);$('#delete-occurrence').classList.toggle('hidden',!item);updateOccurrenceForm();refreshColorPalettes();$('#occurrence-dialog').showModal();
   }
   function saveOccurrence(event){
     event.preventDefault();const title=$('#occurrence-title').value.trim(),type=$('#occurrence-type').value,schedule=type==='birthday'?'date':$('#occurrence-schedule').value,scheduledMonth=$('#occurrence-scheduled-month').value,scheduledDate=$('#occurrence-scheduled-date').value;
-    if(!title){toast('Dê um nome ao acontecimento.');return;}if(schedule==='date'&&!scheduledDate){toast('Escolha a data do acontecimento.');return;}if(schedule==='month'&&!scheduledMonth){toast('Escolha o mês do acontecimento.');return;}
+    const scheduledEndDate=['event','holiday'].includes(type)&&schedule==='date'?$('#occurrence-scheduled-end-date').value:'';
+    if(!title){toast('Dê um nome ao acontecimento.');return;}if(schedule==='date'&&!scheduledDate){toast('Escolha a data do acontecimento.');return;}if(schedule==='month'&&!scheduledMonth){toast('Escolha o mês do acontecimento.');return;}if(scheduledEndDate&&scheduledEndDate<scheduledDate){toast('A data final deve ser igual ou posterior à data inicial.');return;}
     const weekdays=$$('#occurrence-weekday-options input:checked').map(input=>Number(input.value)),monthWeeks=$('#occurrence-repeat-mode').value==='month-weeks'?$$('#occurrence-month-week-options input:checked').map(input=>Number(input.value)):[];
     if(schedule==='recurrence'&&!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}if(schedule==='recurrence'&&$('#occurrence-repeat-mode').value==='month-weeks'&&!monthWeeks.length){toast('Escolha ao menos uma semana do mês.');return;}
-    const id=$('#occurrence-id').value||uid(),existing=state.occurrences.find(item=>item.id===id),next={id,title,type,description:$('#occurrence-description').value.trim(),notes:$('#occurrence-notes').value.trim(),icon:$('#occurrence-icon').value.trim(),color:$('#occurrence-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#occurrence-week').value)||null:null,weekdays:schedule==='recurrence'?weekdays:[],monthWeeks:schedule==='recurrence'?monthWeeks:[],startDate:schedule==='recurrence'?$('#occurrence-start').value:'',endDate:schedule==='recurrence'?$('#occurrence-end').value:'',createdAt:existing?.createdAt||isoToday(),updatedAt:stamp(),deleted:false};
+    const id=$('#occurrence-id').value||uid(),existing=state.occurrences.find(item=>item.id===id),next={id,title,type,description:$('#occurrence-description').value.trim(),notes:$('#occurrence-notes').value.trim(),icon:$('#occurrence-icon').value.trim(),color:$('#occurrence-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',scheduledEndDate,week:schedule==='month'?Number($('#occurrence-week').value)||null:null,weekdays:schedule==='recurrence'?weekdays:[],monthWeeks:schedule==='recurrence'?monthWeeks:[],startDate:schedule==='recurrence'?$('#occurrence-start').value:'',endDate:schedule==='recurrence'?$('#occurrence-end').value:'',createdAt:existing?.createdAt||isoToday(),updatedAt:stamp(),deleted:false};
     const index=state.occurrences.findIndex(item=>item.id===id);if(index<0)state.occurrences.push(next);else state.occurrences[index]=next;
     selectedOccurrenceMonth=(schedule==='date'?`${selectedOccurrenceMonth.slice(0,4)}-${scheduledDate.slice(5,7)}`:schedule==='month'?scheduledMonth:selectedOccurrenceMonth);saveLocal();$('#occurrence-dialog').close();renderOccurrences();toast('Acontecimento salvo.');
   }
@@ -1615,6 +1619,7 @@
   for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{
     if(event.target.closest('[data-open-task-day]')){setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
     const openAction=event.target.closest('[data-open-action]');if(openAction){openActionDialog(openAction.dataset.openAction);return;}
+    const openOccurrence=event.target.closest('[data-open-occurrence]');if(openOccurrence){openOccurrenceDialog(openOccurrence.dataset.openOccurrence);return;}
     const action=event.target.closest('[data-toggle-action]');if(action){toggleAction(action.dataset.toggleAction);return;}
     const remove=event.target.closest('[data-remove-task-day]');if(remove){removeTaskFromDay(remove.dataset.removeTaskDay);return;}
     const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);
