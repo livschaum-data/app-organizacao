@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261026-action-month-drag">
+  <link rel="stylesheet" href="styles.css?v=20261026-planner-entries">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261026-action-month-drag"></script>
+  <script defer src="app.js?v=20261026-planner-entries"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -46,8 +46,20 @@
         <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA</div><h1>Seu dia, em perspectiva.</h1><p id="planner-date-label" class="planner-date-label"></p><p>Suas âncoras e rotinas reunidas em um só lugar.</p>
           <div class="date-navigator planner-day-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><span id="planner-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button><span id="planner-day-status" class="day-status hidden"></span></div>
         </div>
-        <div id="planner-grid" class="planner-grid"></div>
-        <section class="planner-notes planner-block" style="--area-color:#efe6dc;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✎</span><span>Anotações do dia</span></h2><div class="planner-block-body"><label class="sr-only" for="planner-notes-input">Anotações de <span id="planner-notes-date"></span></label><textarea id="planner-notes-input" maxlength="10000" placeholder="Ideias, lembretes ou algo que você queira guardar sobre este dia…"></textarea><small>Salvas automaticamente e sincronizadas com a sua conta.</small></div></section>
+        <nav class="tabs planner-daily-tabs" aria-label="Conteúdo da visão diária">
+          <button type="button" class="tab planner-daily-tab active" data-planner-view="day">Visão do dia</button>
+          <button type="button" class="tab planner-daily-tab" data-planner-view="entries">Entradas</button>
+        </nav>
+        <div id="planner-day-panel" class="planner-daily-panel active-panel">
+          <div id="planner-grid" class="planner-grid"></div>
+          <section class="planner-notes planner-block" style="--area-color:#efe6dc;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✎</span><span>Anotações do dia</span></h2><div class="planner-block-body"><label class="sr-only" for="planner-notes-input">Anotações de <span id="planner-notes-date"></span></label><textarea id="planner-notes-input" maxlength="10000" placeholder="Ideias, lembretes ou algo que você queira guardar sobre este dia…"></textarea><small>Salvas automaticamente e sincronizadas com a sua conta.</small></div></section>
+        </div>
+        <section id="planner-entries-panel" class="planner-daily-panel planner-entries" aria-labelledby="planner-entries-title">
+          <div class="planner-entries-heading"><div><div class="eyebrow">ESPAÇO GERAL</div><h2 id="planner-entries-title">Entradas</h2></div><p>Este conteúdo é o mesmo em todos os dias.</p></div>
+          <label class="sr-only" for="planner-entries-input">Entradas gerais</label>
+          <textarea id="planner-entries-input" placeholder="Registre aqui pensamentos, informações, lembretes e tudo o que quiser manter à vista…"></textarea>
+          <small>Salvo automaticamente e sincronizado com a sua conta.</small>
+        </section>
       </section>
 
       <section id="timeline-workspace" class="workspace-view">

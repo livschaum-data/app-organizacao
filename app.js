@@ -129,12 +129,12 @@
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:6, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],actionAreas:[],taskHistory:{},dayNotes:{},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:6, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],actionAreas:[],taskHistory:{},dayNotes:{},globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',weekdays,monthWeeks:[],startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function plannerNeedsUpgrade(data){
-    return !Array.isArray(data.areas)||!Array.isArray(data.anchors)||
+    return !Array.isArray(data.areas)||!Array.isArray(data.anchors)||!data.globalEntries||typeof data.globalEntries!=='object'||
       makeAreaSeed().some(seed=>!data.areas.some(area=>area.id===seed.id))||
       makeAnchorSeed().some(seed=>!data.anchors.some(anchor=>anchor.id===seed.id));
   }
@@ -151,6 +151,9 @@
     }
     if(!data.taskHistory||typeof data.taskHistory!=='object')data.taskHistory={};
     if(!data.dayNotes||typeof data.dayNotes!=='object')data.dayNotes={};
+    if(!data.globalEntries||typeof data.globalEntries!=='object')data.globalEntries={text:'',updatedAt:''};
+    if(typeof data.globalEntries.text!=='string')data.globalEntries.text='';
+    if(typeof data.globalEntries.updatedAt!=='string')data.globalEntries.updatedAt='';
     data.version=6;
     const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
     for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
@@ -478,6 +481,10 @@
     if(renderedNotesDate!==selectedDate||document.activeElement!==input)input.value=state.dayNotes?.[selectedDate]?.text||'';
     renderedNotesDate=selectedDate;
   }
+  function renderEntries(){
+    const input=$('#planner-entries-input');
+    if(document.activeElement!==input)input.value=state.globalEntries?.text||'';
+  }
   function renderTimeline(){
     const unscheduledOpen=$('#planner-timeline .timeline-unscheduled')?.open??true;
     const date=selectedDate,day=ensureDay(date),taskDay=ensureTaskDay(date),areas=orderedAreas();
@@ -567,6 +574,7 @@
     $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}${blockGroup(taskDay,true)}${actionBlock}`;
     if($('#timeline-workspace').classList.contains('active-workspace'))renderTimeline();
     renderNotes();
+    renderEntries();
   }
   function weekDates(selectedDate){
     const start=safeDate(selectedDate);
@@ -1202,7 +1210,9 @@
       const left=a.dayNotes?.[date],right=b.dayNotes?.[date];
       dayNotes[date]=structuredClone(!left?right:!right?left:(right.updatedAt||'')>=(left.updatedAt||'')?right:left);
     }
-    return {version:6,routines:[...routines.values()],tasks,actions,actionAreas,areas,anchors,history,taskHistory,dayNotes};
+    const leftEntries=a.globalEntries,rightEntries=b.globalEntries;
+    const globalEntries=structuredClone(!leftEntries?rightEntries:!rightEntries?leftEntries:(rightEntries.updatedAt||'')>=(leftEntries.updatedAt||'')?rightEntries:leftEntries);
+    return {version:6,routines:[...routines.values()],tasks,actions,actionAreas,areas,anchors,history,taskHistory,dayNotes,globalEntries};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -1352,6 +1362,12 @@
   window.matchMedia('(max-width:700px)').addEventListener('change',()=>{document.body.classList.remove('sidebar-open');updateSidebarToggle();});
   $('.brand').onclick=event=>{event.preventDefault();setSection('planner');};
   $$('#routines-workspace .tab').forEach(tab=>tab.addEventListener('click',()=>setView(tab.dataset.view)));
+  $$('.planner-daily-tab').forEach(tab=>tab.addEventListener('click',()=>{
+    const view=tab.dataset.plannerView;
+    $$('.planner-daily-tab').forEach(button=>button.classList.toggle('active',button===tab));
+    $$('.planner-daily-panel').forEach(panel=>panel.classList.toggle('active-panel',panel.id===`planner-${view}-panel`));
+    if(view==='entries')renderEntries();
+  }));
   $$('.task-tab').forEach(tab=>tab.addEventListener('click',()=>setTaskView(tab.dataset.taskView)));
   $('#prev-day').onclick=$('#planner-prev-day').onclick=$('#timeline-prev-day').onclick=$('#planner-secondary-prev-day').onclick=$('#task-prev-day').onclick=()=>shiftSelectedDate(-1);
   $('#next-day').onclick=$('#planner-next-day').onclick=$('#timeline-next-day').onclick=$('#planner-secondary-next-day').onclick=$('#task-next-day').onclick=()=>shiftSelectedDate(1);
@@ -1361,6 +1377,10 @@
   $('#planner-secondary-today').onclick=()=>setSelectedDate(isoToday());$('#planner-secondary-date').onchange=e=>setSelectedDate(e.target.value);
   $('#planner-notes-input').addEventListener('input',event=>{
     state.dayNotes[selectedDate]={text:event.target.value,updatedAt:stamp()};
+    saveLocal();
+  });
+  $('#planner-entries-input').addEventListener('input',event=>{
+    state.globalEntries={text:event.target.value,updatedAt:stamp()};
     saveLocal();
   });
   $('#task-today').onclick=()=>setSelectedDate(isoToday());$('#task-date').onchange=e=>setSelectedDate(e.target.value);
