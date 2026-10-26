@@ -661,7 +661,7 @@
   }
   function actionCard(action){
     const schedule=actionScheduleLabel(action);
-    return `<div class="action-card${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><button type="button" class="action-card-main" data-edit-action="${escapeHTML(action.id)}"><span class="action-card-title">${action.icon?`<span class="action-card-mark">${escapeHTML(action.icon)}</span>`:''}<strong>${escapeHTML(action.title)}</strong></span>${schedule?`<small>${escapeHTML(schedule)}</small>`:''}</button></div>`;
+    return `<div class="action-card${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action="${escapeHTML(action.id)}"><button type="button" class="action-card-main" data-edit-action="${escapeHTML(action.id)}" title="Abrir ou arrastar para outro mês"><span class="action-card-title">${action.icon?`<span class="action-card-mark">${escapeHTML(action.icon)}</span>`:''}<strong>${escapeHTML(action.title)}</strong></span>${schedule?`<small>${escapeHTML(schedule)}</small>`:''}</button></div>`;
   }
   function actionMonth(action){return action.schedule==='date'?action.scheduledDate?.slice(0,7)||'':action.scheduledMonth||'';}
   function actionWeek(action){return action.schedule==='date'&&action.scheduledDate?monthWeekNumber(action.scheduledDate):Number(action.week)||null;}
@@ -711,7 +711,7 @@
       const columns=Array.from({length:12},(_,i)=>{
         const key=`${year}-${String(i+1).padStart(2,'0')}`,entries=actions.filter(action=>monthOf(action)===key);
         const name=fmtDate(`${key}-01`,{month:'short'});
-        return `<section class="action-month-column${key===selectedActionMonth?' is-selected':''}"><header><span>${escapeHTML(name)}</span><b>${entries.length}</b></header><div class="action-card-list">${entries.map(actionCard).join('')}<button type="button" class="action-add-inline" data-add-action-month="${key}">＋ Adicionar ação</button></div></section>`;
+        return `<section class="action-month-column${key===selectedActionMonth?' is-selected':''}" data-action-month="${key}"><header><span>${escapeHTML(name)}</span><b>${entries.length}</b></header><div class="action-card-list">${entries.map(actionCard).join('')}<button type="button" class="action-add-inline" data-add-action-month="${key}">＋ Adicionar ação</button></div></section>`;
       });
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Ações por mês" tabindex="0">${columns.join('')}</div>`;
       const board=$('.action-month-board'),selected=$('.action-month-column.is-selected',board);
@@ -781,6 +781,25 @@
     const scroll=$('.action-month-board')?.scrollLeft;
     action.completed=!action.completed;action.completionChangedAt=stamp();action.completedAt=action.completed?isoToday():'';action.updatedAt=action.completionChangedAt;
     saveLocal();renderActions();if(scroll!==undefined&&$('.action-month-board'))$('.action-month-board').scrollLeft=scroll;renderPlanner();
+  }
+  function moveActionToMonth(id,monthKey){
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey))return;
+    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);
+    if(!action||actionMonth(action)===monthKey)return;
+    const [year,month]=monthKey.split('-').map(Number),lastDay=new Date(year,month,0).getDate();
+    if(action.schedule==='date'){
+      const day=Math.min(Number(action.scheduledDate?.slice(8,10))||1,lastDay);
+      action.scheduledDate=`${monthKey}-${String(day).padStart(2,'0')}`;
+    }else{
+      action.scheduledMonth=monthKey;
+      if(action.week){
+        const weeks=Array.from({length:lastDay},(_,index)=>monthWeekNumber(`${monthKey}-${String(index+1).padStart(2,'0')}`));
+        action.week=Math.min(Number(action.week),Math.max(...weeks));
+      }
+    }
+    action.updatedAt=stamp();selectedActionMonth=monthKey;
+    saveLocal();renderActions();renderPlanner();
+    toast(`Ação movida para ${fmtDate(`${monthKey}-01`,{month:'long',year:'numeric'})}.`);
   }
   function openActionAreaDialog(id=null){
     const area=state.actionAreas.find(entry=>entry.id===id&&!entry.deleted);
@@ -1379,7 +1398,82 @@
   $('#action-schedule').onchange=updateActionSchedule;
   $('#action-scheduled-date').onchange=updateActionSchedule;
   $('#action-form').addEventListener('submit',saveAction);$('#delete-action').onclick=deleteAction;
+  const actionsContent=$('#actions-content');
+  let draggedActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
+  const setActionDropTarget=column=>{
+    if(actionDropTarget===column)return;
+    actionDropTarget?.classList.remove('is-drop-target');
+    actionDropTarget=column;
+    actionDropTarget?.classList.add('is-drop-target');
+  };
+  actionsContent.addEventListener('dragstart',event=>{
+    const card=event.target.closest('[data-drag-action]');
+    if(actionView!=='month'||!card)return;
+    draggedActionId=card.dataset.dragAction;
+    card.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed='move';
+    event.dataTransfer.setData('text/plain',draggedActionId);
+  });
+  actionsContent.addEventListener('dragover',event=>{
+    if(!draggedActionId)return;
+    const board=$('.action-month-board'),rect=board?.getBoundingClientRect();
+    if(rect&&event.clientX>rect.right-34)board.scrollLeft+=18;
+    else if(rect&&event.clientX<rect.left+34)board.scrollLeft-=18;
+    const column=event.target.closest('[data-action-month]');
+    setActionDropTarget(column);
+    if(column){event.preventDefault();event.dataTransfer.dropEffect='move';}
+  });
+  actionsContent.addEventListener('drop',event=>{
+    const column=event.target.closest('[data-action-month]'),id=draggedActionId;
+    if(column&&id){event.preventDefault();setActionDropTarget(null);draggedActionId='';moveActionToMonth(id,column.dataset.actionMonth);}
+  });
+  actionsContent.addEventListener('dragend',()=>{
+    actionsContent.querySelector('.action-card.is-dragging')?.classList.remove('is-dragging');
+    setActionDropTarget(null);draggedActionId='';
+  });
+  const finishTouchActionDrag=()=>{
+    if(!touchActionDrag)return;
+    clearTimeout(touchActionDrag.timer);
+    touchActionDrag.preview?.remove();
+    touchActionDrag.source.classList.remove('is-dragging');
+    touchActionDrag=null;setActionDropTarget(null);
+  };
+  actionsContent.addEventListener('touchstart',event=>{
+    if(actionView!=='month'||event.touches.length!==1)return;
+    const card=event.target.closest('[data-drag-action]');if(!card)return;
+    const touch=event.touches[0];
+    touchActionDrag={id:card.dataset.dragAction,touchId:touch.identifier,startX:touch.clientX,startY:touch.clientY,x:touch.clientX,y:touch.clientY,source:card,preview:null,active:false,timer:null};
+    touchActionDrag.timer=setTimeout(()=>{
+      const drag=touchActionDrag;if(!drag)return;
+      drag.active=true;drag.source.classList.add('is-dragging');
+      drag.preview=drag.source.cloneNode(true);drag.preview.removeAttribute('draggable');drag.preview.classList.add('action-drag-preview');
+      drag.preview.style.width=`${drag.source.getBoundingClientRect().width}px`;
+      document.body.append(drag.preview);
+      drag.preview.style.left=`${drag.x}px`;drag.preview.style.top=`${drag.y}px`;
+    },300);
+  },{passive:true});
+  actionsContent.addEventListener('touchmove',event=>{
+    const drag=touchActionDrag;if(!drag)return;
+    const touch=[...event.touches].find(item=>item.identifier===drag.touchId);if(!touch)return;
+    drag.x=touch.clientX;drag.y=touch.clientY;
+    if(!drag.active){if(Math.hypot(drag.x-drag.startX,drag.y-drag.startY)>10)finishTouchActionDrag();return;}
+    event.preventDefault();
+    drag.preview.style.left=`${drag.x}px`;drag.preview.style.top=`${drag.y}px`;
+    const board=$('.action-month-board'),rect=board?.getBoundingClientRect();
+    if(rect&&drag.x>rect.right-34)board.scrollLeft+=18;
+    else if(rect&&drag.x<rect.left+34)board.scrollLeft-=18;
+    setActionDropTarget(document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-month]')||null);
+  },{passive:false});
+  actionsContent.addEventListener('touchend',event=>{
+    const drag=touchActionDrag;if(!drag)return;
+    const touch=[...event.changedTouches].find(item=>item.identifier===drag.touchId);if(!touch)return;
+    const id=drag.id,active=drag.active,month=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('[data-action-month]')?.dataset.actionMonth;
+    finishTouchActionDrag();
+    if(active){ignoreActionClickUntil=Date.now()+500;if(month)moveActionToMonth(id,month);}
+  });
+  actionsContent.addEventListener('touchcancel',finishTouchActionDrag);
   $('#actions-content').addEventListener('click',event=>{
+    if(Date.now()<ignoreActionClickUntil){event.preventDefault();return;}
     const toggle=event.target.closest('[data-toggle-action]');if(toggle){toggleAction(toggle.dataset.toggleAction);return;}
     const edit=event.target.closest('[data-edit-action]');if(edit){openActionDialog(edit.dataset.editAction);return;}
     const month=event.target.closest('[data-add-action-month]');if(month){openActionDialog();$('#action-schedule').value='month';$('#action-scheduled-month').value=month.dataset.addActionMonth;updateActionSchedule();return;}
