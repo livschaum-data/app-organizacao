@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261026-planner-entries">
+  <link rel="stylesheet" href="styles.css?v=20261026-occurrences">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261026-planner-entries"></script>
+  <script defer src="app.js?v=20261026-occurrences"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -28,6 +28,7 @@
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
         <button type="button" class="sidebar-link" data-section="tasks"><span>✓</span> Tarefas</button>
         <button type="button" class="sidebar-link" data-section="actions"><span>✦</span> Ações</button>
+        <button type="button" class="sidebar-link" data-section="occurrences"><span>◉</span> Acontecimentos</button>
       </nav>
       <p class="sidebar-note">Um ponto de apoio para cada dia.</p>
     </aside>
@@ -185,6 +186,23 @@
         <div class="section-heading area-heading"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2>Áreas gerais</h2></div><button type="button" class="text-button" id="add-action-area">＋ Nova área geral</button></div>
         <div id="action-area-list" class="area-list"></div>
       </section>
+
+      <section id="occurrences-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">ACONTECIMENTOS</div><h1>Datas para lembrar.</h1><p>Lembretes, eventos, feriados e aniversários organizados no tempo.</p></div>
+        <div class="section-heading"><div><div class="eyebrow">SEU CALENDÁRIO</div><h2>Acontecimentos</h2></div><button type="button" class="primary-button" id="add-occurrence">＋ Novo acontecimento</button></div>
+        <nav class="tabs" aria-label="Visões de acontecimentos"><button type="button" class="tab occurrence-tab active" data-occurrence-view="month">Por mês</button><button type="button" class="tab occurrence-tab" data-occurrence-view="date">Calendário</button><button type="button" class="tab occurrence-tab" data-occurrence-view="list">Lista</button></nav>
+        <div class="date-navigator occurrence-month-navigator"><button type="button" id="occurrence-prev-month" class="round-button" aria-label="Período anterior">←</button><input id="occurrence-month" type="month" aria-label="Escolher mês ou ano dos acontecimentos"><button type="button" id="occurrence-next-month" class="round-button" aria-label="Próximo período">→</button><button type="button" id="occurrence-current-month" class="today-button">Atual</button></div>
+        <div id="occurrence-list-filters" class="action-list-filters hidden">
+          <div class="action-filter-grid occurrence-filter-grid">
+            <label>Buscar<input id="occurrence-filter-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label>
+            <label>Tipo<select id="occurrence-filter-type" class="text-input"><option value="">Todos</option><option value="reminder">Lembretes</option><option value="event">Eventos</option><option value="holiday">Feriados</option><option value="birthday">Aniversários</option></select></label>
+            <label>Agendamento<select id="occurrence-filter-schedule" class="text-input"><option value="">Todos</option><option value="month">Por mês</option><option value="date">Por data</option><option value="recurrence">Recorrentes</option></select></label>
+            <label>Mês<input id="occurrence-filter-month" class="text-input" type="month"></label>
+          </div>
+          <div class="action-list-sort"><label for="occurrence-sort-by">Ordenar por</label><select id="occurrence-sort-by" class="text-input"><option value="date">Data</option><option value="title">Nome</option><option value="type">Tipo</option><option value="created">Criação</option></select><select id="occurrence-sort-direction" class="text-input" aria-label="Direção da ordenação"><option value="asc">Crescente</option><option value="desc">Decrescente</option></select><button type="button" id="occurrence-clear-filters" class="text-button">Limpar filtros</button></div>
+        </div>
+        <div id="occurrences-content"></div>
+      </section>
     </main>
     <footer class="footer">Um ponto de apoio para cada dia.</footer>
   </div>
@@ -233,6 +251,21 @@
       <input type="hidden" id="action-area-id"><label class="field-label" for="action-area-name">Nome da área geral</label><input class="text-input" id="action-area-name" maxlength="60" required placeholder="Ex.: Casa e ambiente">
       <label class="field-label" for="action-area-color">Cor</label><input class="color-input" id="action-area-color" type="color" value="#dcebe7">
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-action-area">Excluir área</button><span></span><button type="button" class="secondary-button" data-close="action-area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar área</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="occurrence-dialog" class="dialog" aria-labelledby="occurrence-dialog-title">
+    <form id="occurrence-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">ACONTECIMENTOS</div><h2 id="occurrence-dialog-title">Novo acontecimento</h2></div><button type="button" class="close-button" data-close="occurrence-dialog" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="occurrence-id"><label class="field-label" for="occurrence-title">Nome</label><input class="text-input" id="occurrence-title" maxlength="120" required placeholder="Ex.: Consulta, aniversário ou feriado">
+      <label class="field-label" for="occurrence-type">Tipo</label><select class="text-input" id="occurrence-type"><option value="reminder">Lembrete</option><option value="event">Evento</option><option value="holiday">Feriado</option><option value="birthday">Aniversário</option></select>
+      <label class="field-label" for="occurrence-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="occurrence-description" maxlength="2000" rows="3"></textarea>
+      <div class="form-row"><div class="field"><label class="field-label" for="occurrence-icon">Ícone <span class="optional">(opcional)</span></label><input class="text-input icon-input" id="occurrence-icon" maxlength="8"></div><div class="field"><label class="field-label" for="occurrence-color">Cor</label><input class="color-input" id="occurrence-color" type="color" value="#5DFF5D"></div></div>
+      <label class="field-label" for="occurrence-schedule">Agendar por</label><select class="text-input" id="occurrence-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option><option value="recurrence">Recorrência</option></select>
+      <div id="occurrence-month-field"><label class="field-label" for="occurrence-scheduled-month">Mês</label><input class="text-input" id="occurrence-scheduled-month" type="month"><label class="field-label" for="occurrence-week">Semana <span class="optional">(opcional)</span></label><select class="text-input" id="occurrence-week"><option value="">Mês inteiro</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option></select></div>
+      <div id="occurrence-date-field" class="hidden"><label class="field-label" for="occurrence-scheduled-date">Data</label><input class="text-input" id="occurrence-scheduled-date" type="date"><p id="occurrence-annual-hint" class="schedule-hint hidden">Este aniversário se repetirá todos os anos nesta data.</p></div>
+      <div id="occurrence-recurrence-field" class="hidden"><label class="field-label" for="occurrence-repeat-mode">Frequência</label><select class="text-input" id="occurrence-repeat-mode"><option value="every-week">Todas as semanas</option><option value="month-weeks">Semanas específicas do mês</option></select><fieldset id="occurrence-month-weeks-field" class="weekday-field hidden"><legend class="field-label">Semanas do mês</legend><div id="occurrence-month-week-options" class="weekday-options month-week-options"></div></fieldset><fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="occurrence-weekday-options" class="weekday-options"></div></fieldset><div class="form-row"><div class="field"><label class="field-label" for="occurrence-start">Começa em <span class="optional">(opcional)</span></label><input class="text-input" id="occurrence-start" type="date"></div><div class="field"><label class="field-label" for="occurrence-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="occurrence-end" type="date"></div></div></div>
+      <label class="field-label" for="occurrence-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input catalog-notes" id="occurrence-notes" maxlength="20000" rows="6" placeholder="Anotações sobre este acontecimento"></textarea>
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-occurrence">Excluir acontecimento</button><span></span><button type="button" class="secondary-button" data-close="occurrence-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar acontecimento</button></div>
     </form>
   </dialog>
 
@@ -303,7 +336,7 @@
   <dialog id="account-dialog" class="dialog sync-dialog" aria-labelledby="account-dialog-title">
     <form id="account-form" method="dialog">
       <div class="dialog-head"><div><div class="eyebrow">SUPABASE</div><h2 id="account-dialog-title">Sincronização da conta</h2></div><button type="button" class="close-button" data-close="account-dialog" aria-label="Fechar">×</button></div>
-      <p class="sync-intro">Áreas, âncoras, rotinas, tarefas, ações e histórico são sincronizados entre aparelhos conectados à mesma conta. As alterações ficam guardadas neste aparelho até a confirmação na nuvem.</p>
+      <p class="sync-intro">Áreas, âncoras, rotinas, tarefas, ações, acontecimentos, entradas e histórico são sincronizados entre aparelhos conectados à mesma conta. As alterações ficam guardadas neste aparelho até a confirmação na nuvem.</p>
       <div class="sync-summary" aria-label="Resumo da sincronização">
         <div><small>ESTADO</small><strong id="sync-detail-status">Somente neste aparelho</strong></div>
         <div><small>ÚLTIMA SINCRONIZAÇÃO</small><strong id="sync-detail-last">Ainda não confirmada</strong></div>
