@@ -214,8 +214,8 @@
   }
   function actionAreaName(action){return state.actionAreas.find(area=>area.id===action.areaId&&!area.deleted)?.name||'';}
   function actionScheduleLabel(action){
-    const week=action.schedule==='date'&&action.scheduledDate?monthWeekNumber(action.scheduledDate):action.week;
-    return [actionAreaName(action),week?`Semana ${week}`:'',action.schedule==='date'&&action.scheduledDate?fmtDate(action.scheduledDate,{day:'numeric',month:'short'}):''].filter(Boolean).join(' · ');
+    if(action.schedule==='date'&&action.scheduledDate)return fmtDate(action.scheduledDate,{day:'numeric',month:'short'});
+    return action.week?`Semana ${action.week}`:'';
   }
   function taskIsConsultation(task){
     const catalog=state.tasks.find(entry=>entry.id===(task.taskId||task.id));
@@ -625,8 +625,8 @@
     $('#task-week-grid').innerHTML=`<table class="weekly-table task-week-table"><thead><tr><th scope="col" class="weekly-corner">Tarefas</th>${weeklyHeaders(dates,'tasks')}</tr></thead><tbody>${rows}</tbody></table>`;
   }
   function actionCard(action){
-    const when=action.schedule==='date'?fmtDate(action.scheduledDate,{day:'numeric',month:'short'}):'Mês inteiro';
-    return `<div class="action-card${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><button type="button" class="action-card-main" data-edit-action="${escapeHTML(action.id)}"><span class="action-card-title"><span class="action-card-mark">${escapeHTML(action.icon||'✦')}</span><strong>${escapeHTML(action.title)}</strong></span><small>${action.completed?'✓ Concluída':'▸ Programado'} · ${escapeHTML(when)}</small>${actionScheduleLabel(action)?`<span class="action-card-description">${escapeHTML(actionScheduleLabel(action))}</span>`:''}${action.description?`<span class="action-card-description">${escapeHTML(action.description)}</span>`:''}</button></div>`;
+    const schedule=actionScheduleLabel(action);
+    return `<div class="action-card${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><button type="button" class="action-card-main" data-edit-action="${escapeHTML(action.id)}"><span class="action-card-title"><span class="action-card-mark">${escapeHTML(action.icon||'✦')}</span><strong>${escapeHTML(action.title)}</strong></span>${schedule?`<small>${escapeHTML(schedule)}</small>`:''}</button></div>`;
   }
   function actionMonth(action){return action.schedule==='date'?action.scheduledDate?.slice(0,7)||'':action.scheduledMonth||'';}
   function actionWeek(action){return action.schedule==='date'&&action.scheduledDate?monthWeekNumber(action.scheduledDate):Number(action.week)||null;}
