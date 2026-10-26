@@ -26,6 +26,7 @@
     ['tema-do-dia','Tema do dia','#e9e1ec']
   ];
   const AREA_ICONS = {'area-tema-do-dia':'♡','area-casa':'⌂','area-lazer':'♡','area-estudos':'✎','area-movimento':'✳','area-extras':'✦'};
+  const COLOR_PALETTE = ['#808080','#FFC001','#5DFF5D','#31869B','#FF5399','#CC66FF','#366092','#60497A','#963634','#76933C','#E26B0A'];
   // Títulos legíveis nos exemplos enviados. Os campos e os dias podem ser editados.
   const ANCHOR_SEED = [
     ['casa','🍳','Janta, marmita e almoço',[1,2,4]],
@@ -81,6 +82,33 @@
     const luminance=channels.map(value=>{const channel=value/255;return channel<=.04045?channel/12.92:((channel+.055)/1.055)**2.4;});
     return luminance[0]*.2126+luminance[1]*.7152+luminance[2]*.0722<.35?'#fffdfa':'#25474c';
   };
+  function refreshColorPalettes(){
+    $$('.color-input').forEach(input=>{
+      const selected=input.value.toUpperCase();
+      $$('.color-swatch',input.nextElementSibling).forEach(button=>{
+        const active=button.dataset.color===selected;
+        button.classList.toggle('is-selected',active);
+        button.setAttribute('aria-pressed',String(active));
+      });
+    });
+  }
+  function setupColorPalettes(){
+    $$('.color-input').forEach(input=>{
+      const palette=document.createElement('div');palette.className='color-palette';
+      palette.setAttribute('role','group');palette.setAttribute('aria-label',`Cores sugeridas para ${input.labels?.[0]?.textContent.trim()||'este item'}`);
+      for(const color of COLOR_PALETTE){
+        const button=document.createElement('button');button.type='button';button.className='color-swatch';
+        button.dataset.color=color;button.style.backgroundColor=color;
+        button.setAttribute('aria-label',`Usar cor ${color}`);button.title=color;
+        button.addEventListener('click',()=>{input.value=color;input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));});
+        palette.append(button);
+      }
+      input.insertAdjacentElement('afterend',palette);
+      input.addEventListener('input',refreshColorPalettes);
+      input.addEventListener('change',refreshColorPalettes);
+    });
+    refreshColorPalettes();
+  }
   let state = loadState();
   let selectedDate = isoToday();
   let selectedWeekDate = isoToday();
@@ -104,7 +132,7 @@
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:5, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],taskHistory:{},dayNotes:{},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:6, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],actionAreas:[],taskHistory:{},dayNotes:{},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',weekdays,monthWeeks:[],startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
@@ -118,9 +146,15 @@
     if(!Array.isArray(data.anchors))data.anchors=[];
     if(!Array.isArray(data.tasks))data.tasks=[];
     if(!Array.isArray(data.actions))data.actions=[];
+    if(!Array.isArray(data.actionAreas))data.actionAreas=[];
+    for(const action of data.actions){
+      if(!action.createdAt)action.createdAt=action.updatedAt||SEED_TIMESTAMP;
+      if(action.completed&&!action.completedAt)action.completedAt=action.completionChangedAt||action.updatedAt||'';
+      if(!action.completed)action.completedAt='';
+    }
     if(!data.taskHistory||typeof data.taskHistory!=='object')data.taskHistory={};
     if(!data.dayNotes||typeof data.dayNotes!=='object')data.dayNotes={};
-    data.version=5;
+    data.version=6;
     const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
     for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
     for(const anchor of makeAnchorSeed())if(!anchorIds.has(anchor.id))data.anchors.push(anchor);
@@ -174,7 +208,14 @@
     return weeks>=0&&weeks%2===0;
   }
   function actionIsScheduled(action,date){
-    return !action.deleted&&(action.schedule==='date'?action.scheduledDate===date:action.scheduledMonth===date.slice(0,7));
+    if(action.deleted)return false;
+    if(action.schedule==='date')return action.scheduledDate===date;
+    return action.scheduledMonth===date.slice(0,7)&&(!action.week||Number(action.week)===monthWeekNumber(date));
+  }
+  function actionAreaName(action){return state.actionAreas.find(area=>area.id===action.areaId&&!area.deleted)?.name||'';}
+  function actionScheduleLabel(action){
+    const week=action.schedule==='date'&&action.scheduledDate?monthWeekNumber(action.scheduledDate):action.week;
+    return [actionAreaName(action),week?`Semana ${week}`:'',action.schedule==='date'&&action.scheduledDate?fmtDate(action.scheduledDate,{day:'numeric',month:'short'}):''].filter(Boolean).join(' · ');
   }
   function taskIsConsultation(task){
     const catalog=state.tasks.find(entry=>entry.id===(task.taskId||task.id));
@@ -484,7 +525,7 @@
     const routineBlock=`<section class="planner-block planner-routines"><h2><span class="planner-heading-icon" aria-hidden="true">☑</span><span>Rotinas do dia</span></h2><div class="planner-block-body">${routines.length?routines.map(r=>`<button type="button" class="planner-routine" data-planner-routine="${escapeHTML(r.routineId)}"><span>${escapeHTML(r.icon)}</span><strong>${escapeHTML(r.name)}</strong>${r.scheduledTime?`<time class="planner-routine-time">${escapeHTML(r.scheduledTime)}</time>`:''}</button>`).join(''):'<p class="planner-empty">Nenhuma rotina neste dia.</p>'}</div></section>`;
     $('#planner-grid').innerHTML=`${primaryBlocks.theme}<div class="planner-areas">${primaryBlocks.other||'<p class="planner-empty">Nenhuma área na visão principal.</p>'}</div>${routineBlock}`;
     const actions=state.actions.filter(action=>actionIsScheduled(action,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
-    const actionBlock=actions.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${actions.map(action=>`<div class="planner-item"><span class="planner-item-icon">${escapeHTML(action.icon||'✦')}</span><div><strong>${escapeHTML(action.title)}</strong>${action.description?`<p>${escapeHTML(action.description)}</p>`:''}</div></div>`).join('')}</div></section>`:'';
+    const actionBlock=actions.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${actions.map(action=>`<div class="planner-item planner-action-item${action.completed?' is-complete':''}"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span class="planner-item-icon">${escapeHTML(action.icon||'✦')}</span><div><strong>${escapeHTML(action.title)}</strong>${actionScheduleLabel(action)?`<p>${escapeHTML(actionScheduleLabel(action))}</p>`:''}${action.description?`<p>${escapeHTML(action.description)}</p>`:''}</div></div>`).join('')}</div></section>`:'';
     $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}${blockGroup(taskDay,true)}${actionBlock}`;
     $('#planner-grid').classList.toggle('hidden',plannerMode==='timeline');
     $('#planner-timeline').classList.toggle('hidden',plannerMode!=='timeline');
@@ -585,11 +626,48 @@
   }
   function actionCard(action){
     const when=action.schedule==='date'?fmtDate(action.scheduledDate,{day:'numeric',month:'short'}):'Mês inteiro';
-    return `<button type="button" class="action-card" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" data-edit-action="${escapeHTML(action.id)}"><span class="action-card-title"><span class="action-card-mark">${escapeHTML(action.icon||'✦')}</span><strong>${escapeHTML(action.title)}</strong></span><small>▸ Programado · ${escapeHTML(when)}</small>${action.description?`<span class="action-card-description">${escapeHTML(action.description)}</span>`:''}</button>`;
+    return `<div class="action-card${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><button type="button" class="action-card-main" data-edit-action="${escapeHTML(action.id)}"><span class="action-card-title"><span class="action-card-mark">${escapeHTML(action.icon||'✦')}</span><strong>${escapeHTML(action.title)}</strong></span><small>${action.completed?'✓ Concluída':'▸ Programado'} · ${escapeHTML(when)}</small>${actionScheduleLabel(action)?`<span class="action-card-description">${escapeHTML(actionScheduleLabel(action))}</span>`:''}${action.description?`<span class="action-card-description">${escapeHTML(action.description)}</span>`:''}</button></div>`;
+  }
+  function actionMonth(action){return action.schedule==='date'?action.scheduledDate?.slice(0,7)||'':action.scheduledMonth||'';}
+  function actionWeek(action){return action.schedule==='date'&&action.scheduledDate?monthWeekNumber(action.scheduledDate):Number(action.week)||null;}
+  function actionDueDate(action){
+    if(action.dueDate)return action.dueDate;
+    if(action.schedule==='date')return action.scheduledDate||'';
+    if(!/^\d{4}-\d{2}$/.test(action.scheduledMonth||''))return '';
+    const [year,month]=action.scheduledMonth.split('-').map(Number),last=new Date(year,month,0).getDate();
+    if(!action.week)return `${action.scheduledMonth}-${String(last).padStart(2,'0')}`;
+    for(let day=last;day>=1;day--){const date=`${action.scheduledMonth}-${String(day).padStart(2,'0')}`;if(monthWeekNumber(date)===Number(action.week))return date;}
+    return '';
+  }
+  function actionStatus(action){return action.completed?'Concluída':actionDueDate(action)<isoToday()&&actionDueDate(action)?'Vencida':'Em aberto';}
+  function renderActionList(actions){
+    const areaSelect=$('#action-filter-area'),selectedArea=areaSelect.value;
+    areaSelect.innerHTML='<option value="">Todas</option>'+state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
+    areaSelect.value=selectedArea;
+    const get=id=>$(id).value;
+    const search=get('#action-filter-search').trim().toLocaleLowerCase('pt-BR'),status=get('#action-filter-status'),area=get('#action-filter-area'),schedule=get('#action-filter-schedule'),month=get('#action-filter-month'),week=get('#action-filter-week');
+    const createdFrom=get('#action-filter-created-from'),createdTo=get('#action-filter-created-to'),completedFrom=get('#action-filter-completed-from'),completedTo=get('#action-filter-completed-to'),dueFrom=get('#action-filter-due-from'),dueTo=get('#action-filter-due-to');
+    const within=(date,from,to)=>(!from||date&&date>=from)&&(!to||date&&date<=to);
+    const filtered=actions.filter(action=>{
+      const created=(action.createdAt||'').slice(0,10),completed=(action.completedAt||'').slice(0,10),due=actionDueDate(action);
+      const statusMatches=!status||(status==='open'&&!action.completed)||(status==='completed'&&action.completed)||(status==='overdue'&&actionStatus(action)==='Vencida');
+      return (!search||[action.title,action.description,action.notes,actionAreaName(action)].some(value=>String(value||'').toLocaleLowerCase('pt-BR').includes(search)))
+        &&statusMatches
+        &&(!area||action.areaId===area)&&(!schedule||action.schedule===schedule)&&(!month||actionMonth(action)===month)&&(!week||actionWeek(action)===Number(week))
+        &&within(created,createdFrom,createdTo)&&within(completed,completedFrom,completedTo)&&within(due,dueFrom,dueTo);
+    });
+    const sortBy=get('#action-sort-by'),direction=get('#action-sort-direction')==='desc'?-1:1;
+    const sortValue=action=>({due:actionDueDate(action),title:action.title,area:actionAreaName(action),created:(action.createdAt||'').slice(0,10),completed:(action.completedAt||'').slice(0,10),month:actionMonth(action),week:actionWeek(action)?String(actionWeek(action)).padStart(2,'0'):'',status:actionStatus(action)})[sortBy]||'';
+    filtered.sort((a,b)=>{const left=sortValue(a),right=sortValue(b);if(!left)return right?1:0;if(!right)return -1;return direction*left.localeCompare(right,'pt-BR',{numeric:true})||a.title.localeCompare(b.title,'pt-BR');});
+    const dateLabel=value=>value?escapeHTML(fmtDate(value.slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'})):'—';
+    const rows=filtered.map(action=>{const due=actionDueDate(action),stateLabel=actionStatus(action);return `<tr class="${action.completed?'is-complete':''}"><td><div class="action-list-title"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span>${escapeHTML(action.icon||'✦')} <strong>${escapeHTML(action.title)}</strong></span></div></td><td>${escapeHTML(actionAreaName(action)||'—')}</td><td>${actionMonth(action)?escapeHTML(fmtDate(`${actionMonth(action)}-01`,{month:'short',year:'numeric'})):'—'}</td><td>${actionWeek(action)?`Semana ${actionWeek(action)}`:'—'}</td><td>${dateLabel(due)}</td><td>${dateLabel(action.createdAt||'')}</td><td>${dateLabel(action.completedAt||'')}</td><td><span class="action-status is-${stateLabel==='Concluída'?'done':stateLabel==='Vencida'?'late':'open'}">${stateLabel}</span></td><td><button type="button" class="small-edit" data-edit-action="${escapeHTML(action.id)}">Editar</button></td></tr>`;}).join('');
+    $('#actions-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'ação encontrada':'ações encontradas'}</p><div class="action-list-scroll"><table class="action-list-table"><thead><tr><th>Ação</th><th>Área geral</th><th>Mês</th><th>Semana</th><th>Vencimento</th><th>Criação</th><th>Conclusão</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="action-list-empty">Nenhuma ação corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
   }
   function renderActions(){
     $('#action-month').value=selectedActionMonth;
     $('#action-current-month').classList.toggle('hidden',selectedActionMonth===isoToday().slice(0,7));
+    $('.action-month-navigator').classList.toggle('hidden',actionView==='list');
+    $('#action-list-filters').classList.toggle('hidden',actionView!=='list');
     $$('.action-tab').forEach(button=>{const active=button.dataset.actionView===actionView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const actions=state.actions.filter(action=>!action.deleted).sort((a,b)=>(a.scheduledDate||`${a.scheduledMonth}-01`).localeCompare(b.scheduledDate||`${b.scheduledMonth}-01`)||a.title.localeCompare(b.title,'pt-BR'));
     const monthOf=action=>action.schedule==='date'?action.scheduledDate?.slice(0,7):action.scheduledMonth;
@@ -603,16 +681,20 @@
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Ações por mês" tabindex="0">${columns.join('')}</div>`;
       const board=$('.action-month-board'),selected=$('.action-month-column.is-selected',board);
       if(selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);
-    }else{
+    }else if(actionView==='date'){
       const first=new Date(year,month-1,1),start=new Date(year,month-1,1-(first.getDay()+6)%7),last=new Date(year,month,0),weeks=Math.ceil(((first.getDay()+6)%7+last.getDate())/7);
       const dateKey=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
       const heads=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'].map(label=>`<div class="action-calendar-heading">${label}</div>`).join('');
       const cells=Array.from({length:weeks*7},(_,index)=>{
         const day=new Date(start);day.setDate(start.getDate()+index);const key=dateKey(day),entries=actions.filter(action=>action.schedule==='date'&&action.scheduledDate===key);
-        return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-action-date="${key}" aria-label="Adicionar ação em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(action=>`<button type="button" class="action-calendar-item" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" data-edit-action="${escapeHTML(action.id)}"><span>${escapeHTML(action.icon||'✦')}</span>${escapeHTML(action.title)}</button>`).join('')}</div></div>`;
+        return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-action-date="${key}" aria-label="Adicionar ação em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(action=>`<div class="action-calendar-item${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}"><span>${escapeHTML(action.icon||'✦')}</span>${escapeHTML(action.title)}<small>${escapeHTML([actionAreaName(action),`Semana ${monthWeekNumber(key)}`].filter(Boolean).join(' · '))}</small></button></div>`).join('')}</div></div>`;
       }).join('');
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
+    }else{
+      renderActionList(actions);
     }
+    const actionAreas=state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    $('#action-area-list').innerHTML=actionAreas.length?actionAreas.map(area=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color||'#dcebe7')}"></span><strong>${escapeHTML(area.name)}</strong><small class="area-view-tag">${state.actions.filter(action=>!action.deleted&&action.areaId===area.id).length} ações</small><button type="button" class="small-edit" data-edit-action-area="${escapeHTML(area.id)}">Editar</button></article>`).join(''):'<p class="planner-empty">Crie áreas gerais para organizar as ações.</p>';
   }
   function openActionDialog(id=null){
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);
@@ -620,24 +702,35 @@
     $('#action-dialog-title').textContent=action?'Editar ação':'Nova ação';
     $('#action-title').value=action?.title||'';$('#action-description').value=action?.description||'';
     $('#action-icon').value=action?.icon||'✦';$('#action-color').value=action?.color||'#bbdcd8';
+    const actionAreas=state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    $('#action-area').innerHTML='<option value="">Sem área geral</option>'+actionAreas.map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
+    if(action?.areaId&&!actionAreas.some(area=>area.id===action.areaId))$('#action-area').insertAdjacentHTML('beforeend',`<option value="${escapeHTML(action.areaId)}">Área indisponível</option>`);
+    $('#action-area').value=action?.areaId||'';
     $('#action-schedule').value=action?.schedule||'month';
     $('#action-scheduled-month').value=action?.scheduledMonth||selectedActionMonth;
     $('#action-scheduled-date').value=action?.scheduledDate||selectedDate;
+    $('#action-due').value=action?.dueDate||'';
+    $('#action-week').value=action?.week||'';
+    $('#action-completed').checked=action?.completed===true;
+    $('#action-created-at').textContent=action?`Criada em ${fmtDate((action.createdAt||action.updatedAt).slice(0,10),{day:'numeric',month:'long',year:'numeric'})}`:'';
+    $('#action-created-at').classList.toggle('hidden',!action);
     $('#action-notes').value=action?.notes||'';
     $('#delete-action').classList.toggle('hidden',!action);
-    updateActionSchedule();$('#action-dialog').showModal();
+    updateActionSchedule();refreshColorPalettes();$('#action-dialog').showModal();
   }
   function updateActionSchedule(){
     const date=$('#action-schedule').value==='date';
     $('#action-month-field').classList.toggle('hidden',date);
     $('#action-date-field').classList.toggle('hidden',!date);
+    $('#action-date-week').textContent=date&&$('#action-scheduled-date').value?`Semana ${monthWeekNumber($('#action-scheduled-date').value)} · calculada a partir da data`:'';
   }
   function saveAction(event){
     event.preventDefault();
     const title=$('#action-title').value.trim(),schedule=$('#action-schedule').value,scheduledMonth=$('#action-scheduled-month').value,scheduledDate=$('#action-scheduled-date').value;
     if(!title){toast('Dê um nome à ação.');return;}
     if(schedule==='date'?!scheduledDate:!scheduledMonth){toast('Escolha a data ou o mês da ação.');return;}
-    const id=$('#action-id').value||uid(),next={id,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim()||'✦',color:$('#action-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',updatedAt:stamp(),deleted:false};
+    const id=$('#action-id').value||uid(),existing=state.actions.find(action=>action.id===id),now=stamp(),completed=$('#action-completed').checked;
+    const next={id,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim()||'✦',color:$('#action-color').value,areaId:$('#action-area').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
     const index=state.actions.findIndex(action=>action.id===id);
     if(index<0)state.actions.push(next);else state.actions[index]=next;
     selectedActionMonth=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
@@ -647,6 +740,32 @@
     const action=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted);if(!action)return;
     if(!confirm(`Excluir a ação “${action.title}”?`))return;
     action.deleted=true;action.updatedAt=stamp();saveLocal();$('#action-dialog').close();renderActions();renderPlanner();toast('Ação excluída.');
+  }
+  function toggleAction(id){
+    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);if(!action)return;
+    const scroll=$('.action-month-board')?.scrollLeft;
+    action.completed=!action.completed;action.completionChangedAt=stamp();action.completedAt=action.completed?isoToday():'';action.updatedAt=action.completionChangedAt;
+    saveLocal();renderActions();if(scroll!==undefined&&$('.action-month-board'))$('.action-month-board').scrollLeft=scroll;renderPlanner();
+  }
+  function openActionAreaDialog(id=null){
+    const area=state.actionAreas.find(entry=>entry.id===id&&!entry.deleted);
+    $('#action-area-form').reset();$('#action-area-id').value=area?.id||'';
+    $('#action-area-dialog-title').textContent=area?'Editar área geral':'Nova área geral';
+    $('#action-area-name').value=area?.name||'';$('#action-area-color').value=area?.color||'#dcebe7';
+    $('#delete-action-area').classList.toggle('hidden',!area);refreshColorPalettes();$('#action-area-dialog').showModal();
+  }
+  function saveActionArea(event){
+    event.preventDefault();const name=$('#action-area-name').value.trim();if(!name){toast('Dê um nome à área geral.');return;}
+    const id=$('#action-area-id').value||uid(),next={id,name,color:$('#action-area-color').value,updatedAt:stamp(),deleted:false};
+    const index=state.actionAreas.findIndex(area=>area.id===id);
+    if(index<0)state.actionAreas.push(next);else state.actionAreas[index]=next;
+    saveLocal();$('#action-area-dialog').close();renderActions();renderPlanner();toast('Área geral salva.');
+  }
+  function deleteActionArea(){
+    const area=state.actionAreas.find(entry=>entry.id===$('#action-area-id').value&&!entry.deleted);if(!area)return;
+    if(state.actions.some(action=>!action.deleted&&action.areaId===area.id)){toast('Mova ou exclua as ações desta área antes de excluí-la.');return;}
+    if(!confirm(`Excluir a área geral “${area.name}”?`))return;
+    area.deleted=true;area.updatedAt=stamp();saveLocal();$('#action-area-dialog').close();renderActions();toast('Área geral excluída.');
   }
   function renderAnchors(){
     const areas=orderedAreas(),areaById=new Map(areas.map(area=>[area.id,area]));
@@ -712,7 +831,7 @@
     $('#routine-start').value=r?.startDate||''; $('#routine-end').value=r?.endDate||'';
     buildWeekdayOptions(r?.weekdays||[0,1,2,3,4,5,6]);
     $('#routine-items-editor').innerHTML=''; (r?.items.filter(i=>i.active!==false)||['']).forEach(addItemEditor);
-    $('#delete-routine').classList.toggle('hidden',!r); $('#routine-dialog').showModal();
+    $('#delete-routine').classList.toggle('hidden',!r);refreshColorPalettes(); $('#routine-dialog').showModal();
   }
   function saveRoutine(event) {
     event.preventDefault();
@@ -760,7 +879,7 @@
     $('#task-start').value=task?.startDate||'';$('#task-end').value=task?.endDate||'';
     buildWeekdayOptions(task?.weekdays||[safeDate(selectedDate).getDay()],'#task-weekday-options');
     $('#task-items-editor').innerHTML='';(task?.items||[]).filter(item=>item.active!==false).forEach(addTaskItemEditor);
-    updateTaskFrequency();updateTaskKind();$('#task-delete').classList.toggle('hidden',!task);$('#task-dialog').showModal();
+    updateTaskFrequency();updateTaskKind();$('#task-delete').classList.toggle('hidden',!task);refreshColorPalettes();$('#task-dialog').showModal();
   }
   function saveTask(event){
     event.preventDefault();
@@ -824,7 +943,7 @@
     $('#area-form').reset();$('#area-id').value=area?.id||'';
     $('#area-dialog-title').textContent=area?'Editar área':'Nova área';
     $('#area-name').value=area?.name||'';$('#area-color').value=area?.color||'#e8e5dd';$('#area-daily-view').value=area?.dailyView==='secondary'?'secondary':'primary';
-    $('#delete-area').classList.toggle('hidden',!area);$('#area-dialog').showModal();
+    $('#delete-area').classList.toggle('hidden',!area);refreshColorPalettes();$('#area-dialog').showModal();
   }
   function saveArea(event){
     event.preventDefault();const id=$('#area-id').value||uid(),name=$('#area-name').value.trim();
@@ -934,7 +1053,18 @@
       }
       return [...records.values()];
     };
-    const areas=mergeRecords(a.areas,b.areas),anchors=mergeRecords(a.anchors,b.anchors),tasks=mergeRecords(a.tasks,b.tasks),actions=mergeRecords(a.actions,b.actions);
+    const areas=mergeRecords(a.areas,b.areas),anchors=mergeRecords(a.anchors,b.anchors),tasks=mergeRecords(a.tasks,b.tasks),actions=mergeRecords(a.actions,b.actions),actionAreas=mergeRecords(a.actionAreas,b.actionAreas);
+    const leftActions=new Map(a.actions.map(action=>[action.id,action])),rightActions=new Map(b.actions.map(action=>[action.id,action]));
+    for(const action of actions){
+      const left=leftActions.get(action.id),right=rightActions.get(action.id);
+      if(!left||!right)continue;
+      const leftCompletion=Date.parse(left.completionChangedAt||0)||0,rightCompletion=Date.parse(right.completionChangedAt||0)||0;
+      const completion=rightCompletion>=leftCompletion?right:left;
+      action.completed=completion.completed===true;
+      action.completedAt=action.completed?completion.completedAt||completion.completionChangedAt||'':'';
+      action.completionChangedAt=completion.completionChangedAt||'';
+      action.createdAt=[left.createdAt,right.createdAt].filter(Boolean).sort()[0]||action.createdAt;
+    }
     const routines=new Map();
     for(const r of [...(a.routines||[]),...(b.routines||[])]) {
       const prev=routines.get(r.id), rt=Date.parse(r.updatedAt||0)||0, pt=Date.parse(prev?.updatedAt||0)||0;
@@ -1006,7 +1136,7 @@
       const left=a.dayNotes?.[date],right=b.dayNotes?.[date];
       dayNotes[date]=structuredClone(!left?right:!right?left:(right.updatedAt||'')>=(left.updatedAt||'')?right:left);
     }
-    return {version:5,routines:[...routines.values()],tasks,actions,areas,anchors,history,taskHistory,dayNotes};
+    return {version:6,routines:[...routines.values()],tasks,actions,actionAreas,areas,anchors,history,taskHistory,dayNotes};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -1034,6 +1164,34 @@
     const {data,error}=await supabaseClient.from(c.table).select('data,updated_at').eq('user_id',session.user.id).eq('id',c.recordId).maybeSingle();
     if(error)throw error;return data;
   }
+  // As ações têm uma cópia em outro registro: clientes antigos ainda abertos
+  // podem regravar o registro principal sem conhecer o campo "actions".
+  function actionRecordId(){return `${window.ANCORA_SUPABASE.recordId}-acoes`;}
+  async function readActionBackup(){
+    const c=window.ANCORA_SUPABASE;
+    const {data,error}=await supabaseClient.from(c.table).select('data,updated_at').eq('user_id',session.user.id).eq('id',actionRecordId()).maybeSingle();
+    if(error)throw error;return data;
+  }
+  function actionBackupData(){return {actions:state.actions,actionAreas:state.actionAreas};}
+  async function syncActionBackup(initialBackup){
+    let backup=initialBackup;
+    for(let attempt=0;attempt<7;attempt++){
+      state=mergeState(state,backup?.data||{});
+      const data=actionBackupData();
+      if(backup&&JSON.stringify(data)===JSON.stringify(backup.data))return;
+      const updatedAt=new Date(Math.max(Date.now(),(Date.parse(backup?.updated_at||'')||0)+1)).toISOString();
+      const c=window.ANCORA_SUPABASE;
+      const query=supabaseClient.from(c.table);
+      const result=backup
+        ?await query.update({data,updated_at:updatedAt}).eq('user_id',session.user.id).eq('id',actionRecordId()).eq('updated_at',backup.updated_at).select('updated_at').maybeSingle()
+        :await query.insert({user_id:session.user.id,id:actionRecordId(),data,updated_at:updatedAt}).select('updated_at').maybeSingle();
+      if(result.error?.code==='23505'){backup=await readActionBackup();continue;}
+      if(result.error)throw result.error;
+      if(result.data)return;
+      backup=await readActionBackup();
+    }
+    throw new Error('As ações mudaram em outro aparelho. Tente sincronizar novamente.');
+  }
   async function pushSync(successMessage='Sincronizado com a nuvem') {
     if(!configureSupabase()||!session?.user)return false;
     if(saving){saveAgain=true;return false;} saving=true;setSyncStatus('syncing','Sincronizando…');
@@ -1042,8 +1200,10 @@
         saveAgain=false;let committed=false;
         for(let attempt=0;attempt<7&&!committed;attempt++) {
           const revisionAtStart=localRevision;
-          const remote=await readRemote(),remoteJson=JSON.stringify(remote?.data||{});
-          state=mergeState(state,remote?.data||{});localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+          const [remote,actionBackup]=await Promise.all([readRemote(),readActionBackup()]),remoteJson=JSON.stringify(remote?.data||{});
+          state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{});
+          await syncActionBackup(actionBackup);
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
           if(remote&&JSON.stringify(state)===remoteJson){
             committed=true;
             if(localRevision!==revisionAtStart)saveAgain=true;
@@ -1068,11 +1228,11 @@
     if(!configureSupabase()||!session?.user)return false;
     setSyncStatus('syncing','Baixando dados da nuvem...');
     try {
-      const remote=await readRemote();
-      if(!remote){setSyncStatus('online','Ainda não há dados na nuvem para baixar.');return true;}
-      state=mergeState(state,remote.data||{});
+      const [remote,actionBackup]=await Promise.all([readRemote(),readActionBackup()]);
+      if(!remote&&!actionBackup){setSyncStatus('online','Ainda não há dados na nuvem para baixar.');return true;}
+      state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{});
       localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
-      if(JSON.stringify(state)!==JSON.stringify(remote.data)){
+      if(JSON.stringify(state)!==JSON.stringify(remote?.data||{})||JSON.stringify(actionBackupData())!==JSON.stringify(actionBackup?.data||{})){
         localStorage.setItem(PENDING_KEY,session.user.id);
         scheduleSync();
       }
@@ -1154,14 +1314,26 @@
   $('#task-week-today').onclick=()=>{selectedTaskWeekDate=isoToday();renderTaskWeekly();};
   $('#task-week-date').onchange=e=>{if(e.target.value){selectedTaskWeekDate=e.target.value;renderTaskWeekly();}};
   $$('.action-tab').forEach(button=>button.onclick=()=>{actionView=button.dataset.actionView;renderActions();});
+  $('#action-list-filters').addEventListener('input',renderActions);
+  $('#action-list-filters').addEventListener('change',renderActions);
+  $('#action-clear-filters').onclick=()=>{
+    $$('#action-list-filters input').forEach(input=>input.value='');
+    $$('#action-list-filters select').forEach(select=>select.selectedIndex=0);
+    renderActions();
+  };
   const shiftActionPeriod=amount=>{const [year,month]=selectedActionMonth.split('-').map(Number),next=new Date(year,month-1+(actionView==='month'?amount*12:amount),1);selectedActionMonth=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;renderActions();};
   $('#action-prev-month').onclick=()=>shiftActionPeriod(-1);$('#action-next-month').onclick=()=>shiftActionPeriod(1);
   $('#action-current-month').onclick=()=>{selectedActionMonth=isoToday().slice(0,7);renderActions();};
   $('#action-month').onchange=event=>{if(event.target.value){selectedActionMonth=event.target.value;renderActions();}};
   $('#add-action').onclick=()=>openActionDialog();
+  $('#add-action-area').onclick=()=>openActionAreaDialog();
+  $('#action-area-form').addEventListener('submit',saveActionArea);$('#delete-action-area').onclick=deleteActionArea;
+  $('#action-area-list').addEventListener('click',event=>{const edit=event.target.closest('[data-edit-action-area]');if(edit)openActionAreaDialog(edit.dataset.editActionArea);});
   $('#action-schedule').onchange=updateActionSchedule;
+  $('#action-scheduled-date').onchange=updateActionSchedule;
   $('#action-form').addEventListener('submit',saveAction);$('#delete-action').onclick=deleteAction;
   $('#actions-content').addEventListener('click',event=>{
+    const toggle=event.target.closest('[data-toggle-action]');if(toggle){toggleAction(toggle.dataset.toggleAction);return;}
     const edit=event.target.closest('[data-edit-action]');if(edit){openActionDialog(edit.dataset.editAction);return;}
     const month=event.target.closest('[data-add-action-month]');if(month){openActionDialog();$('#action-schedule').value='month';$('#action-scheduled-month').value=month.dataset.addActionMonth;updateActionSchedule();return;}
     const date=event.target.closest('[data-add-action-date]');if(date){openActionDialog();$('#action-schedule').value='date';$('#action-scheduled-date').value=date.dataset.addActionDate;updateActionSchedule();}
@@ -1169,6 +1341,7 @@
   $('#planner-grid').addEventListener('click',event=>{const button=event.target.closest('[data-planner-routine]');if(button)openFocusRoutine(button.dataset.plannerRoutine);});
   $('#planner-timeline').addEventListener('click',event=>{const routine=event.target.closest('[data-timeline-routine]'),task=event.target.closest('[data-timeline-task]');if(routine)openFocusRoutine(routine.dataset.timelineRoutine);else if(task)openTaskFocus(task.dataset.timelineTask);});
   for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{
+    const action=event.target.closest('[data-toggle-action]');if(action){toggleAction(action.dataset.toggleAction);return;}
     const remove=event.target.closest('[data-remove-task-day]');if(remove){removeTaskFromDay(remove.dataset.removeTaskDay);return;}
     const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);
   });
@@ -1277,5 +1450,5 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshCalendarDay();refreshFromCloud();}});
   window.addEventListener('online',refreshFromCloud);
   setInterval(()=>{refreshCalendarDay();refreshFromCloud();},60000);
-  render();initializeSync();
+  setupColorPalettes();render();initializeSync();
 })();

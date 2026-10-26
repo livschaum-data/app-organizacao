@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261026-actions">
+  <link rel="stylesheet" href="styles.css?v=20261026-action-list">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261026-actions"></script>
+  <script defer src="app.js?v=20261026-action-sync"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -144,9 +144,28 @@
       <section id="actions-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">AÇÕES</div><h1>Planos em movimento.</h1><p>Ações agendadas para um mês inteiro ou para uma data específica.</p></div>
         <div class="section-heading"><div><div class="eyebrow">SEU PLANEJAMENTO</div><h2>Ações</h2></div><button type="button" class="primary-button" id="add-action">＋ Nova ação</button></div>
-        <nav class="tabs" aria-label="Visões de ações"><button type="button" class="tab action-tab active" data-action-view="month">Por mês</button><button type="button" class="tab action-tab" data-action-view="date">Calendário</button></nav>
+        <nav class="tabs" aria-label="Visões de ações"><button type="button" class="tab action-tab active" data-action-view="month">Por mês</button><button type="button" class="tab action-tab" data-action-view="date">Calendário</button><button type="button" class="tab action-tab" data-action-view="list">Lista</button></nav>
         <div class="date-navigator action-month-navigator"><button type="button" id="action-prev-month" class="round-button" aria-label="Período anterior">←</button><input id="action-month" type="month" aria-label="Escolher mês ou ano das ações"><button type="button" id="action-next-month" class="round-button" aria-label="Próximo período">→</button><button type="button" id="action-current-month" class="today-button">Atual</button></div>
+        <div id="action-list-filters" class="action-list-filters hidden">
+          <div class="action-filter-grid">
+            <label>Buscar<input id="action-filter-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label>
+            <label>Estado<select id="action-filter-status" class="text-input"><option value="">Todos</option><option value="open">Em aberto</option><option value="completed">Concluídas</option><option value="overdue">Vencidas</option></select></label>
+            <label>Área geral<select id="action-filter-area" class="text-input"><option value="">Todas</option></select></label>
+            <label>Agendamento<select id="action-filter-schedule" class="text-input"><option value="">Todos</option><option value="month">Por mês</option><option value="date">Por data</option></select></label>
+            <label>Mês<input id="action-filter-month" class="text-input" type="month"></label>
+            <label>Semana<select id="action-filter-week" class="text-input"><option value="">Todas</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option></select></label>
+            <label>Criada de<input id="action-filter-created-from" class="text-input" type="date"></label>
+            <label>até<input id="action-filter-created-to" class="text-input" type="date"></label>
+            <label>Concluída de<input id="action-filter-completed-from" class="text-input" type="date"></label>
+            <label>até<input id="action-filter-completed-to" class="text-input" type="date"></label>
+            <label>Vencimento de<input id="action-filter-due-from" class="text-input" type="date"></label>
+            <label>até<input id="action-filter-due-to" class="text-input" type="date"></label>
+          </div>
+          <div class="action-list-sort"><label for="action-sort-by">Ordenar por</label><select id="action-sort-by" class="text-input"><option value="due">Vencimento</option><option value="title">Nome</option><option value="area">Área geral</option><option value="created">Criação</option><option value="completed">Conclusão</option><option value="month">Mês</option><option value="week">Semana</option><option value="status">Estado</option></select><select id="action-sort-direction" class="text-input" aria-label="Direção da ordenação"><option value="asc">Crescente</option><option value="desc">Decrescente</option></select><button type="button" id="action-clear-filters" class="text-button">Limpar filtros</button></div>
+        </div>
         <div id="actions-content" class="actions-content"></div>
+        <div class="section-heading area-heading"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2>Áreas gerais</h2></div><button type="button" class="text-button" id="add-action-area">＋ Nova área geral</button></div>
+        <div id="action-area-list" class="area-list"></div>
       </section>
     </main>
     <footer class="footer">Um ponto de apoio para cada dia.</footer>
@@ -179,11 +198,23 @@
       <input type="hidden" id="action-id"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
       <label class="field-label" for="action-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="action-description" maxlength="2000" rows="3"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone</label><input class="text-input icon-input" id="action-icon" maxlength="8" value="✦"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div>
+      <label class="field-label" for="action-area">Área geral <span class="optional">(opcional)</span></label><select class="text-input" id="action-area"></select>
       <label class="field-label" for="action-schedule">Agendar por</label><select class="text-input" id="action-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option></select>
-      <div id="action-month-field"><label class="field-label" for="action-scheduled-month">Mês</label><input class="text-input" id="action-scheduled-month" type="month"></div>
-      <div id="action-date-field" class="hidden"><label class="field-label" for="action-scheduled-date">Data</label><input class="text-input" id="action-scheduled-date" type="date"></div>
+      <div id="action-month-field"><label class="field-label" for="action-scheduled-month">Mês</label><input class="text-input" id="action-scheduled-month" type="month"><label class="field-label" for="action-week">Semana <span class="optional">(opcional)</span></label><select class="text-input" id="action-week"><option value="">Mês inteiro</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option></select></div>
+      <div id="action-date-field" class="hidden"><label class="field-label" for="action-scheduled-date">Data</label><input class="text-input" id="action-scheduled-date" type="date"><p id="action-date-week" class="schedule-hint"></p></div>
+      <label class="field-label" for="action-due">Vencimento <span class="optional">(opcional; se vazio, segue o agendamento)</span></label><input class="text-input" id="action-due" type="date">
+      <p id="action-created-at" class="schedule-hint hidden"></p>
+      <label class="task-completion action-form-completion"><input type="checkbox" id="action-completed"><span>Ação concluída</span></label>
       <label class="field-label" for="action-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input catalog-notes" id="action-notes" maxlength="20000" rows="6" placeholder="Anotações sobre esta ação"></textarea>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-action">Excluir ação</button><span></span><button type="button" class="secondary-button" data-close="action-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar ação</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="action-area-dialog" class="dialog small-dialog" aria-labelledby="action-area-dialog-title">
+    <form id="action-area-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2 id="action-area-dialog-title">Nova área geral</h2></div><button type="button" class="close-button" data-close="action-area-dialog" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="action-area-id"><label class="field-label" for="action-area-name">Nome da área geral</label><input class="text-input" id="action-area-name" maxlength="60" required placeholder="Ex.: Casa e ambiente">
+      <label class="field-label" for="action-area-color">Cor</label><input class="color-input" id="action-area-color" type="color" value="#dcebe7">
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-action-area">Excluir área</button><span></span><button type="button" class="secondary-button" data-close="action-area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar área</button></div>
     </form>
   </dialog>
 
