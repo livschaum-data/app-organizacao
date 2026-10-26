@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261026-action-card">
+  <link rel="stylesheet" href="styles.css?v=20261026-action-link">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261026-action-card"></script>
+  <script defer src="app.js?v=20261026-action-link"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -197,7 +197,7 @@
     <form id="action-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="action-dialog-title">Nova ação</h2></div><button type="button" class="close-button" data-close="action-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="action-id"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
       <label class="field-label" for="action-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="action-description" maxlength="2000" rows="3"></textarea>
-      <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone</label><input class="text-input icon-input" id="action-icon" maxlength="8" value="✦"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone (opcional)</label><input class="text-input icon-input" id="action-icon" maxlength="8"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div>
       <label class="field-label" for="action-area">Área geral <span class="optional">(opcional)</span></label><select class="text-input" id="action-area"></select>
       <label class="field-label" for="action-schedule">Agendar por</label><select class="text-input" id="action-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option></select>
       <div id="action-month-field"><label class="field-label" for="action-scheduled-month">Mês</label><input class="text-input" id="action-scheduled-month" type="month"><label class="field-label" for="action-week">Semana <span class="optional">(opcional)</span></label><select class="text-input" id="action-week"><option value="">Mês inteiro</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option></select></div>
