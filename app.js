@@ -480,9 +480,11 @@
     const untimedTasks=visibleTasks.filter(task=>!task.scheduledTime);
     const anchors=areas.filter(area=>area.id!=='area-tema-do-dia').map(area=>({area,entries:scheduledAnchors.filter(anchor=>anchor.areaId===area.id&&!hasTime(anchor))})).filter(group=>group.entries.length);
     const minutes=value=>Number(value.slice(0,2))*60+Number(value.slice(3,5));
-    const startHour=Math.min(5,...timed.map(entry=>Math.floor(minutes(entry.scheduledTime)/60)));
+    const isToday=date===isoToday(),now=new Date();
+    const nowMinutes=now.getHours()*60+now.getMinutes();
+    const startHour=Math.min(5,...timed.map(entry=>Math.floor(minutes(entry.scheduledTime)/60)),...(isToday?[Math.floor(nowMinutes/60)]:[]));
     const duration=entry=>Math.max(15,Math.min(480,Number(entry.durationMinutes)||45));
-    const endHour=Math.max(23,...timed.map(entry=>Math.ceil((minutes(entry.scheduledTime)+duration(entry))/60)));
+    const endHour=Math.max(isToday?24:23,...timed.map(entry=>Math.ceil((minutes(entry.scheduledTime)+duration(entry))/60)));
     const hourHeight=70,range=(endHour-startHour)*hourHeight;
     const lanes=[];
     const events=timed.map(entry=>{
@@ -498,7 +500,17 @@
     }).join('');
     const themeMarkup=todayTheme.length?`<div class="timeline-theme"><strong>Tema do dia</strong>${todayTheme.map(anchor=>`<span>${escapeHTML(anchor.icon)} ${escapeHTML(anchor.title)}</span>`).join('')}</div>`:'';
     const unscheduled=[...untimedRoutines.map(entry=>`<button type="button" data-timeline-routine="${escapeHTML(entry.routineId)}">${escapeHTML(entry.icon)} ${escapeHTML(entry.name)}</button>`),...untimedTasks.map(entry=>`<button type="button" data-timeline-task="${escapeHTML(entry.taskId)}">${escapeHTML(entry.icon||'✓')} ${escapeHTML(entry.name)}</button>`),...anchors.map(({area,entries})=>`<div class="timeline-anchor-group"><strong>${escapeHTML(area.name)}</strong>${entries.map(anchor=>`<span>${escapeHTML(anchor.icon)} ${escapeHTML(anchor.title)}</span>`).join('')}</div>`)];
-    $('#planner-timeline').innerHTML=`${themeMarkup}${unscheduled.length?`<details class="timeline-unscheduled"${unscheduledOpen?' open':''}><summary>Sem horário · ${unscheduled.length} grupos e itens</summary><div>${unscheduled.join('')}</div></details>`:''}<div class="timeline-axis" style="height:${range}px">${markers}${eventMarkup}</div>`;
+    const nowMarker=isToday?`<div class="timeline-now" style="top:${(nowMinutes-startHour*60)/60*hourHeight}px" aria-label="Horário atual ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}"><time>${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}</time></div>`:'';
+    $('#planner-timeline').innerHTML=`${themeMarkup}${unscheduled.length?`<details class="timeline-unscheduled"${unscheduledOpen?' open':''}><summary>Sem horário · ${unscheduled.length} grupos e itens</summary><div>${unscheduled.join('')}</div></details>`:''}<div class="timeline-axis" style="height:${range}px" data-start-hour="${startHour}" data-hour-height="${hourHeight}">${markers}${eventMarkup}${nowMarker}</div>`;
+  }
+  function updateTimelineNow(){
+    if(selectedDate!==isoToday()||plannerMode!=='timeline')return;
+    const axis=$('#planner-timeline .timeline-axis'),marker=axis?.querySelector('.timeline-now');
+    if(!marker)return;
+    const now=new Date(),time=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    marker.style.top=`${(now.getHours()*60+now.getMinutes()-Number(axis.dataset.startHour)*60)/60*Number(axis.dataset.hourHeight)}px`;
+    marker.setAttribute('aria-label',`Horário atual ${time}`);
+    marker.querySelector('time').textContent=time;
   }
   function renderPlanner(){
     $('#planner-date').value=selectedDate;
@@ -1447,9 +1459,9 @@
   $('#sync-upload').onclick=()=>pushSync('Dados enviados para a nuvem.');
   $('#sign-out').onclick=async()=>{try{const {error}=await supabaseClient.auth.signOut();if(error)throw error;session=null;setSyncStatus('offline','Somente neste aparelho');updateAccountDialog();toast('Você saiu da conta.');}catch(error){toast(error.message||'Não foi possível sair da conta.');}};
   function refreshCalendarDay(){if(renderedCalendarDate!==isoToday()){renderedCalendarDate=isoToday();render();}}
-  window.addEventListener('focus',()=>{refreshCalendarDay();refreshFromCloud();});
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshCalendarDay();refreshFromCloud();}});
+  window.addEventListener('focus',()=>{refreshCalendarDay();updateTimelineNow();refreshFromCloud();});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshCalendarDay();updateTimelineNow();refreshFromCloud();}});
   window.addEventListener('online',refreshFromCloud);
-  setInterval(()=>{refreshCalendarDay();refreshFromCloud();},60000);
+  setInterval(()=>{refreshCalendarDay();updateTimelineNow();refreshFromCloud();},60000);
   setupColorPalettes();render();initializeSync();
 })();
