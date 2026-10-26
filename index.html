@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261026-planner-links">
+  <link rel="stylesheet" href="styles.css?v=20261026-timeline-tab">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261026-planner-links"></script>
+  <script defer src="app.js?v=20261026-timeline-tab"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -19,6 +19,7 @@
       <div class="sidebar-caption">SEU ESPAÇO</div>
       <nav class="sidebar-nav" aria-label="Páginas">
         <button type="button" class="sidebar-link active" data-section="planner" aria-current="page"><span>▦</span> Visão diária</button>
+        <button type="button" class="sidebar-link" data-section="timeline"><span>◷</span> Cronograma</button>
         <button type="button" class="sidebar-link" data-section="planner-secondary"><span>▧</span> Visão secundária</button>
         <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
         <button type="button" class="sidebar-link" data-section="monthly"><span>▦</span> Visão mensal</button>
@@ -45,10 +46,15 @@
         <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA</div><h1>Seu dia, em perspectiva.</h1><p id="planner-date-label" class="planner-date-label"></p><p>Suas âncoras e rotinas reunidas em um só lugar.</p>
           <div class="date-navigator planner-day-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><span id="planner-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button><span id="planner-day-status" class="day-status hidden"></span></div>
         </div>
-        <div class="planner-mode" role="group" aria-label="Formato da visão diária"><button type="button" class="planner-mode-button active" data-planner-mode="blocks" aria-pressed="true">Blocos</button><button type="button" class="planner-mode-button" data-planner-mode="timeline" aria-pressed="false">Cronograma</button></div>
         <div id="planner-grid" class="planner-grid"></div>
-        <div id="planner-timeline" class="planner-timeline hidden"></div>
         <section class="planner-notes planner-block" style="--area-color:#efe6dc;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✎</span><span>Anotações do dia</span></h2><div class="planner-block-body"><label class="sr-only" for="planner-notes-input">Anotações de <span id="planner-notes-date"></span></label><textarea id="planner-notes-input" maxlength="10000" placeholder="Ideias, lembretes ou algo que você queira guardar sobre este dia…"></textarea><small>Salvas automaticamente e sincronizadas com a sua conta.</small></div></section>
+      </section>
+
+      <section id="timeline-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">CRONOGRAMA</div><h1>Seu dia, hora a hora.</h1><p id="timeline-date-label" class="planner-date-label"></p><p>Rotinas, tarefas, blocos, âncoras e ações no mesmo lugar.</p>
+          <div class="date-navigator planner-day-navigator"><button type="button" id="timeline-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="timeline-date" type="date" aria-label="Escolher dia do cronograma"><span id="timeline-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="timeline-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="timeline-today" class="today-button">Hoje</button><span id="timeline-day-status" class="day-status hidden"></span></div>
+        </div>
+        <div id="planner-timeline" class="planner-timeline"></div>
       </section>
 
       <section id="planner-secondary-workspace" class="workspace-view">

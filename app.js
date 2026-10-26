@@ -5,7 +5,6 @@
   const LAST_SYNC_KEY = `${STORAGE_KEY}-last-sync`;
   const PENDING_KEY = `${STORAGE_KEY}-pending-sync`;
   const SIDEBAR_KEY = 'ancora-sidebar-collapsed-v1';
-  const PLANNER_MODE_KEY = 'ancora-planner-mode-v1';
   const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
   const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   const SEED = [
@@ -118,8 +117,6 @@
   let selectedActionMonth = isoToday().slice(0,7);
   let actionView = 'month';
   let renderedCalendarDate = isoToday();
-  let plannerMode = 'blocks';
-  try{if(localStorage.getItem(PLANNER_MODE_KEY)==='timeline')plannerMode='timeline';}catch{}
   let renderedNotesDate = '';
   let selectedAnchorArea = '';
   const openManageRoutines = new Set();
@@ -482,16 +479,18 @@
     renderedNotesDate=selectedDate;
   }
   function renderTimeline(){
-    const unscheduledOpen=$('#planner-timeline .timeline-unscheduled')?.open||false;
+    const unscheduledOpen=$('#planner-timeline .timeline-unscheduled')?.open??true;
     const date=selectedDate,day=ensureDay(date),taskDay=ensureTaskDay(date),areas=orderedAreas();
     const areaById=new Map(areas.map(area=>[area.id,area]));
     const scheduledAnchors=state.anchors.filter(anchor=>areaById.has(anchor.areaId)&&dayIsScheduled(anchor,date));
     const hasTime=entry=>/^\d{2}:\d{2}$/.test(entry.scheduledTime||'');
-    const todayTheme=scheduledAnchors.filter(anchor=>anchor.areaId==='area-tema-do-dia');
+    const todayTheme=scheduledAnchors.filter(anchor=>anchor.areaId==='area-tema-do-dia'&&!hasTime(anchor));
     const visibleTasks=Object.values(taskDay.tasks||{}).filter(task=>taskIsVisibleOnDay(task,date));
-    const timed=[...Object.values(day.routines||{}).map(routine=>({...routine,type:'routine',id:routine.routineId})),...visibleTasks.map(task=>({...task,type:'task',id:task.taskId})),...scheduledAnchors.map(anchor=>({...anchor,type:'anchor',name:anchor.title,color:areaById.get(anchor.areaId)?.color||'#8eada8'}))].filter(hasTime).sort((a,b)=>a.scheduledTime.localeCompare(b.scheduledTime));
-    const untimedRoutines=Object.values(day.routines||{}).filter(routine=>!routine.scheduledTime);
-    const untimedTasks=visibleTasks.filter(task=>!task.scheduledTime);
+    const scheduledActions=state.actions.filter(action=>actionIsScheduled(action,date));
+    const timed=[...Object.values(day.routines||{}).map(routine=>({...routine,type:'routine',id:routine.routineId})),...visibleTasks.map(task=>({...task,type:'task',id:task.taskId})),...scheduledAnchors.map(anchor=>({...anchor,type:'anchor',name:anchor.title,color:areaById.get(anchor.areaId)?.color||'#8eada8'})),...scheduledActions.map(action=>({...action,type:'action',name:action.title}))].filter(hasTime).sort((a,b)=>a.scheduledTime.localeCompare(b.scheduledTime));
+    const untimedRoutines=Object.values(day.routines||{}).filter(routine=>!hasTime(routine));
+    const untimedTasks=visibleTasks.filter(task=>!hasTime(task));
+    const untimedActions=scheduledActions.filter(action=>!hasTime(action));
     const anchors=areas.filter(area=>area.id!=='area-tema-do-dia').map(area=>({area,entries:scheduledAnchors.filter(anchor=>anchor.areaId===area.id&&!hasTime(anchor))})).filter(group=>group.entries.length);
     const minutes=value=>Number(value.slice(0,2))*60+Number(value.slice(3,5));
     const isToday=date===isoToday(),now=new Date();
@@ -509,16 +508,24 @@
     const markers=Array.from({length:endHour-startHour+1},(_,index)=>`<div class="timeline-hour" style="top:${index*hourHeight}px"><time>${String(startHour+index).padStart(2,'0')}:00</time></div>`).join('');
     const eventMarkup=events.map(entry=>{
       const style=`top:${entry.top}px;height:${Math.max(30,entry.height-4)}px;left:calc(75px + (100% - 85px) * ${entry.lane/Math.max(lanes.length,1)});width:calc((100% - 85px) * ${1/Math.max(lanes.length,1)} - 5px);--event-color:${escapeHTML(entry.color||'#7daaa1')}`;
-      const content=`<time>${escapeHTML(entry.scheduledTime)}</time><span>${escapeHTML(entry.icon||'✓')} ${escapeHTML(entry.name)}</span>`;
+      const content=`<time>${escapeHTML(entry.scheduledTime)}</time><span>${entry.icon?`${escapeHTML(entry.icon)} `:''}${escapeHTML(entry.name)}</span>`;
       return entry.type==='anchor'?`<div class="timeline-event timeline-anchor" style="${style}" title="${escapeHTML(entry.description||entry.name)}">${content}</div>`:`<button type="button" class="timeline-event timeline-${entry.type}${entry.kind==='block'?' timeline-block':''}" style="${style}" data-timeline-${entry.type}="${escapeHTML(entry.id)}">${content}</button>`;
     }).join('');
     const themeMarkup=todayTheme.length?`<div class="timeline-theme"><strong>Tema do dia</strong>${todayTheme.map(anchor=>`<span>${escapeHTML(anchor.icon)} ${escapeHTML(anchor.title)}</span>`).join('')}</div>`:'';
-    const unscheduled=[...untimedRoutines.map(entry=>`<button type="button" data-timeline-routine="${escapeHTML(entry.routineId)}">${escapeHTML(entry.icon)} ${escapeHTML(entry.name)}</button>`),...untimedTasks.map(entry=>`<button type="button" data-timeline-task="${escapeHTML(entry.taskId)}">${escapeHTML(entry.icon||'✓')} ${escapeHTML(entry.name)}</button>`),...anchors.map(({area,entries})=>`<div class="timeline-anchor-group"><strong>${escapeHTML(area.name)}</strong>${entries.map(anchor=>`<span>${escapeHTML(anchor.icon)} ${escapeHTML(anchor.title)}</span>`).join('')}</div>`)];
+    const untimedGroups=[
+      {label:'Rotinas',entries:untimedRoutines.map(entry=>`<button type="button" data-timeline-routine="${escapeHTML(entry.routineId)}">${entry.icon?`${escapeHTML(entry.icon)} `:''}${escapeHTML(entry.name)}</button>`)},
+      {label:'Tarefas',entries:untimedTasks.filter(task=>task.kind!=='block').map(entry=>`<button type="button" data-timeline-task="${escapeHTML(entry.taskId)}">${entry.icon?`${escapeHTML(entry.icon)} `:''}${escapeHTML(entry.name)}</button>`)},
+      {label:'Blocos',entries:untimedTasks.filter(task=>task.kind==='block').map(entry=>`<button type="button" data-timeline-task="${escapeHTML(entry.taskId)}">${entry.icon?`${escapeHTML(entry.icon)} `:''}${escapeHTML(entry.name)}</button>`)},
+      ...anchors.map(({area,entries})=>({label:area.name,entries:entries.map(anchor=>`<span>${anchor.icon?`${escapeHTML(anchor.icon)} `:''}${escapeHTML(anchor.title)}</span>`)})),
+      {label:'Ações',entries:untimedActions.map(action=>`<button type="button" data-timeline-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button>`)}
+    ].filter(group=>group.entries.length);
+    const unscheduled=untimedGroups.map(group=>`<div class="timeline-anchor-group"><strong>${escapeHTML(group.label)}</strong>${group.entries.join('')}</div>`);
+    const untimedCount=untimedGroups.reduce((total,group)=>total+group.entries.length,0);
     const nowMarker=isToday?`<div class="timeline-now" style="top:${(nowMinutes-startHour*60)/60*hourHeight}px" aria-label="Horário atual ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}"><time>${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}</time></div>`:'';
-    $('#planner-timeline').innerHTML=`${themeMarkup}${unscheduled.length?`<details class="timeline-unscheduled"${unscheduledOpen?' open':''}><summary>Sem horário · ${unscheduled.length} grupos e itens</summary><div>${unscheduled.join('')}</div></details>`:''}<div class="timeline-axis" style="height:${range}px" data-start-hour="${startHour}" data-hour-height="${hourHeight}">${markers}${eventMarkup}${nowMarker}</div>`;
+    $('#planner-timeline').innerHTML=`${themeMarkup}${unscheduled.length?`<details class="timeline-unscheduled"${unscheduledOpen?' open':''}><summary>Sem horário · ${untimedCount} ${untimedCount===1?'item':'itens'}</summary><div>${unscheduled.join('')}</div></details>`:''}<div class="timeline-axis" style="height:${range}px" data-start-hour="${startHour}" data-hour-height="${hourHeight}">${markers}${eventMarkup}${nowMarker}</div>`;
   }
   function updateTimelineNow(){
-    if(selectedDate!==isoToday()||plannerMode!=='timeline')return;
+    if(selectedDate!==isoToday()||!$('#timeline-workspace').classList.contains('active-workspace'))return;
     const axis=$('#planner-timeline .timeline-axis'),marker=axis?.querySelector('.timeline-now');
     if(!marker)return;
     const now=new Date(),time=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -531,12 +538,17 @@
     $('#planner-date-label').textContent=fmtDate(selectedDate);
     $('#planner-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
     $('#planner-today').classList.toggle('hidden',selectedDate===isoToday());
+    $('#timeline-date').value=selectedDate;
+    $('#timeline-date-label').textContent=fmtDate(selectedDate);
+    $('#timeline-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
+    $('#timeline-today').classList.toggle('hidden',selectedDate===isoToday());
     $('#planner-secondary-date').value=selectedDate;
     $('#planner-secondary-date-label').textContent=fmtDate(selectedDate);
     $('#planner-secondary-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
     $('#planner-secondary-today').classList.toggle('hidden',selectedDate===isoToday());
     renderDayStatus('#planner-day-status',selectedDate);
     renderDayStatus('#planner-secondary-day-status',selectedDate);
+    renderDayStatus('#timeline-day-status',selectedDate);
     const areas=orderedAreas(),day=ensureDay(selectedDate);
     const areaBlocks=new Map(areas.map(area=>{
       const anchors=state.anchors.filter(anchor=>anchor.areaId===area.id&&dayIsScheduled(anchor,selectedDate)).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99')||a.title.localeCompare(b.title,'pt-BR'));
@@ -553,10 +565,7 @@
     const actions=state.actions.filter(action=>actionIsScheduled(action,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const actionBlock=actions.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${actions.map(action=>{const area=state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted);return `<div class="planner-item planner-action-item"><button type="button" class="planner-action-link" data-open-action="${escapeHTML(action.id)}">${escapeHTML(action.title)}</button>${area?`<span class="planner-action-area-tag" style="--tag-color:${escapeHTML(area.color||'#dcebe7')};--tag-ink:${plannerHeadingInk(area.color)}">${escapeHTML(area.name)}</span>`:''}</div>`;}).join('')}</div></section>`:'';
     $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}${blockGroup(taskDay,true)}${actionBlock}`;
-    $('#planner-grid').classList.toggle('hidden',plannerMode==='timeline');
-    $('#planner-timeline').classList.toggle('hidden',plannerMode!=='timeline');
-    $$('.planner-mode-button').forEach(button=>{const active=button.dataset.plannerMode===plannerMode;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
-    if(plannerMode==='timeline')renderTimeline();
+    if($('#timeline-workspace').classList.contains('active-workspace'))renderTimeline();
     renderNotes();
   }
   function weekDates(selectedDate){
@@ -807,6 +816,7 @@
     $$('.workspace-view').forEach(view=>view.classList.toggle('active-workspace',view.id===`${section}-workspace`));
     $$('.sidebar-link').forEach(link=>{const active=link.dataset.section===section;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
     if(section==='actions')renderActions();
+    if(section==='timeline')renderTimeline();
     document.body.classList.remove('sidebar-open');updateSidebarToggle();
   }
   function updateSidebarToggle(){
@@ -1324,12 +1334,12 @@
   $('.brand').onclick=event=>{event.preventDefault();setSection('planner');};
   $$('#routines-workspace .tab').forEach(tab=>tab.addEventListener('click',()=>setView(tab.dataset.view)));
   $$('.task-tab').forEach(tab=>tab.addEventListener('click',()=>setTaskView(tab.dataset.taskView)));
-  $('#prev-day').onclick=$('#planner-prev-day').onclick=$('#planner-secondary-prev-day').onclick=$('#task-prev-day').onclick=()=>shiftSelectedDate(-1);
-  $('#next-day').onclick=$('#planner-next-day').onclick=$('#planner-secondary-next-day').onclick=$('#task-next-day').onclick=()=>shiftSelectedDate(1);
+  $('#prev-day').onclick=$('#planner-prev-day').onclick=$('#timeline-prev-day').onclick=$('#planner-secondary-prev-day').onclick=$('#task-prev-day').onclick=()=>shiftSelectedDate(-1);
+  $('#next-day').onclick=$('#planner-next-day').onclick=$('#timeline-next-day').onclick=$('#planner-secondary-next-day').onclick=$('#task-next-day').onclick=()=>shiftSelectedDate(1);
   $('#today-button').onclick=()=>setSelectedDate(isoToday());$('#selected-date').onchange=e=>setSelectedDate(e.target.value);
   $('#planner-today').onclick=()=>setSelectedDate(isoToday());$('#planner-date').onchange=e=>setSelectedDate(e.target.value);
+  $('#timeline-today').onclick=()=>setSelectedDate(isoToday());$('#timeline-date').onchange=e=>setSelectedDate(e.target.value);
   $('#planner-secondary-today').onclick=()=>setSelectedDate(isoToday());$('#planner-secondary-date').onchange=e=>setSelectedDate(e.target.value);
-  $$('.planner-mode-button').forEach(button=>button.onclick=()=>{plannerMode=button.dataset.plannerMode;try{localStorage.setItem(PLANNER_MODE_KEY,plannerMode);}catch{}renderPlanner();});
   $('#planner-notes-input').addEventListener('input',event=>{
     state.dayNotes[selectedDate]={text:event.target.value,updatedAt:stamp()};
     saveLocal();
@@ -1379,7 +1389,7 @@
     if(event.target.closest('[data-open-routine-day]')){setSection('routines');setView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
     const button=event.target.closest('[data-planner-routine]');if(button)openFocusRoutine(button.dataset.plannerRoutine);
   });
-  $('#planner-timeline').addEventListener('click',event=>{const routine=event.target.closest('[data-timeline-routine]'),task=event.target.closest('[data-timeline-task]');if(routine)openFocusRoutine(routine.dataset.timelineRoutine);else if(task)openTaskFocus(task.dataset.timelineTask);});
+  $('#planner-timeline').addEventListener('click',event=>{const routine=event.target.closest('[data-timeline-routine]'),task=event.target.closest('[data-timeline-task]'),action=event.target.closest('[data-timeline-action]');if(routine)openFocusRoutine(routine.dataset.timelineRoutine);else if(task)openTaskFocus(task.dataset.timelineTask);else if(action)openActionDialog(action.dataset.timelineAction);});
   for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{
     if(event.target.closest('[data-open-task-day]')){setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
     const openAction=event.target.closest('[data-open-action]');if(openAction){openActionDialog(openAction.dataset.openAction);return;}
