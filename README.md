@@ -2,7 +2,7 @@
 
 Aplicativo estático, preparado para hospedagem no GitHub Pages. Rotinas, âncoras, áreas e histórico ficam no navegador e podem ser sincronizados entre dispositivos com Supabase Auth e uma tabela JSONB protegida por RLS.
 
-O menu lateral reúne Visão diária, Âncoras e Rotinas. A visão diária mostra blocos editáveis de Tema do dia, Casa, Lazer, Estudos, Movimento e Extras, além das rotinas da data. As âncoras pré-cadastradas foram transcritas dos exemplos fornecidos e podem ter nome, ícone, área, descrição, dias da semana e período editados. Áreas também podem ser criadas, renomeadas, coloridas, reordenadas e excluídas quando vazias. Todos esses cadastros usam a mesma sincronização das rotinas.
+O menu lateral reúne as visões diárias, semanais e mensais, além de Âncoras, Rotinas, Tarefas e Ações. A visão diária mostra blocos editáveis de Tema do dia, Casa, Lazer, Estudos, Movimento e Extras, além das rotinas da data. As âncoras pré-cadastradas foram transcritas dos exemplos fornecidos e podem ter nome, ícone, área, descrição, dias da semana e período editados. Áreas também podem ser criadas, renomeadas, coloridas, reordenadas e excluídas quando vazias. Todos esses cadastros usam a mesma sincronização das rotinas.
 
 No computador, o botão no cabeçalho recolhe ou expande o menu lateral e lembra a escolha neste navegador. Na Visão diária, as áreas ficam à esquerda e as rotinas ocupam uma coluna inteira à direita; no celular, os blocos ficam em sequência.
 
@@ -42,3 +42,7 @@ Ao abrir um bloco, o resultado pode ser **Realizado**, **Realizado parcialmente*
 Âncoras também podem ter horário sugerido e duração opcional (45 minutos por padrão). Âncoras com horário aparecem na posição correspondente no cronograma diário; as sem horário permanecem na lista acima dele. Esses campos seguem a sincronização em nuvem.
 
 A **Visão mensal** organiza as âncoras com semanas específicas nas colunas Semana 1 a Semana 5 e as áreas nas linhas. Âncoras configuradas para todas as semanas não entram nessa visão. As semanas seguem a mesma regra do cadastro de âncoras: de segunda a domingo, com a Semana 1 sendo a primeira que tem pelo menos quatro dias no mês escolhido. Os cabeçalhos usam a paleta azul enviada como referência.
+
+## Ações
+
+A seção **Ações** oferece um quadro com os meses do ano lado a lado e um calendário mensal. Cada ação pode ser agendada para um mês inteiro ou para uma data específica, com nome, ícone, cor, descrição e notas opcionais. As ações do mês aparecem em cada dia daquele mês na Visão secundária; as ações com data aparecem apenas na data escolhida. Ações não entram na contagem de dias incompletos. Os cadastros são salvos junto com os demais dados e sincronizados entre dispositivos conectados à mesma conta.

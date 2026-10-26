@@ -198,6 +198,25 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-task-block{--area-color:#e2eee6}
 .planner-task-biweekly{--area-color:#e9e3f0}
 .planner-block-tasks{--area-color:#d9e7f0}
+.planner-block-actions{--area-color:#f3e6d7}
+.actions-content{padding:0 0 48px}
+.action-month-navigator{margin:14px 0 23px}
+.action-period-title{margin:0 0 13px;color:var(--ink);font:800 20px/1.3 Manrope,sans-serif;text-transform:capitalize}
+.action-month-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(176px,1fr);gap:10px;overflow-x:auto;padding:0 0 14px;scrollbar-color:#b6c6c3 transparent}
+.action-month-column{min-height:380px;padding:10px;border:1px solid #d9dfdb;border-radius:11px;background:#f2f3ef}
+.action-month-column:nth-child(6n+1){background:#e6f1ee}.action-month-column:nth-child(6n+2){background:#edeaf3}.action-month-column:nth-child(6n+3){background:#e5edf2}.action-month-column:nth-child(6n+4){background:#f4e7e0}.action-month-column:nth-child(6n+5){background:#eeeaf0}.action-month-column:nth-child(6n){background:#eef0e2}
+.action-month-column.is-selected{outline:2px solid #467a7a;outline-offset:-2px}
+.action-month-column header{display:flex;align-items:center;gap:8px;margin:0 0 12px;color:#244b50;font-size:12px}.action-month-column header span{padding:4px 9px;border-radius:6px;background:#fff9;font-weight:800;text-transform:capitalize}.action-month-column header b{font-size:11px}
+.action-card-list{display:grid;gap:7px;align-content:start}
+.action-card{display:block;width:100%;padding:9px 10px;border:1px solid color-mix(in srgb,var(--action-color) 50%,#b9c6c1);border-left:4px solid var(--action-color);border-radius:8px;background:#fffdf9;color:var(--ink);text-align:left;box-shadow:1px 2px 0 #25474c0a}
+.action-card:hover,.action-calendar-item:hover{filter:brightness(.97);border-color:#658e8a}
+.action-card-title{display:flex;align-items:flex-start;gap:5px;font-size:11px;line-height:1.4}.action-card-mark{flex:none}.action-card small{display:block;margin:5px 0 0;color:#6b7370;font-size:10px}.action-card-description{display:block;margin-top:4px;color:#6b7370;font-size:10px;line-height:1.3}
+.action-add-inline{border:0;background:transparent;color:#356d70;padding:8px 2px;text-align:left;font:700 11px Manrope,sans-serif}
+.action-calendar-scroll{max-width:100%;overflow-x:auto;padding-bottom:15px}.action-calendar{display:grid;grid-template-columns:repeat(7,minmax(115px,1fr));min-width:805px;border:1px solid #d7dfdb;border-radius:10px;overflow:hidden;background:#fffdfa}
+.action-calendar-heading{padding:10px 7px;background:#dcebe7;color:#25474c;border-right:1px solid #cbdad6;text-align:center;font:800 11px Manrope,sans-serif}.action-calendar-heading:nth-child(7){border-right:0}
+.action-calendar-day{min-height:126px;padding:6px;border-right:1px solid #e2e7e3;border-top:1px solid #e2e7e3;background:#fffdfa}.action-calendar-day:nth-child(7n){border-right:0}.action-calendar-day.is-outside{background:#f1f1ed;color:#8e9690}.action-calendar-day.is-today{background:#f0f8f4}
+.action-calendar-day-head{display:flex;justify-content:space-between;align-items:center;font-size:11px;font-weight:800}.action-calendar-day-head button{padding:1px 5px;border:0;background:transparent;color:#4b7778;font-size:16px;opacity:.55}.action-calendar-day:hover .action-calendar-day-head button,.action-calendar-day-head button:focus-visible{opacity:1}
+.action-calendar-items{display:grid;gap:3px;margin-top:5px}.action-calendar-item{width:100%;padding:4px 5px;border:0;border-left:3px solid var(--action-color);border-radius:3px;background:color-mix(in srgb,var(--action-color) 28%,white);color:#263e40;text-align:left;font-size:10px;line-height:1.25;overflow-wrap:anywhere}.action-calendar-item span{margin-right:3px}
 .task-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .task-tab-bar{display:flex;align-items:flex-end;gap:14px;border-bottom:1px solid var(--line)}
 .task-tab-bar .tabs{flex:1;min-width:0;margin-top:12px;border-bottom:0;white-space:nowrap}

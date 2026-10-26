@@ -87,6 +87,8 @@
   let selectedMonthlyMonth = isoToday().slice(0,7);
   let selectedTaskWeekDate = isoToday();
   let selectedSummaryMonth = isoToday().slice(0,7);
+  let selectedActionMonth = isoToday().slice(0,7);
+  let actionView = 'month';
   let renderedCalendarDate = isoToday();
   let plannerMode = 'blocks';
   try{if(localStorage.getItem(PLANNER_MODE_KEY)==='timeline')plannerMode='timeline';}catch{}
@@ -102,7 +104,7 @@
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:4, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],taskHistory:{},dayNotes:{},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:5, routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],taskHistory:{},dayNotes:{},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',weekdays,monthWeeks:[],startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
@@ -115,9 +117,10 @@
     if(!Array.isArray(data.areas))data.areas=[];
     if(!Array.isArray(data.anchors))data.anchors=[];
     if(!Array.isArray(data.tasks))data.tasks=[];
+    if(!Array.isArray(data.actions))data.actions=[];
     if(!data.taskHistory||typeof data.taskHistory!=='object')data.taskHistory={};
     if(!data.dayNotes||typeof data.dayNotes!=='object')data.dayNotes={};
-    data.version=4;
+    data.version=5;
     const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
     for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
     for(const anchor of makeAnchorSeed())if(!anchorIds.has(anchor.id))data.anchors.push(anchor);
@@ -169,6 +172,9 @@
     const mondayUTC=value=>{const day=safeDate(value);day.setDate(day.getDate()-(day.getDay()+6)%7);return Date.UTC(day.getFullYear(),day.getMonth(),day.getDate());};
     const weeks=Math.round((mondayUTC(date)-mondayUTC(task.startDate))/604800000);
     return weeks>=0&&weeks%2===0;
+  }
+  function actionIsScheduled(action,date){
+    return !action.deleted&&(action.schedule==='date'?action.scheduledDate===date:action.scheduledMonth===date.slice(0,7));
   }
   function taskIsConsultation(task){
     const catalog=state.tasks.find(entry=>entry.id===(task.taskId||task.id));
@@ -477,7 +483,9 @@
     const taskDay=ensureTaskDay(selectedDate);
     const routineBlock=`<section class="planner-block planner-routines"><h2><span class="planner-heading-icon" aria-hidden="true">☑</span><span>Rotinas do dia</span></h2><div class="planner-block-body">${routines.length?routines.map(r=>`<button type="button" class="planner-routine" data-planner-routine="${escapeHTML(r.routineId)}"><span>${escapeHTML(r.icon)}</span><strong>${escapeHTML(r.name)}</strong>${r.scheduledTime?`<time class="planner-routine-time">${escapeHTML(r.scheduledTime)}</time>`:''}</button>`).join(''):'<p class="planner-empty">Nenhuma rotina neste dia.</p>'}</div></section>`;
     $('#planner-grid').innerHTML=`${primaryBlocks.theme}<div class="planner-areas">${primaryBlocks.other||'<p class="planner-empty">Nenhuma área na visão principal.</p>'}</div>${routineBlock}`;
-    $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}${blockGroup(taskDay,true)}`;
+    const actions=state.actions.filter(action=>actionIsScheduled(action,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    const actionBlock=actions.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${actions.map(action=>`<div class="planner-item"><span class="planner-item-icon">${escapeHTML(action.icon||'✦')}</span><div><strong>${escapeHTML(action.title)}</strong>${action.description?`<p>${escapeHTML(action.description)}</p>`:''}</div></div>`).join('')}</div></section>`:'';
+    $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${taskGroup(taskDay,'weekly',true)}${taskGroup(taskDay,'biweekly',true)}${blockGroup(taskDay,true)}${actionBlock}`;
     $('#planner-grid').classList.toggle('hidden',plannerMode==='timeline');
     $('#planner-timeline').classList.toggle('hidden',plannerMode!=='timeline');
     $$('.planner-mode-button').forEach(button=>{const active=button.dataset.plannerMode===plannerMode;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
@@ -575,6 +583,71 @@
     }).join('');
     $('#task-week-grid').innerHTML=`<table class="weekly-table task-week-table"><thead><tr><th scope="col" class="weekly-corner">Tarefas</th>${weeklyHeaders(dates,'tasks')}</tr></thead><tbody>${rows}</tbody></table>`;
   }
+  function actionCard(action){
+    const when=action.schedule==='date'?fmtDate(action.scheduledDate,{day:'numeric',month:'short'}):'Mês inteiro';
+    return `<button type="button" class="action-card" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" data-edit-action="${escapeHTML(action.id)}"><span class="action-card-title"><span class="action-card-mark">${escapeHTML(action.icon||'✦')}</span><strong>${escapeHTML(action.title)}</strong></span><small>▸ Programado · ${escapeHTML(when)}</small>${action.description?`<span class="action-card-description">${escapeHTML(action.description)}</span>`:''}</button>`;
+  }
+  function renderActions(){
+    $('#action-month').value=selectedActionMonth;
+    $('#action-current-month').classList.toggle('hidden',selectedActionMonth===isoToday().slice(0,7));
+    $$('.action-tab').forEach(button=>{const active=button.dataset.actionView===actionView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
+    const actions=state.actions.filter(action=>!action.deleted).sort((a,b)=>(a.scheduledDate||`${a.scheduledMonth}-01`).localeCompare(b.scheduledDate||`${b.scheduledMonth}-01`)||a.title.localeCompare(b.title,'pt-BR'));
+    const monthOf=action=>action.schedule==='date'?action.scheduledDate?.slice(0,7):action.scheduledMonth;
+    const [year,month]=selectedActionMonth.split('-').map(Number);
+    if(actionView==='month'){
+      const columns=Array.from({length:12},(_,i)=>{
+        const key=`${year}-${String(i+1).padStart(2,'0')}`,entries=actions.filter(action=>monthOf(action)===key);
+        const name=fmtDate(`${key}-01`,{month:'short'});
+        return `<section class="action-month-column${key===selectedActionMonth?' is-selected':''}"><header><span>${escapeHTML(name)}</span><b>${entries.length}</b></header><div class="action-card-list">${entries.map(actionCard).join('')}<button type="button" class="action-add-inline" data-add-action-month="${key}">＋ Adicionar ação</button></div></section>`;
+      });
+      $('#actions-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Ações por mês" tabindex="0">${columns.join('')}</div>`;
+      const board=$('.action-month-board'),selected=$('.action-month-column.is-selected',board);
+      if(selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);
+    }else{
+      const first=new Date(year,month-1,1),start=new Date(year,month-1,1-(first.getDay()+6)%7),last=new Date(year,month,0),weeks=Math.ceil(((first.getDay()+6)%7+last.getDate())/7);
+      const dateKey=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+      const heads=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'].map(label=>`<div class="action-calendar-heading">${label}</div>`).join('');
+      const cells=Array.from({length:weeks*7},(_,index)=>{
+        const day=new Date(start);day.setDate(start.getDate()+index);const key=dateKey(day),entries=actions.filter(action=>action.schedule==='date'&&action.scheduledDate===key);
+        return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-action-date="${key}" aria-label="Adicionar ação em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(action=>`<button type="button" class="action-calendar-item" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" data-edit-action="${escapeHTML(action.id)}"><span>${escapeHTML(action.icon||'✦')}</span>${escapeHTML(action.title)}</button>`).join('')}</div></div>`;
+      }).join('');
+      $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
+    }
+  }
+  function openActionDialog(id=null){
+    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);
+    $('#action-form').reset();$('#action-id').value=action?.id||'';
+    $('#action-dialog-title').textContent=action?'Editar ação':'Nova ação';
+    $('#action-title').value=action?.title||'';$('#action-description').value=action?.description||'';
+    $('#action-icon').value=action?.icon||'✦';$('#action-color').value=action?.color||'#bbdcd8';
+    $('#action-schedule').value=action?.schedule||'month';
+    $('#action-scheduled-month').value=action?.scheduledMonth||selectedActionMonth;
+    $('#action-scheduled-date').value=action?.scheduledDate||selectedDate;
+    $('#action-notes').value=action?.notes||'';
+    $('#delete-action').classList.toggle('hidden',!action);
+    updateActionSchedule();$('#action-dialog').showModal();
+  }
+  function updateActionSchedule(){
+    const date=$('#action-schedule').value==='date';
+    $('#action-month-field').classList.toggle('hidden',date);
+    $('#action-date-field').classList.toggle('hidden',!date);
+  }
+  function saveAction(event){
+    event.preventDefault();
+    const title=$('#action-title').value.trim(),schedule=$('#action-schedule').value,scheduledMonth=$('#action-scheduled-month').value,scheduledDate=$('#action-scheduled-date').value;
+    if(!title){toast('Dê um nome à ação.');return;}
+    if(schedule==='date'?!scheduledDate:!scheduledMonth){toast('Escolha a data ou o mês da ação.');return;}
+    const id=$('#action-id').value||uid(),next={id,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim()||'✦',color:$('#action-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',updatedAt:stamp(),deleted:false};
+    const index=state.actions.findIndex(action=>action.id===id);
+    if(index<0)state.actions.push(next);else state.actions[index]=next;
+    selectedActionMonth=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
+    saveLocal();$('#action-dialog').close();renderActions();renderPlanner();toast('Ação salva.');
+  }
+  function deleteAction(){
+    const action=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted);if(!action)return;
+    if(!confirm(`Excluir a ação “${action.title}”?`))return;
+    action.deleted=true;action.updatedAt=stamp();saveLocal();$('#action-dialog').close();renderActions();renderPlanner();toast('Ação excluída.');
+  }
   function renderAnchors(){
     const areas=orderedAreas(),areaById=new Map(areas.map(area=>[area.id,area]));
     if(selectedAnchorArea&&!areaById.has(selectedAnchorArea))selectedAnchorArea='';
@@ -584,10 +657,11 @@
     $('#anchor-list').innerHTML=anchors.length?anchors.map(anchor=>`<article class="anchor-card"><span class="anchor-icon">${escapeHTML(anchor.icon||'✦')}</span><div class="anchor-info"><strong>${escapeHTML(anchor.title)}</strong><small>${escapeHTML(areaById.get(anchor.areaId)?.name||'Área indisponível')} · ${anchor.weekdays?.length===7?'Todos os dias':(anchor.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${anchor.monthWeeks?.length?` · semanas ${escapeHTML(anchor.monthWeeks.join(', '))}`:''}${anchor.scheduledTime?` · ${escapeHTML(anchor.scheduledTime)} (${Number(anchor.durationMinutes)||45} min)`:''}${anchor.startDate?` · a partir de ${escapeHTML(fmtDate(anchor.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}${anchor.endDate?` · até ${escapeHTML(fmtDate(anchor.endDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div><button type="button" class="small-edit" data-edit-anchor="${escapeHTML(anchor.id)}">Editar</button></article>`).join(''):selectedAnchorArea?'<div class="empty-state"><h3>Nenhuma âncora nesta área</h3><p>Escolha outra área ou crie uma nova âncora.</p></div>':'<div class="empty-state"><h3>Suas âncoras começam aqui</h3><p>Crie uma âncora para organizar seu dia.</p></div>';
     $('#area-list').innerHTML=areas.map((area,index)=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color)}"></span><strong>${escapeHTML(area.name)}</strong><small class="area-view-tag">${area.dailyView==='secondary'?'Visão secundária':'Visão principal'}</small><div class="area-card-actions"><button type="button" data-move-area="up" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para cima" ${index===0?'disabled':''}>↑</button><button type="button" data-move-area="down" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para baixo" ${index===areas.length-1?'disabled':''}>↓</button><button type="button" class="small-edit" data-edit-area="${escapeHTML(area.id)}">Editar</button></div></article>`).join('');
   }
-  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderPlanner(); renderWeekly(); renderMonthly(); renderTaskWeekly(); renderSummary(); renderAnchors(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
+  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderPlanner(); renderWeekly(); renderMonthly(); renderTaskWeekly(); renderSummary(); renderAnchors(); renderActions(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
   function setSection(section){
     $$('.workspace-view').forEach(view=>view.classList.toggle('active-workspace',view.id===`${section}-workspace`));
     $$('.sidebar-link').forEach(link=>{const active=link.dataset.section===section;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');});
+    if(section==='actions')renderActions();
     document.body.classList.remove('sidebar-open');updateSidebarToggle();
   }
   function updateSidebarToggle(){
@@ -860,7 +934,7 @@
       }
       return [...records.values()];
     };
-    const areas=mergeRecords(a.areas,b.areas),anchors=mergeRecords(a.anchors,b.anchors),tasks=mergeRecords(a.tasks,b.tasks);
+    const areas=mergeRecords(a.areas,b.areas),anchors=mergeRecords(a.anchors,b.anchors),tasks=mergeRecords(a.tasks,b.tasks),actions=mergeRecords(a.actions,b.actions);
     const routines=new Map();
     for(const r of [...(a.routines||[]),...(b.routines||[])]) {
       const prev=routines.get(r.id), rt=Date.parse(r.updatedAt||0)||0, pt=Date.parse(prev?.updatedAt||0)||0;
@@ -932,7 +1006,7 @@
       const left=a.dayNotes?.[date],right=b.dayNotes?.[date];
       dayNotes[date]=structuredClone(!left?right:!right?left:(right.updatedAt||'')>=(left.updatedAt||'')?right:left);
     }
-    return {version:4,routines:[...routines.values()],tasks,areas,anchors,history,taskHistory,dayNotes};
+    return {version:5,routines:[...routines.values()],tasks,actions,areas,anchors,history,taskHistory,dayNotes};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -1079,6 +1153,19 @@
   $('#task-week-prev').onclick=()=>shiftTaskWeek(-1);$('#task-week-next').onclick=()=>shiftTaskWeek(1);
   $('#task-week-today').onclick=()=>{selectedTaskWeekDate=isoToday();renderTaskWeekly();};
   $('#task-week-date').onchange=e=>{if(e.target.value){selectedTaskWeekDate=e.target.value;renderTaskWeekly();}};
+  $$('.action-tab').forEach(button=>button.onclick=()=>{actionView=button.dataset.actionView;renderActions();});
+  const shiftActionPeriod=amount=>{const [year,month]=selectedActionMonth.split('-').map(Number),next=new Date(year,month-1+(actionView==='month'?amount*12:amount),1);selectedActionMonth=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;renderActions();};
+  $('#action-prev-month').onclick=()=>shiftActionPeriod(-1);$('#action-next-month').onclick=()=>shiftActionPeriod(1);
+  $('#action-current-month').onclick=()=>{selectedActionMonth=isoToday().slice(0,7);renderActions();};
+  $('#action-month').onchange=event=>{if(event.target.value){selectedActionMonth=event.target.value;renderActions();}};
+  $('#add-action').onclick=()=>openActionDialog();
+  $('#action-schedule').onchange=updateActionSchedule;
+  $('#action-form').addEventListener('submit',saveAction);$('#delete-action').onclick=deleteAction;
+  $('#actions-content').addEventListener('click',event=>{
+    const edit=event.target.closest('[data-edit-action]');if(edit){openActionDialog(edit.dataset.editAction);return;}
+    const month=event.target.closest('[data-add-action-month]');if(month){openActionDialog();$('#action-schedule').value='month';$('#action-scheduled-month').value=month.dataset.addActionMonth;updateActionSchedule();return;}
+    const date=event.target.closest('[data-add-action-date]');if(date){openActionDialog();$('#action-schedule').value='date';$('#action-scheduled-date').value=date.dataset.addActionDate;updateActionSchedule();}
+  });
   $('#planner-grid').addEventListener('click',event=>{const button=event.target.closest('[data-planner-routine]');if(button)openFocusRoutine(button.dataset.plannerRoutine);});
   $('#planner-timeline').addEventListener('click',event=>{const routine=event.target.closest('[data-timeline-routine]'),task=event.target.closest('[data-timeline-task]');if(routine)openFocusRoutine(routine.dataset.timelineRoutine);else if(task)openTaskFocus(task.dataset.timelineTask);});
   for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{
