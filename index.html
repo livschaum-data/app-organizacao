@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261026-timeline-now">
+  <link rel="stylesheet" href="styles.css?v=20261026-planner-links">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261026-timeline-now"></script>
+  <script defer src="app.js?v=20261026-planner-links"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -74,7 +74,7 @@
 
       <section id="summary-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">ACOMPANHAMENTO</div><h1>Resumo dos seus dias.</h1><p>Veja quantos dias ainda têm rotinas ou tarefas pendentes.</p><div class="date-navigator"><button type="button" id="summary-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="summary-date" type="month" aria-label="Escolher mês do resumo"><button type="button" id="summary-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="summary-today" class="today-button">Mês atual</button></div></div>
-        <p class="summary-explainer">Rotinas contam como registradas ao concluir o dia. Tarefas contam quando são marcadas como concluídas. Dias futuros não entram no resumo.</p>
+        <p class="summary-explainer">Rotinas e tarefas têm conclusões separadas. Ao concluir, itens abertos ficam registrados como não realizados. Dias futuros não entram no resumo.</p>
         <div id="summary-content" class="summary-content"></div>
       </section>
 
@@ -114,7 +114,7 @@
         <div class="section-heading"><div><div class="eyebrow">A JORNADA DE HOJE</div><h2>Suas rotinas</h2></div><button class="text-button" id="add-routine-from-day">＋ Nova rotina</button></div>
         <div id="routine-list" class="routine-list"></div>
         <div id="empty-day" class="empty-state hidden"><span>☀</span><h3>Um espaço para você</h3><p>Nenhuma rotina está programada para este dia.</p><button class="primary-button" id="empty-add">Criar uma rotina</button></div>
-        <div class="day-footer"><span id="day-save-note">Seu progresso é salvo automaticamente.</span><button id="finish-day" class="finish-button">Concluir meu dia</button></div>
+        <div class="day-footer"><span id="day-save-note">Seu progresso é salvo automaticamente.</span><button id="finish-day" class="finish-button">Concluir rotinas</button></div>
       </section>
 
       <section id="history-view" class="view">
@@ -135,7 +135,7 @@
           <div id="task-day-navigator" class="date-navigator planner-day-navigator"><button type="button" id="task-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="task-date" type="date" aria-label="Escolher dia das tarefas"><span id="task-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="task-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="task-today" class="today-button">Hoje</button><span id="task-day-status" class="day-status hidden"></span></div>
         </div>
         <div class="task-tab-bar"><nav class="tabs" aria-label="Seções de tarefas"><button type="button" class="tab task-tab active" data-task-view="day">Tarefas do dia</button><button type="button" class="tab task-tab" data-task-view="week">Visão semanal</button><button type="button" class="tab task-tab" data-task-view="history">Histórico</button><button type="button" class="tab task-tab" data-task-view="manage">Minhas tarefas</button></nav><button type="button" class="text-button task-add-button" id="add-task">＋ Nova tarefa</button></div>
-        <section id="task-day-view" class="view task-view active-view"><div class="section-heading"><div><div class="eyebrow">PARA ESTE DIA</div><h2>Suas tarefas</h2></div></div><div id="task-day-list" class="task-groups"></div></section>
+        <section id="task-day-view" class="view task-view active-view"><div class="section-heading"><div><div class="eyebrow">PARA ESTE DIA</div><h2>Suas tarefas</h2></div></div><div id="task-day-list" class="task-groups"></div><div class="day-footer"><span>Seu progresso é salvo automaticamente.</span><button id="finish-tasks-day" class="finish-button">Concluir tarefas e blocos</button></div></section>
         <section id="task-week-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">SEMANA</div><h2>Tarefas da semana</h2><p id="task-week-range-label" class="planner-date-label"></p></div></div><div class="date-navigator task-week-navigator"><button type="button" id="task-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="task-week-date" type="date" aria-label="Escolher semana das tarefas"><button type="button" id="task-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="task-week-today" class="today-button">Esta semana</button></div><div id="task-week-grid" class="weekly-scroll"></div></section>
         <section id="task-history-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">REGISTROS</div><h2>Histórico de tarefas</h2></div><button type="button" class="text-button" id="task-history-export">↓ Exportar CSV</button></div><div id="task-history-list" class="history-list"></div></section>
         <section id="task-manage-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">DO SEU JEITO</div><h2>Minhas tarefas</h2></div></div><p class="section-intro">Cadastre tarefas com ou sem passos e escolha a repetição semanal ou quinzenal.</p><div id="task-manage-list" class="manage-list"></div></section>

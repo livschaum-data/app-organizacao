@@ -175,6 +175,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-secondary-empty{grid-column:1/-1}
 .planner-block{min-width:0;border-radius:6px;background:color-mix(in srgb,var(--area-color) 46%,white);border:1px solid color-mix(in srgb,var(--area-color) 60%,white);overflow:hidden;box-shadow:2px 3px 0 #25474c09}
 .planner-block h2{display:flex;align-items:center;gap:8px;margin:0;padding:11px 13px 9px;background:color-mix(in srgb,var(--area-color) 84%,#c9d0cd);border-bottom:1px dashed #48636a48;color:var(--heading-ink,#25474c);font:800 12px/1.2 Manrope,sans-serif;letter-spacing:.55px;text-transform:uppercase}
+.planner-block-link{display:inline-flex;align-items:center;gap:8px;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}.planner-block-link:hover span:last-child{text-decoration:underline}.planner-block-link:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:2px}
 .planner-block h2::after{content:'✧';margin-left:auto;color:inherit;opacity:.75;font:400 17px/1 'Segoe Print',cursive;transform:rotate(-12deg)}
 .planner-heading-icon{flex:none;display:grid;place-items:center;width:19px;height:19px;color:inherit;font:700 20px/1 'Segoe Print','DM Sans',sans-serif;letter-spacing:0;transform:rotate(-8deg)}
 .planner-block-body{padding:7px 12px 11px}
