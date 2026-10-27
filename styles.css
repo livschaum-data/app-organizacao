@@ -422,6 +422,9 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .summary-day:last-child{border-bottom:0}
 .summary-day.is-pending>span{font-weight:700;color:#9a4549}
 .summary-day>div{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.summary-day button{border:0;background:#fae7e4;color:#954449;border-radius:6px;padding:5px 8px;font-size:10px;font-weight:700}
-.summary-day button:hover{background:#f1d5d2}
+.summary-day button{border:0;border-radius:6px;padding:5px 8px;font-size:10px;font-weight:700}
+.summary-day button[data-summary-section="routines"]{background:#fae3e9;color:#914b63}
+.summary-day button[data-summary-section="routines"]:hover{background:#f1cfd9}
+.summary-day button[data-summary-section="tasks"]{background:#f8ddd7;color:#a04f45}
+.summary-day button[data-summary-section="tasks"]:hover{background:#efc8c0}
 @media(max-width:560px){.summary-totals article{padding:14px}.summary-period summary{align-items:flex-start;flex-wrap:wrap}.summary-period summary strong{flex:0 0 100%;text-align:left;margin-left:21px}.summary-day{align-items:flex-start;flex-direction:column}.summary-day>div{justify-content:flex-start}.timeline-event{font-size:10px;gap:4px;flex-wrap:wrap}.timeline-event time{font-size:9px}}
