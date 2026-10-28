@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css?v=20261027-summary-colors">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261028-task-focus-buttons"></script>
+  <script defer src="app.js?v=20261028-weekly-group-options"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -105,7 +105,7 @@
         <div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Áreas</h2></div><button type="button" class="text-button" id="add-area">＋ Nova área</button></div>
         <div id="area-list" class="area-list"></div>
         <div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Grupos nas visões diárias</h2></div></div>
-        <p class="section-intro">Defina uma única vez em qual visão cada grupo de cartões aparece.</p>
+        <p class="section-intro">Defina em qual visão diária cada grupo aparece e se ele também entra na visão semanal global.</p>
         <form id="daily-view-groups-form" class="area-list"><div id="daily-view-groups"></div><div class="dialog-actions"><span></span><button type="submit" class="primary-button">Salvar posições</button></div></form>
       </section>
 
@@ -333,6 +333,7 @@
       <label class="field-label" for="area-name">Nome da área</label><input class="text-input" id="area-name" maxlength="40" required placeholder="Ex.: Projetos">
       <label class="field-label" for="area-color">Cor de fundo</label><input class="color-input" id="area-color" type="color" value="#e8e5dd">
       <label class="field-label" for="area-daily-view">Mostrar na visão diária</label><select class="text-input" id="area-daily-view"><option value="primary">Principal</option><option value="secondary">Secundária</option></select>
+      <label class="daily-weekly-toggle"><input type="checkbox" id="area-weekly-view"> Mostrar na visão semanal global</label>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-area">Excluir área</button><span></span><button type="button" class="secondary-button" data-close="area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar área</button></div>
     </form>
   </dialog>
