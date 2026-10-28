@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css?v=20261027-summary-colors">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261026-occurrences-secondary"></script>
+  <script defer src="app.js?v=20261028-card-views"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -44,7 +44,7 @@
 
     <main>
       <section id="planner-workspace" class="workspace-view active-workspace">
-        <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA</div><h1>Seu dia, em perspectiva.</h1><p id="planner-date-label" class="planner-date-label"></p><p>Suas âncoras e rotinas reunidas em um só lugar.</p>
+        <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA</div><h1>Seu dia, em perspectiva.</h1><p id="planner-date-label" class="planner-date-label"></p><p>Os itens que você escolheu para esta visão.</p>
           <div class="date-navigator planner-day-navigator"><button type="button" id="planner-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="planner-date" type="date" aria-label="Escolher dia da visão diária"><span id="planner-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="planner-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-today" class="today-button">Hoje</button><span id="planner-day-status" class="day-status hidden"></span></div>
         </div>
         <nav class="tabs planner-daily-tabs" aria-label="Conteúdo da visão diária">
@@ -71,7 +71,7 @@
       </section>
 
       <section id="planner-secondary-workspace" class="workspace-view">
-        <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA SECUNDÁRIA</div><h1>Outro olhar para o dia.</h1><p id="planner-secondary-date-label" class="planner-date-label"></p><p>As âncoras das áreas escolhidas para esta visão.</p>
+        <div class="planner-hero"><div class="eyebrow">VISÃO DIÁRIA SECUNDÁRIA</div><h1>Outro olhar para o dia.</h1><p id="planner-secondary-date-label" class="planner-date-label"></p><p>Os itens que você escolheu para esta visão.</p>
           <div class="date-navigator planner-day-navigator"><button type="button" id="planner-secondary-prev-day" class="round-button" aria-label="Dia anterior">←</button><span class="planner-date-with-weekday"><input id="planner-secondary-date" type="date" aria-label="Escolher dia da visão secundária"><span id="planner-secondary-weekday" class="planner-weekday" aria-live="polite"></span></span><button type="button" id="planner-secondary-next-day" class="round-button" aria-label="Próximo dia">→</button><button type="button" id="planner-secondary-today" class="today-button">Hoje</button><span id="planner-secondary-day-status" class="day-status hidden"></span></div>
         </div>
         <div id="planner-secondary-grid" class="planner-secondary-grid"></div>
@@ -235,6 +235,7 @@
       <label class="field-label" for="action-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="action-description" maxlength="2000" rows="3"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone (opcional)</label><input class="text-input icon-input" id="action-icon" maxlength="8"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div>
       <label class="field-label" for="action-area">Área geral <span class="optional">(opcional)</span></label><select class="text-input" id="action-area"></select>
+      <label class="field-label" for="action-daily-view">Mostrar na visão diária</label><select class="text-input" id="action-daily-view" required><option value="" disabled>Escolha onde mostrar</option><option value="primary">Visão principal</option><option value="secondary">Visão secundária</option></select>
       <label class="field-label" for="action-schedule">Agendar por</label><select class="text-input" id="action-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option></select>
       <div id="action-month-field"><label class="field-label" for="action-scheduled-month">Mês</label><input class="text-input" id="action-scheduled-month" type="month"><label class="field-label" for="action-week">Semana <span class="optional">(opcional)</span></label><select class="text-input" id="action-week"><option value="">Mês inteiro</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option></select></div>
       <div id="action-date-field" class="hidden"><label class="field-label" for="action-scheduled-date">Data</label><input class="text-input" id="action-scheduled-date" type="date"><p id="action-date-week" class="schedule-hint"></p></div>
@@ -260,6 +261,7 @@
       <label class="field-label" for="occurrence-type">Tipo</label><select class="text-input" id="occurrence-type"><option value="reminder">Lembrete</option><option value="event">Evento</option><option value="holiday">Feriado</option><option value="birthday">Aniversário</option></select>
       <label class="field-label" for="occurrence-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="occurrence-description" maxlength="2000" rows="3"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="occurrence-icon">Ícone <span class="optional">(opcional)</span></label><input class="text-input icon-input" id="occurrence-icon" maxlength="8"></div><div class="field"><label class="field-label" for="occurrence-color">Cor</label><input class="color-input" id="occurrence-color" type="color" value="#5DFF5D"></div></div>
+      <label class="field-label" for="occurrence-daily-view">Mostrar na visão diária</label><select class="text-input" id="occurrence-daily-view" required><option value="" disabled>Escolha onde mostrar</option><option value="primary">Visão principal</option><option value="secondary">Visão secundária</option></select>
       <label class="field-label" for="occurrence-schedule">Agendar por</label><select class="text-input" id="occurrence-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option><option value="recurrence">Recorrência</option></select>
       <div id="occurrence-month-field"><label class="field-label" for="occurrence-scheduled-month">Mês</label><input class="text-input" id="occurrence-scheduled-month" type="month"><label class="field-label" for="occurrence-week">Semana <span class="optional">(opcional)</span></label><select class="text-input" id="occurrence-week"><option value="">Mês inteiro</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option></select></div>
       <div id="occurrence-date-field" class="hidden"><label class="field-label" for="occurrence-scheduled-date">Data inicial</label><input class="text-input" id="occurrence-scheduled-date" type="date"><div id="occurrence-end-date-field" class="hidden"><label class="field-label" for="occurrence-scheduled-end-date">Data final <span class="optional">(opcional)</span></label><input class="text-input" id="occurrence-scheduled-end-date" type="date"><p class="schedule-hint">Se ficar vazia, o acontecimento terá apenas um dia.</p></div><p id="occurrence-annual-hint" class="schedule-hint hidden">Este aniversário se repetirá todos os anos nesta data.</p></div>
@@ -276,6 +278,7 @@
       <label class="field-label" for="task-time">Horário sugerido <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="task-time" type="time">
       <label class="field-label" for="task-duration">Duração no cronograma <span class="optional">(minutos, opcional)</span></label><input class="text-input routine-time-input" id="task-duration" type="number" min="15" max="480" step="15" placeholder="45">
       <label class="field-label" for="task-kind">Tipo de tarefa</label><select class="text-input" id="task-kind"><option value="regular">Tarefa</option><option value="block">Bloco</option><option value="consultation">Consulta</option></select><p id="task-kind-hint" class="schedule-hint"></p>
+      <label class="field-label" for="task-daily-view">Mostrar na visão diária</label><select class="text-input" id="task-daily-view" required><option value="" disabled>Escolha onde mostrar</option><option value="primary">Visão principal</option><option value="secondary">Visão secundária</option></select>
       <label class="field-label" for="task-frequency">Frequência</label><select class="text-input" id="task-frequency"><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option></select>
       <fieldset class="weekday-field"><legend class="field-label">Dias da semana</legend><div id="task-weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="task-start">Começa em</label><input class="text-input" id="task-start" type="date"></div><div class="field"><label class="field-label" for="task-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="task-end" type="date"></div></div><p id="task-biweekly-hint" class="schedule-hint hidden">A repetição quinzenal conta a partir da semana da data inicial, de segunda a domingo.</p>
@@ -294,6 +297,7 @@
       <div class="form-row"><div class="field"><label class="field-label" for="routine-icon">Ícone</label><input class="text-input icon-input" id="routine-icon" maxlength="8" value="✨" aria-label="Ícone"></div><div class="field"><label class="field-label" for="routine-color">Cor</label><input class="color-input" id="routine-color" type="color" value="#e8a59c"></div></div>
       <label class="field-label" for="routine-time">Horário agendado <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="routine-time" type="time">
       <label class="field-label" for="routine-duration">Duração no cronograma <span class="optional">(minutos, opcional)</span></label><input class="text-input routine-time-input" id="routine-duration" type="number" min="15" max="480" step="15" placeholder="45">
+      <label class="field-label" for="routine-daily-view">Mostrar na visão diária</label><select class="text-input" id="routine-daily-view" required><option value="" disabled>Escolha onde mostrar</option><option value="primary">Visão principal</option><option value="secondary">Visão secundária</option></select>
       <fieldset class="weekday-field"><legend class="field-label">Repetir em</legend><div id="weekday-options" class="weekday-options"></div></fieldset>
       <div class="form-row"><div class="field"><label class="field-label" for="routine-start">Começa em</label><input class="text-input" id="routine-start" type="date"></div><div class="field"><label class="field-label" for="routine-end">Termina em <span class="optional">(opcional)</span></label><input class="text-input" id="routine-end" type="date"></div></div>
       <div class="items-editor-head"><label class="field-label">Passos da rotina</label><button class="text-button" type="button" id="add-item">＋ Adicionar passo</button></div>

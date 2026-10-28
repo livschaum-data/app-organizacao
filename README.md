@@ -4,6 +4,8 @@ Aplicativo estático, preparado para hospedagem no GitHub Pages. Rotinas, âncor
 
 O menu lateral reúne as visões diárias, semanais e mensais, além de Âncoras, Rotinas, Tarefas e Ações. A visão diária mostra blocos editáveis de Tema do dia, Casa, Lazer, Estudos, Movimento e Extras, além das rotinas da data. As âncoras pré-cadastradas foram transcritas dos exemplos fornecidos e podem ter nome, ícone, área, descrição, dias da semana e período editados. Áreas também podem ser criadas, renomeadas, coloridas, reordenadas e excluídas quando vazias. Todos esses cadastros usam a mesma sincronização das rotinas.
 
+Além das áreas das âncoras, cada rotina, tarefa (inclusive bloco e consulta), ação e acontecimento recebe uma escolha obrigatória de **Visão principal** ou **Visão secundária** no cadastro. Assim, a posição dos cartões diários é definida item a item. Registros antigos preservam a posição que já utilizavam até serem editados.
+
 No computador, o botão no cabeçalho recolhe ou expande o menu lateral e lembra a escolha neste navegador. Na Visão diária, as áreas ficam à esquerda e as rotinas ocupam uma coluna inteira à direita; no celular, os blocos ficam em sequência.
 
 ## Configurar sincronização
