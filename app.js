@@ -124,6 +124,7 @@
   let renderedCalendarDate = isoToday();
   let renderedNotesDate = '';
   let selectedAnchorArea = '';
+  let anchorView = 'anchors';
   const openManageRoutines = new Set();
   const openManageTasks = new Set();
   let activeRoutineId = null;
@@ -1754,6 +1755,7 @@
   $('#task-history-list').addEventListener('click',event=>{const button=event.target.closest('[data-task-history-date]');if(button){setSelectedDate(button.dataset.taskHistoryDate);setSection('tasks');setTaskView('day');}});
   $('#task-history-export').onclick=exportTaskCSV;
   $('#add-anchor').onclick=()=>openAnchorDialog();$('#anchor-form').addEventListener('submit',saveAnchor);$('#delete-anchor').onclick=deleteAnchor;$('#daily-view-groups-form').addEventListener('submit',saveDailyViewGroups);
+  $$('.anchor-tab').forEach(button=>button.onclick=()=>{anchorView=button.dataset.anchorView;$$('.anchor-tab').forEach(tab=>tab.classList.toggle('active',tab===button));$$('.anchor-view').forEach(view=>view.classList.toggle('active-view',view.id===`anchor-view-${anchorView}`));$('#add-anchor').classList.toggle('hidden',anchorView!=='anchors');});
   $('#anchor-repeat-mode').onchange=updateAnchorRepeatMode;
   $('#anchor-area-filter').onchange=event=>{selectedAnchorArea=event.target.value;renderAnchors();};
   $('#anchor-list').addEventListener('click',event=>{const button=event.target.closest('[data-edit-anchor]');if(button)openAnchorDialog(button.dataset.editAnchor);});

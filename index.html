@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css?v=20261028-sidebar-scroll">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261028-weekly-group-options"></script>
+  <script defer src="app.js?v=20261028-anchor-tabs"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -99,14 +99,12 @@
 
       <section id="anchors-workspace" class="workspace-view">
         <div class="section-heading workspace-heading"><div><div class="eyebrow">PONTOS DE APOIO</div><h2>Âncoras</h2></div><button type="button" class="primary-button" id="add-anchor">＋ Nova âncora</button></div>
-        <p class="section-intro">Organize atividades por área e escolha em quais dias elas aparecem nas visões diárias.</p>
-        <div class="anchor-filter"><label for="anchor-area-filter">Filtrar por área</label><select id="anchor-area-filter" aria-label="Filtrar âncoras por área"></select></div>
-        <div id="anchor-list" class="anchor-list"></div>
-        <div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Áreas</h2></div><button type="button" class="text-button" id="add-area">＋ Nova área</button></div>
-        <div id="area-list" class="area-list"></div>
+        <nav class="tabs anchor-tabs" aria-label="Cadastro de âncoras"><button type="button" class="tab anchor-tab active" data-anchor-view="anchors">Âncoras</button><button type="button" class="tab anchor-tab" data-anchor-view="areas">Áreas</button></nav>
+        <div id="anchor-view-anchors" class="anchor-view active-view"><p class="section-intro">Organize atividades por área e escolha em quais dias elas aparecem nas visões diárias.</p><div class="anchor-filter"><label for="anchor-area-filter">Filtrar por área</label><select id="anchor-area-filter" aria-label="Filtrar âncoras por área"></select></div><div id="anchor-list" class="anchor-list"></div></div>
+        <div id="anchor-view-areas" class="anchor-view"><div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Áreas</h2></div><button type="button" class="text-button" id="add-area">＋ Nova área</button></div><div id="area-list" class="area-list"></div>
         <div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Grupos nas visões diárias</h2></div></div>
         <p class="section-intro">Defina em qual visão diária cada grupo aparece e se ele também entra na visão semanal global.</p>
-        <form id="daily-view-groups-form" class="area-list"><div id="daily-view-groups"></div><div class="dialog-actions"><span></span><button type="submit" class="primary-button">Salvar posições</button></div></form>
+        <form id="daily-view-groups-form" class="area-list"><div id="daily-view-groups"></div><div class="dialog-actions"><span></span><button type="submit" class="primary-button">Salvar posições</button></div></form></div>
       </section>
 
       <div id="routines-workspace" class="workspace-view">

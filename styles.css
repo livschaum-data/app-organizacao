@@ -431,3 +431,5 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .summary-day button[data-summary-section="tasks"]{background:#f8ddd7;color:#a04f45}
 .summary-day button[data-summary-section="tasks"]:hover{background:#efc8c0}
 @media(max-width:560px){.summary-totals article{padding:14px}.summary-period summary{align-items:flex-start;flex-wrap:wrap}.summary-period summary strong{flex:0 0 100%;text-align:left;margin-left:21px}.summary-day{align-items:flex-start;flex-direction:column}.summary-day>div{justify-content:flex-start}.timeline-event{font-size:10px;gap:4px;flex-wrap:wrap}.timeline-event time{font-size:9px}}
+/* Abas internas de âncoras e áreas. */
+.anchor-view{display:none;padding:28px 0 40px}.anchor-view.active-view{display:block}.anchor-tabs{margin-top:18px}
