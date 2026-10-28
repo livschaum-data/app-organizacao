@@ -624,14 +624,30 @@
     $('#weekly-range-label').textContent=`${fmtDate(dates[0],{day:'numeric',month:'short'})} a ${fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'})}`;
     $('#weekly-today').classList.toggle('hidden',dates.includes(isoToday()));
     const headers=weeklyHeaders(dates);
-    const rows=areas.map(area=>{
+    const areaRows=areas.map(area=>{
       const cells=dates.map(date=>{
         const anchors=state.anchors.filter(anchor=>anchor.areaId===area.id&&dayIsScheduled(anchor,date)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
         return `<td>${anchors.map(anchor=>`<div class="weekly-anchor" title="${escapeHTML(anchor.description||anchor.title)}"><span aria-hidden="true">${escapeHTML(anchor.icon||'✦')}</span><span>${escapeHTML(anchor.title)}</span></div>`).join('')}</td>`;
       }).join('');
       return `<tr style="--area-color:${escapeHTML(area.color)}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${AREA_ICONS[area.id]||'✦'}</span><span>${escapeHTML(area.name)}</span></th>${cells}</tr>`;
     }).join('');
-    $('#weekly-grid').innerHTML=`<table class="weekly-table"><thead><tr><th scope="col" class="weekly-corner">Área</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
+    const snapshots=dates.map(taskWeekSnapshot);
+    const taskEntries=(index,frequency,kind='regular',consultation=false)=>taskSnapshots(snapshots[index],frequency,dates[index],kind,'','',consultation);
+    const card=(icon,title,attrs='')=>`<button type="button" class="weekly-anchor weekly-global-item" ${attrs}><span aria-hidden="true">${escapeHTML(icon||'✦')}</span><span>${escapeHTML(title)}</span></button>`;
+    const groupDefinitions=[
+      ['routines','Rotinas','#e2eee6','☑',(date)=>state.routines.filter(item=>!item.deleted&&dayIsScheduled(item,date)).map(item=>card(item.icon,item.name,`data-weekly-routine="${escapeHTML(item.id)}"`))],
+      ['tasks-weekly','Tarefas semanais','#e9e3f0','✓',(_,index)=>taskEntries(index,'weekly').map(item=>card(item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`))],
+      ['tasks-biweekly','Tarefas quinzenais','#eee5dc','◫',(_,index)=>taskEntries(index,'biweekly').map(item=>card(item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`))],
+      ['blocks','Blocos','#e6edf2','▣',(_,index)=>taskEntries(index,null,'block',false).map(item=>card(item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`))],
+      ['consultations','Consultas','#edf0e5','◌',(_,index)=>taskEntries(index,null,'regular',true).map(item=>card(item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`))],
+      ['actions','Ações','#f3e6d7','✦',(date)=>state.actions.filter(item=>!item.deleted&&actionIsScheduled(item,date)).map(item=>card(item.icon,item.title,`data-open-action="${escapeHTML(item.id)}"`))],
+      ...Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>[`occurrence-${type}`,`${kind.label}${type==='holiday'?'s':'s'}`,'#e8eeee',kind.icon,(date)=>state.occurrences.filter(item=>!item.deleted&&item.type===type&&occurrenceIsScheduled(item,date)).map(item=>card(item.icon||kind.icon,item.title,`data-open-occurrence="${escapeHTML(item.id)}"`))])
+    ];
+    const groupRows=groupDefinitions.filter(([key])=>groupInWeekly(key)).map(([,label,color,icon,entriesFor])=>{
+      const cells=dates.map((date,index)=>`<td>${entriesFor(date,index).join('')}</td>`).join('');
+      return `<tr class="weekly-global-row" style="--area-color:${color}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${icon}</span><span>${escapeHTML(label)}</span></th>${cells}</tr>`;
+    }).join('');
+    $('#weekly-grid').innerHTML=`<table class="weekly-table"><thead><tr><th scope="col" class="weekly-corner">Grupo</th>${headers}</tr></thead><tbody>${areaRows}${groupRows}</tbody></table>`;
   }
   function renderMonthly(){
     const [year,month]=selectedMonthlyMonth.split('-').map(Number),weeks=[1,2,3,4,5];
@@ -1721,6 +1737,7 @@
     const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);
   });
   $('#task-week-grid').addEventListener('click',event=>{const button=event.target.closest('[data-task-week-date][data-open-task]');if(button)openTaskFocus(button.dataset.openTask,button.dataset.taskWeekDate,true);});
+  $('#weekly-grid').addEventListener('click',event=>{const routine=event.target.closest('[data-weekly-routine]'),task=event.target.closest('[data-task-week-date][data-open-task]'),action=event.target.closest('[data-open-action]'),occurrence=event.target.closest('[data-open-occurrence]');if(routine)openFocusRoutine(routine.dataset.weeklyRoutine);else if(task)openTaskFocus(task.dataset.openTask,task.dataset.taskWeekDate,true);else if(action)openActionDialog(action.dataset.openAction);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);});
   $('#task-focus-complete').onchange=event=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task&&task.kind!=='block'&&!taskIsConsultation(task)){task.done=event.target.checked;task.doneTouched=true;task.doneChangedAt=stamp();}});
   $('#task-focus-block-result').addEventListener('change',event=>{
     const input=event.target.closest('input[name="block-result"]');if(!input)return;
