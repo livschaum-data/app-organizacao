@@ -699,19 +699,21 @@
     const dates=weekDates(selectedActionWeekDate);
     $('#action-week-date').value=selectedActionWeekDate;
     $('#action-week-today').classList.toggle('hidden',dates.includes(isoToday()));
+    const datedActions=actions.filter(action=>action.schedule==='date'),undatedActions=actions.filter(action=>action.schedule==='month'&&dates.some(date=>actionIsScheduled(action,date)));
     const cells=dates.map(date=>{
-      const entries=actions.filter(action=>actionIsScheduled(action,date));
+      const entries=datedActions.filter(action=>actionIsScheduled(action,date));
       return `<td data-action-week-date="${date}"><div class="weekly-action-dropzone">${entries.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</div></td>`;
     }).join('');
-    $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Planejamento</span></th>${cells}</tr></tbody></table></div>`;
+    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?`Semana ${action.week}`:'Mês inteiro'}</small></button></div>`).join('');
+    $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr></tbody></table></div><aside class="action-monthly-undated"><h4>Não agendadas</h4><p>Agendadas apenas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
   }
   function renderActionMonthly(actions){
     const [year,month]=selectedActionMonth.split('-').map(Number),weeks=[1,2,3,4,5];
     const headers=weeks.map(week=>`<th scope="col" class="monthly-week monthly-week-${week}"><span class="monthly-week-pill">semana ${week}</span></th>`).join('');
     const inMonth=action=>action.schedule==='date'?action.scheduledDate?.slice(0,7)===selectedActionMonth:action.scheduledMonth===selectedActionMonth;
     const datedActions=actions.filter(action=>inMonth(action)&&action.schedule==='date'),undatedActions=actions.filter(action=>inMonth(action)&&action.schedule==='month');
-    const cells=weeks.map(week=>{const weekActions=datedActions.filter(action=>actionWeek(action)===week);return `<td>${weekActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</td>`;}).join('');
-    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?`Semana ${action.week}`:'Mês inteiro'}</small></button></div>`).join('');
+    const cells=weeks.map(week=>{const weekActions=datedActions.filter(action=>actionWeek(action)===week);return `<td data-action-month-week="${week}">${weekActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</td>`;}).join('');
+    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?`Semana ${action.week}`:'Mês inteiro'}</small></button></div>`).join('');
     $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table monthly-table action-monthly-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${headers}</tr></thead><tbody>${datedActions.length?`<tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr>`:'<tr><td colspan="6" class="monthly-empty">Nenhuma ação com data específica neste mês.</td></tr>'}</tbody></table></div><aside class="action-monthly-undated"><h4>Sem data específica</h4><p>Agendadas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
   }
   function renderActionList(actions){
@@ -858,6 +860,16 @@
     }
     action.updatedAt=stamp();selectedActionWeekDate=date;selectedActionMonth=date.slice(0,7);
     saveLocal();renderActions();renderPlanner();toast('Ação movida para a semana escolhida.');
+  }
+  function moveActionToMonthlyWeek(id,week){
+    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted),targetWeek=Number(week);if(!action||!targetWeek)return;
+    const [year,month]=selectedActionMonth.split('-').map(Number),lastDay=new Date(year,month,0).getDate();
+    const targetDay=Array.from({length:lastDay},(_,index)=>index+1).find(day=>monthWeekNumber(`${selectedActionMonth}-${String(day).padStart(2,'0')}`)===targetWeek);
+    if(!targetDay)return;
+    const date=`${selectedActionMonth}-${String(targetDay).padStart(2,'0')}`;
+    if(action.schedule==='date'&&action.scheduledDate===date)return;
+    action.schedule='date';action.scheduledDate=date;action.scheduledMonth='';action.week=null;action.updatedAt=stamp();
+    saveLocal();renderActions();renderPlanner();toast(`Ação movida para a semana ${targetWeek}.`);
   }
   function openActionAreaDialog(id=null){
     const area=state.actionAreas.find(entry=>entry.id===id&&!entry.deleted);
@@ -1581,7 +1593,7 @@
   $('#occurrence-type').onchange=updateOccurrenceForm;$('#occurrence-schedule').onchange=updateOccurrenceForm;$('#occurrence-repeat-mode').onchange=updateOccurrenceForm;
   $('#occurrences-content').addEventListener('click',event=>{const edit=event.target.closest('[data-edit-occurrence]');if(edit){openOccurrenceDialog(edit.dataset.editOccurrence);return;}const month=event.target.closest('[data-add-occurrence-month]');if(month){openOccurrenceDialog();$('#occurrence-schedule').value='month';$('#occurrence-scheduled-month').value=month.dataset.addOccurrenceMonth;updateOccurrenceForm();return;}const date=event.target.closest('[data-add-occurrence-date]');if(date){openOccurrenceDialog();$('#occurrence-schedule').value='date';$('#occurrence-scheduled-date').value=date.dataset.addOccurrenceDate;updateOccurrenceForm();}});
   const actionsContent=$('#actions-content');
-  let draggedActionId='',draggedWeeklyActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
+  let draggedActionId='',draggedWeeklyActionId='',draggedMonthlyActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
   const setActionDropTarget=column=>{
     if(actionDropTarget===column)return;
     actionDropTarget?.classList.remove('is-drop-target');
@@ -1590,6 +1602,10 @@
   };
   actionsContent.addEventListener('dragstart',event=>{
     const card=event.target.closest('[data-drag-action]');
+    if(actionView==='monthly'){
+      const monthlyCard=event.target.closest('[data-drag-action-monthly]');if(!monthlyCard)return;
+      draggedMonthlyActionId=monthlyCard.dataset.dragActionMonthly;monthlyCard.classList.add('is-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedMonthlyActionId);return;
+    }
     if(actionView==='week'){
       const weeklyCard=event.target.closest('[data-drag-action-week]');if(!weeklyCard)return;
       draggedWeeklyActionId=weeklyCard.dataset.dragActionWeek;weeklyCard.classList.add('is-dragging');
@@ -1602,6 +1618,7 @@
     event.dataTransfer.setData('text/plain',draggedActionId);
   });
   actionsContent.addEventListener('dragover',event=>{
+    if(actionView==='monthly'&&draggedMonthlyActionId){const target=event.target.closest('[data-action-month-week]');if(target){event.preventDefault();target.classList.add('is-drop-target');}return;}
     if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]');if(target){event.preventDefault();target.classList.add('is-drop-target');}return;}
     if(!draggedActionId)return;
     const board=$('.action-month-board'),rect=board?.getBoundingClientRect();
@@ -1612,11 +1629,13 @@
     if(column){event.preventDefault();event.dataTransfer.dropEffect='move';}
   });
   actionsContent.addEventListener('drop',event=>{
+    if(actionView==='monthly'&&draggedMonthlyActionId){const target=event.target.closest('[data-action-month-week]'),id=draggedMonthlyActionId;$$('[data-action-month-week]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedMonthlyActionId='';if(target){event.preventDefault();moveActionToMonthlyWeek(id,target.dataset.actionMonthWeek);}return;}
     if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]'),id=draggedWeeklyActionId;$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';if(target){event.preventDefault();moveActionToWeekDate(id,target.dataset.actionWeekDate);}return;}
     const column=event.target.closest('[data-action-month]'),id=draggedActionId;
     if(column&&id){event.preventDefault();setActionDropTarget(null);draggedActionId='';moveActionToMonth(id,column.dataset.actionMonth);}
   });
   actionsContent.addEventListener('dragend',()=>{
+    actionsContent.querySelector('.action-monthly-table .weekly-action.is-dragging')?.classList.remove('is-dragging');$$('[data-action-month-week]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedMonthlyActionId='';
     actionsContent.querySelector('.weekly-action.is-dragging')?.classList.remove('is-dragging');$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';
     actionsContent.querySelector('.action-card.is-dragging')?.classList.remove('is-dragging');
     setActionDropTarget(null);draggedActionId='';
@@ -1627,13 +1646,14 @@
     touchActionDrag.preview?.remove();
     touchActionDrag.source.classList.remove('is-dragging');
     $$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));
+    $$('[data-action-month-week]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));
     touchActionDrag=null;setActionDropTarget(null);
   };
   actionsContent.addEventListener('touchstart',event=>{
-    if(!['annual','week'].includes(actionView)||event.touches.length!==1)return;
-    const weekly=actionView==='week',card=event.target.closest(weekly?'[data-drag-action-week]':'[data-drag-action]');if(!card)return;
+    if(!['annual','week','monthly'].includes(actionView)||event.touches.length!==1)return;
+    const weekly=actionView==='week',monthly=actionView==='monthly',card=event.target.closest(monthly?'[data-drag-action-monthly]':weekly?'[data-drag-action-week]':'[data-drag-action]');if(!card)return;
     const touch=event.touches[0];
-    touchActionDrag={id:weekly?card.dataset.dragActionWeek:card.dataset.dragAction,weekly,touchId:touch.identifier,startX:touch.clientX,startY:touch.clientY,x:touch.clientX,y:touch.clientY,source:card,preview:null,active:false,timer:null};
+    touchActionDrag={id:monthly?card.dataset.dragActionMonthly:weekly?card.dataset.dragActionWeek:card.dataset.dragAction,weekly,monthly,touchId:touch.identifier,startX:touch.clientX,startY:touch.clientY,x:touch.clientX,y:touch.clientY,source:card,preview:null,active:false,timer:null};
     touchActionDrag.timer=setTimeout(()=>{
       const drag=touchActionDrag;if(!drag)return;
       drag.active=true;drag.source.classList.add('is-dragging');
@@ -1650,15 +1670,16 @@
     if(!drag.active){if(Math.hypot(drag.x-drag.startX,drag.y-drag.startY)>10)finishTouchActionDrag();return;}
     event.preventDefault();
     drag.preview.style.left=`${drag.x}px`;drag.preview.style.top=`${drag.y}px`;
-    if(drag.weekly){const target=document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-week-date]');$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
+    if(drag.monthly){const target=document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-month-week]');$$('[data-action-month-week]',actionsContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
+    else if(drag.weekly){const target=document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-week-date]');$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
     else{const board=$('.action-month-board'),rect=board?.getBoundingClientRect();if(rect&&drag.x>rect.right-34)board.scrollLeft+=18;else if(rect&&drag.x<rect.left+34)board.scrollLeft-=18;setActionDropTarget(document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-month]')||null);}
   },{passive:false});
   actionsContent.addEventListener('touchend',event=>{
     const drag=touchActionDrag;if(!drag)return;
     const touch=[...event.changedTouches].find(item=>item.identifier===drag.touchId);if(!touch)return;
-    const id=drag.id,active=drag.active,target=document.elementFromPoint(touch.clientX,touch.clientY),month=target?.closest('[data-action-month]')?.dataset.actionMonth,date=target?.closest('[data-action-week-date]')?.dataset.actionWeekDate;
+    const id=drag.id,active=drag.active,target=document.elementFromPoint(touch.clientX,touch.clientY),month=target?.closest('[data-action-month]')?.dataset.actionMonth,date=target?.closest('[data-action-week-date]')?.dataset.actionWeekDate,week=target?.closest('[data-action-month-week]')?.dataset.actionMonthWeek;
     finishTouchActionDrag();
-    if(active){ignoreActionClickUntil=Date.now()+500;if(drag.weekly&&date)moveActionToWeekDate(id,date);else if(month)moveActionToMonth(id,month);}
+    if(active){ignoreActionClickUntil=Date.now()+500;if(drag.monthly&&week)moveActionToMonthlyWeek(id,week);else if(drag.weekly&&date)moveActionToWeekDate(id,date);else if(month)moveActionToMonth(id,month);}
   });
   actionsContent.addEventListener('touchcancel',finishTouchActionDrag);
   $('#actions-content').addEventListener('click',event=>{
