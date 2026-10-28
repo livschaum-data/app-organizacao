@@ -32,7 +32,7 @@
 .focus-step input:focus-visible+.focus-check{outline:3px solid #be8790;outline-offset:2px}
 .focus-step input:checked+.focus-check{background:var(--routine-color);border-color:var(--routine-color)}.focus-step input:checked+.focus-check:after{content:'✓';font-size:14px;font-weight:700;color:#fff}
 .focus-step.is-done>span:last-child{color:#a8a199;text-decoration:line-through}.focus-step input:disabled+.focus-check{opacity:.65}
-.focus-actions{display:flex;align-items:center;justify-content:flex-end;gap:15px;margin-top:14px}.focus-actions .primary-button{font-size:11px;padding:10px 14px}
+.focus-actions{display:flex;align-items:center;justify-content:flex-end;gap:15px;margin-top:14px}.focus-actions .primary-button,.focus-actions .secondary-button{font-size:11px;padding:10px 14px}.focus-actions .secondary-button{background:var(--accent-dark);color:white;box-shadow:0 4px 12px #285b611f}.focus-actions .secondary-button:hover{background:#1d4c52;transform:translateY(-1px)}
 @media(max-width:650px){.focus-shell{padding:0 18px 16px}.focus-topbar{height:52px}.focus-content{padding-top:15px}.focus-icon{width:47px;height:47px;font-size:21px;border-radius:13px}.focus-title-row{gap:11px;margin:9px 0 12px}.focus-title-row h2{font-size:24px}.focus-title-row p{font-size:10px}.focus-progress{margin-bottom:15px}.focus-step{min-height:42px;font-size:12px;gap:10px}.focus-actions{margin-top:12px}}
 
 /* Painel de sincronização no padrão dos demais aplicativos. */
