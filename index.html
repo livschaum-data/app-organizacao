@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261028-sidebar-scroll">
+  <link rel="stylesheet" href="styles.css?v=20261028-occurrence-cycle">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261028-anchor-tabs"></script>
+  <script defer src="app.js?v=20261028-occurrence-views"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -29,6 +29,7 @@
         <button type="button" class="sidebar-link" data-section="tasks"><span>✓</span> Tarefas</button>
         <button type="button" class="sidebar-link" data-section="actions"><span>✦</span> Ações</button>
         <button type="button" class="sidebar-link" data-section="occurrences"><span>◉</span> Acontecimentos</button>
+        <button type="button" class="sidebar-link" data-section="settings"><span>⚙</span> Configuração</button>
       </nav>
       <p class="sidebar-note">Um ponto de apoio para cada dia.</p>
     </aside>
@@ -102,10 +103,10 @@
         <nav class="tabs anchor-tabs" aria-label="Cadastro de âncoras"><button type="button" class="tab anchor-tab active" data-anchor-view="anchors">Âncoras</button><button type="button" class="tab anchor-tab" data-anchor-view="areas">Áreas</button></nav>
         <div id="anchor-view-anchors" class="anchor-view active-view"><p class="section-intro">Organize atividades por área e escolha em quais dias elas aparecem nas visões diárias.</p><div class="anchor-filter"><label for="anchor-area-filter">Filtrar por área</label><select id="anchor-area-filter" aria-label="Filtrar âncoras por área"></select></div><div id="anchor-list" class="anchor-list"></div></div>
         <div id="anchor-view-areas" class="anchor-view"><div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Áreas</h2></div><button type="button" class="text-button" id="add-area">＋ Nova área</button></div><div id="area-list" class="area-list"></div>
-        <div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Grupos nas visões diárias</h2></div></div>
-        <p class="section-intro">Defina em qual visão diária cada grupo aparece e se ele também entra na visão semanal global.</p>
-        <form id="daily-view-groups-form" class="area-list"><div id="daily-view-groups"></div><div class="dialog-actions"><span></span><button type="submit" class="primary-button">Salvar posições</button></div></form></div>
+        </div>
       </section>
+
+      <section id="settings-workspace" class="workspace-view"><div class="section-heading workspace-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Configuração</h2></div></div><p class="section-intro">Defina em qual visão diária cada grupo aparece e se ele também entra na visão semanal global ou no cronograma.</p><form id="daily-view-groups-form" class="area-list"><div id="daily-view-groups"></div><div class="dialog-actions"><span></span><button type="submit" class="primary-button">Salvar posições</button></div></form></section>
 
       <div id="routines-workspace" class="workspace-view">
       <section class="hero">
@@ -192,12 +193,12 @@
       <section id="occurrences-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">ACONTECIMENTOS</div><h1>Datas para lembrar.</h1><p>Lembretes, eventos, feriados e aniversários organizados no tempo.</p></div>
         <div class="section-heading"><div><div class="eyebrow">SEU CALENDÁRIO</div><h2>Acontecimentos</h2></div><button type="button" class="primary-button" id="add-occurrence">＋ Novo acontecimento</button></div>
-        <nav class="tabs" aria-label="Visões de acontecimentos"><button type="button" class="tab occurrence-tab active" data-occurrence-view="month">Por mês</button><button type="button" class="tab occurrence-tab" data-occurrence-view="date">Calendário</button><button type="button" class="tab occurrence-tab" data-occurrence-view="list">Lista</button></nav>
+        <nav class="tabs" aria-label="Visões de acontecimentos"><button type="button" class="tab occurrence-tab active" data-occurrence-view="annual">Visão anual</button><button type="button" class="tab occurrence-tab" data-occurrence-view="monthly">Visão mensal</button><button type="button" class="tab occurrence-tab" data-occurrence-view="week">Visão semanal</button><button type="button" class="tab occurrence-tab" data-occurrence-view="date">Calendário</button><button type="button" class="tab occurrence-tab" data-occurrence-view="list">Lista</button></nav>
         <div class="date-navigator occurrence-month-navigator"><button type="button" id="occurrence-prev-month" class="round-button" aria-label="Período anterior">←</button><input id="occurrence-month" type="month" aria-label="Escolher mês ou ano dos acontecimentos"><button type="button" id="occurrence-next-month" class="round-button" aria-label="Próximo período">→</button><button type="button" id="occurrence-current-month" class="today-button">Atual</button></div>
         <div id="occurrence-list-filters" class="action-list-filters hidden">
           <div class="action-filter-grid occurrence-filter-grid">
             <label>Buscar<input id="occurrence-filter-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label>
-            <label>Tipo<select id="occurrence-filter-type" class="text-input"><option value="">Todos</option><option value="reminder">Lembretes</option><option value="event">Eventos</option><option value="holiday">Feriados</option><option value="birthday">Aniversários</option></select></label>
+            <label>Tipo<select id="occurrence-filter-type" class="text-input"><option value="">Todos</option><option value="reminder">Lembretes</option><option value="event">Eventos</option><option value="holiday">Feriados</option><option value="birthday">Aniversários</option><option value="cycle">Ciclos</option></select></label>
             <label>Agendamento<select id="occurrence-filter-schedule" class="text-input"><option value="">Todos</option><option value="month">Por mês</option><option value="date">Por data</option><option value="recurrence">Recorrentes</option></select></label>
             <label>Mês<input id="occurrence-filter-month" class="text-input" type="month"></label>
           </div>
@@ -259,7 +260,7 @@
   <dialog id="occurrence-dialog" class="dialog" aria-labelledby="occurrence-dialog-title">
     <form id="occurrence-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">ACONTECIMENTOS</div><h2 id="occurrence-dialog-title">Novo acontecimento</h2></div><button type="button" class="close-button" data-close="occurrence-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="occurrence-id"><label class="field-label" for="occurrence-title">Nome</label><input class="text-input" id="occurrence-title" maxlength="120" required placeholder="Ex.: Consulta, aniversário ou feriado">
-      <label class="field-label" for="occurrence-type">Tipo</label><select class="text-input" id="occurrence-type"><option value="reminder">Lembrete</option><option value="event">Evento</option><option value="holiday">Feriado</option><option value="birthday">Aniversário</option></select>
+      <label class="field-label" for="occurrence-type">Tipo</label><select class="text-input" id="occurrence-type"><option value="reminder">Lembrete</option><option value="event">Evento</option><option value="holiday">Feriado</option><option value="birthday">Aniversário</option><option value="cycle">Ciclo</option></select>
       <label class="field-label" for="occurrence-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="occurrence-description" maxlength="2000" rows="3"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="occurrence-icon">Ícone <span class="optional">(opcional)</span></label><input class="text-input icon-input" id="occurrence-icon" maxlength="8"></div><div class="field"><label class="field-label" for="occurrence-color">Cor</label><input class="color-input" id="occurrence-color" type="color" value="#5DFF5D"></div></div>
       <label class="field-label" for="occurrence-schedule">Agendar por</label><select class="text-input" id="occurrence-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option><option value="recurrence">Recorrência</option></select>

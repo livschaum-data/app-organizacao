@@ -7,7 +7,7 @@
   const SIDEBAR_KEY = 'ancora-sidebar-collapsed-v1';
   const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
   const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  const DAILY_VIEW_GROUPS=[['routines','Rotinas','primary',true],['tasks-weekly','Tarefas semanais','secondary',true],['tasks-biweekly','Tarefas quinzenais','secondary',true],['blocks','Blocos','secondary',true],['consultations','Consultas','secondary',true],['actions','Ações','secondary',true],['occurrence-reminder','Lembretes','secondary',true],['occurrence-event','Eventos','secondary',true],['occurrence-holiday','Feriados','secondary',true],['occurrence-birthday','Aniversários','secondary',true]];
+  const DAILY_VIEW_GROUPS=[['routines','Rotinas','primary',true],['tasks-weekly','Tarefas semanais','secondary',true],['tasks-biweekly','Tarefas quinzenais','secondary',true],['blocks','Blocos','secondary',true],['consultations','Consultas','secondary',true],['actions','Ações','secondary',true],['occurrence-reminder','Lembretes','secondary',true],['occurrence-event','Eventos','secondary',true],['occurrence-holiday','Feriados','secondary',true],['occurrence-birthday','Aniversários','secondary',true],['occurrence-cycle','Ciclos','secondary',true]];
   const SEED = [
     ['💗✨','Preparo para o dia','#d98ba8',['Hidratar estrias','Vestir roupa dia','Tomar café da manhã','Comida pets','Tour pets manhã (recolher cacas, ver nível água)','Ajustar janelas','Lavar o rosto','Skincare manhã','Escovar os dentes','Make do dia','Captura e registros digitais (entradas, hábitos, vestuário, Elisa, sono)']],
     ['💼✨','Preparo para o trabalho focado','#7484a8',['Limpar mesa e notebooks','Limpar caixa de entrada de e-mails','Escrever tarefas do dia','Ligar música de fundo','Ligar contador','Bloquear notificações e distrações']],
@@ -27,7 +27,7 @@
   ];
   const AREA_ICONS = {'area-tema-do-dia':'♡','area-casa':'⌂','area-lazer':'♡','area-estudos':'✎','area-movimento':'✳','area-extras':'✦'};
   const COLOR_PALETTE = ['#808080','#FFC001','#5DFF5D','#31869B','#FF5399','#CC66FF','#366092','#60497A','#963634','#76933C','#E26B0A'];
-  const OCCURRENCE_TYPES = {reminder:{label:'Lembrete',icon:'◉'},event:{label:'Evento',icon:'◆'},holiday:{label:'Feriado',icon:'⚑'},birthday:{label:'Aniversário',icon:'🎂'}};
+  const OCCURRENCE_TYPES = {reminder:{label:'Lembrete',icon:'◉'},event:{label:'Evento',icon:'◆'},holiday:{label:'Feriado',icon:'⚑'},birthday:{label:'Aniversário',icon:'🎂'},cycle:{label:'Ciclo',icon:'↻'}};
   // Títulos legíveis nos exemplos enviados. Os campos e os dias podem ser editados.
   const ANCHOR_SEED = [
     ['casa','🍳','Janta, marmita e almoço',[1,2,4]],
@@ -120,7 +120,7 @@
   let selectedActionWeekDate = isoToday();
   let actionView = 'annual';
   let selectedOccurrenceMonth = isoToday().slice(0,7);
-  let occurrenceView = 'month';
+  let occurrenceView = 'annual';
   let renderedCalendarDate = isoToday();
   let renderedNotesDate = '';
   let selectedAnchorArea = '';
@@ -940,14 +940,22 @@
   function renderOccurrences(){
     $('#occurrence-month').value=selectedOccurrenceMonth;
     $('#occurrence-current-month').classList.toggle('hidden',selectedOccurrenceMonth===isoToday().slice(0,7));
-    $('.occurrence-month-navigator').classList.toggle('hidden',occurrenceView==='list');
+    $('.occurrence-month-navigator').classList.toggle('hidden',occurrenceView==='list'||occurrenceView==='week');
     $('#occurrence-list-filters').classList.toggle('hidden',occurrenceView!=='list');
     $$('.occurrence-tab').forEach(button=>{const active=button.dataset.occurrenceView===occurrenceView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const items=state.occurrences.filter(item=>!item.deleted),[year,month]=selectedOccurrenceMonth.split('-').map(Number);
-    if(occurrenceView==='month'){
+    if(occurrenceView==='annual'){
       const columns=Array.from({length:12},(_,index)=>{const key=`${year}-${String(index+1).padStart(2,'0')}`;const entries=items.filter(item=>item.schedule==='month'?occurrenceMonth(item,year)===key:occurrenceDatesInMonth(item,key).length>0).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));return `<section class="action-month-column occurrence-month-column${key===selectedOccurrenceMonth?' is-selected':''}"><header><span>${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span><b>${entries.length}</b></header><div class="action-card-list">${entries.map(occurrenceCard).join('')}<button type="button" class="action-add-inline" data-add-occurrence-month="${key}">＋ Adicionar acontecimento</button></div></section>`;});
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Acontecimentos por mês" tabindex="0">${columns.join('')}</div>`;
       const board=$('#occurrences-content .action-month-board'),selected=$('#occurrences-content .action-month-column.is-selected');if(selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);
+    }else if(occurrenceView==='monthly'){
+      const weeks=[1,2,3,4,5], headers=weeks.map(week=>`<th scope="col" class="monthly-week"><span class="monthly-week-pill">semana ${week}</span></th>`).join('');
+      const entries=items.filter(item=>item.schedule==='month'?occurrenceMonth(item,year)===selectedOccurrenceMonth:occurrenceDatesInMonth(item,selectedOccurrenceMonth).length>0);
+      const cells=weeks.map(week=>`<td>${entries.filter(item=>item.schedule==='month'?Number(item.week)===week||!item.week:occurrenceDatesInMonth(item,selectedOccurrenceMonth).some(date=>monthWeekNumber(date)===week)).map(occurrenceCard).join('')}</td>`).join('');
+      $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedOccurrenceMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table monthly-table"><thead><tr><th class="weekly-corner">Acontecimentos</th>${headers}</tr></thead><tbody><tr><th>Todos</th>${cells}</tr></tbody></table></div>`;
+    }else if(occurrenceView==='week'){
+      const dates=weekDates(selectedOccurrenceMonth+'-01'), entries=items.filter(item=>dates.some(date=>occurrenceIsScheduled(item,date)));
+      $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table"><thead><tr><th class="weekly-corner">Acontecimentos</th>${weeklyHeaders(dates,'occurrences')}</tr></thead><tbody><tr><th>Todos</th>${dates.map(date=>`<td>${entries.filter(item=>occurrenceIsScheduled(item,date)).map(occurrenceCard).join('')}</td>`).join('')}</tr></tbody></table></div>`;
     }else if(occurrenceView==='date'){
       const first=new Date(year,month-1,1),start=new Date(year,month-1,1-(first.getDay()+6)%7),last=new Date(year,month,0),weeks=Math.ceil(((first.getDay()+6)%7+last.getDate())/7),dateKey=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
       const heads=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'].map(label=>`<div class="action-calendar-heading">${label}</div>`).join('');
@@ -966,7 +974,7 @@
     schedule.disabled=type==='birthday';
     const mode=schedule.value;
     $('#occurrence-month-field').classList.toggle('hidden',mode!=='month');$('#occurrence-date-field').classList.toggle('hidden',mode!=='date');$('#occurrence-recurrence-field').classList.toggle('hidden',mode!=='recurrence');
-    $('#occurrence-end-date-field').classList.toggle('hidden',mode!=='date'||!['event','holiday'].includes(type));
+    $('#occurrence-end-date-field').classList.toggle('hidden',mode!=='date'||!['event','holiday','cycle'].includes(type));
     $('#occurrence-annual-hint').classList.toggle('hidden',type!=='birthday');
     $('#occurrence-month-weeks-field').classList.toggle('hidden',mode!=='recurrence'||$('#occurrence-repeat-mode').value!=='month-weeks');
   }
@@ -980,7 +988,7 @@
   }
   function saveOccurrence(event){
     event.preventDefault();const title=$('#occurrence-title').value.trim(),type=$('#occurrence-type').value,schedule=type==='birthday'?'date':$('#occurrence-schedule').value,scheduledMonth=$('#occurrence-scheduled-month').value,scheduledDate=$('#occurrence-scheduled-date').value;
-    const scheduledEndDate=['event','holiday'].includes(type)&&schedule==='date'?$('#occurrence-scheduled-end-date').value:'';
+    const scheduledEndDate=['event','holiday','cycle'].includes(type)&&schedule==='date'?$('#occurrence-scheduled-end-date').value:'';
     if(!title){toast('Dê um nome ao acontecimento.');return;}if(schedule==='date'&&!scheduledDate){toast('Escolha a data do acontecimento.');return;}if(schedule==='month'&&!scheduledMonth){toast('Escolha o mês do acontecimento.');return;}if(scheduledEndDate&&scheduledEndDate<scheduledDate){toast('A data final deve ser igual ou posterior à data inicial.');return;}
     const weekdays=$$('#occurrence-weekday-options input:checked').map(input=>Number(input.value)),monthWeeks=$('#occurrence-repeat-mode').value==='month-weeks'?$$('#occurrence-month-week-options input:checked').map(input=>Number(input.value)):[];
     if(schedule==='recurrence'&&!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}if(schedule==='recurrence'&&$('#occurrence-repeat-mode').value==='month-weeks'&&!monthWeeks.length){toast('Escolha ao menos uma semana do mês.');return;}
@@ -1591,7 +1599,7 @@
   $$('.occurrence-tab').forEach(button=>button.onclick=()=>{occurrenceView=button.dataset.occurrenceView;renderOccurrences();});
   $('#occurrence-list-filters').addEventListener('input',renderOccurrences);$('#occurrence-list-filters').addEventListener('change',renderOccurrences);
   $('#occurrence-clear-filters').onclick=()=>{$$('#occurrence-list-filters input').forEach(input=>input.value='');$$('#occurrence-list-filters select').forEach(select=>select.selectedIndex=0);renderOccurrences();};
-  const shiftOccurrencePeriod=amount=>{const [year,month]=selectedOccurrenceMonth.split('-').map(Number),next=new Date(year,month-1+(occurrenceView==='month'?amount*12:amount),1);selectedOccurrenceMonth=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;renderOccurrences();};
+  const shiftOccurrencePeriod=amount=>{const [year,month]=selectedOccurrenceMonth.split('-').map(Number),next=new Date(year,month-1+(occurrenceView==='annual'?amount*12:amount),1);selectedOccurrenceMonth=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;renderOccurrences();};
   $('#occurrence-prev-month').onclick=()=>shiftOccurrencePeriod(-1);$('#occurrence-next-month').onclick=()=>shiftOccurrencePeriod(1);$('#occurrence-current-month').onclick=()=>{selectedOccurrenceMonth=isoToday().slice(0,7);renderOccurrences();};
   $('#occurrence-month').onchange=event=>{if(event.target.value){selectedOccurrenceMonth=event.target.value;renderOccurrences();}};
   $('#add-occurrence').onclick=()=>openOccurrenceDialog();$('#occurrence-form').addEventListener('submit',saveOccurrence);$('#delete-occurrence').onclick=deleteOccurrence;
