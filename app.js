@@ -455,7 +455,6 @@
     const task=ensureTaskDay(date).tasks[id];
     if(!task||!taskIsVisibleOnDay(task,date))return;
     activeTaskId=id;activeTaskDate=date;
-    $('#task-focus-done').textContent='Voltar à lista de tarefas';
     renderTaskFocus();$('#task-focus-dialog').showModal();
   }
   function mutateTaskDay(fn){
@@ -1718,7 +1717,8 @@
     });
   });
   $('#close-task-focus').onclick=()=>$('#task-focus-dialog').close();
-  $('#task-focus-done').onclick=()=>{ $('#task-focus-dialog').close();setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'}); };
+  $('#task-focus-day').onclick=()=>{ $('#task-focus-dialog').close();setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'}); };
+  $('#task-focus-done').onclick=()=>{ $('#task-focus-dialog').close();setSection('tasks');setTaskView('manage');window.scrollTo({top:0,behavior:'smooth'}); };
   $('#task-focus-dialog').addEventListener('close',()=>{activeTaskId=null;activeTaskDate=null;});
   $('#add-task').onclick=()=>openTaskDialog();
   $('#task-form').addEventListener('submit',saveTask);$('#task-delete').onclick=deleteTask;
