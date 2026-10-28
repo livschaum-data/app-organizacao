@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261028-occurrence-cycle">
+  <link rel="stylesheet" href="styles.css?v=20261028-settings-refined">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261028-settings-visual"></script>
+  <script defer src="app.js?v=20261028-settings-refined"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -106,7 +106,7 @@
         </div>
       </section>
 
-      <section id="settings-workspace" class="workspace-view"><div class="section-heading workspace-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Configuração</h2></div></div><p class="section-intro">Defina em qual visão diária cada grupo aparece e se ele também entra na visão semanal global ou no cronograma.</p><form id="daily-view-groups-form" class="area-list"><div id="daily-view-groups"></div><div class="dialog-actions"><span></span><button type="submit" class="primary-button">Salvar posições</button></div></form></section>
+      <section id="settings-workspace" class="workspace-view"><div class="section-heading workspace-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Configuração</h2></div></div><p class="section-intro">Escolha onde cada grupo aparece nas diferentes visões do app.</p><form id="daily-view-groups-form" class="settings-form"><div class="settings-panel"><div class="settings-panel-head"><div><span class="settings-panel-icon" aria-hidden="true">☷</span><div><strong>Organização das visões</strong><small>As alterações valem para todos os dias.</small></div></div></div><div class="settings-columns" aria-hidden="true"><span>Grupo</span><span>Visão diária</span><span>Visão semanal</span><span>Cronograma</span></div><div id="daily-view-groups"></div></div><div class="settings-actions"><span>Você pode alterar estas opções quando quiser.</span><button type="submit" class="primary-button">Salvar alterações</button></div></form></section>
 
       <div id="routines-workspace" class="workspace-view">
       <section class="hero">
