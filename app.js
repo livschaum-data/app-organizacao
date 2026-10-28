@@ -118,7 +118,7 @@
   let selectedSummaryMonth = isoToday().slice(0,7);
   let selectedActionMonth = isoToday().slice(0,7);
   let selectedActionWeekDate = isoToday();
-  let actionView = 'month';
+  let actionView = 'annual';
   let selectedOccurrenceMonth = isoToday().slice(0,7);
   let occurrenceView = 'month';
   let renderedCalendarDate = isoToday();
@@ -705,6 +705,15 @@
     }).join('');
     $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Planejamento</span></th>${cells}</tr></tbody></table></div>`;
   }
+  function renderActionMonthly(actions){
+    const [year,month]=selectedActionMonth.split('-').map(Number),weeks=[1,2,3,4,5];
+    const headers=weeks.map(week=>`<th scope="col" class="monthly-week monthly-week-${week}"><span class="monthly-week-pill">semana ${week}</span></th>`).join('');
+    const inMonth=action=>action.schedule==='date'?action.scheduledDate?.slice(0,7)===selectedActionMonth:action.scheduledMonth===selectedActionMonth;
+    const datedActions=actions.filter(action=>inMonth(action)&&action.schedule==='date'),undatedActions=actions.filter(action=>inMonth(action)&&action.schedule==='month');
+    const cells=weeks.map(week=>{const weekActions=datedActions.filter(action=>actionWeek(action)===week);return `<td>${weekActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</td>`;}).join('');
+    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?`Semana ${action.week}`:'Mês inteiro'}</small></button></div>`).join('');
+    $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table monthly-table action-monthly-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${headers}</tr></thead><tbody>${datedActions.length?`<tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr>`:'<tr><td colspan="6" class="monthly-empty">Nenhuma ação com data específica neste mês.</td></tr>'}</tbody></table></div><aside class="action-monthly-undated"><h4>Sem data específica</h4><p>Agendadas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
+  }
   function renderActionList(actions){
     const areaSelect=$('#action-filter-area'),selectedArea=areaSelect.value;
     areaSelect.innerHTML='<option value="">Todas</option>'+state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
@@ -738,7 +747,7 @@
     const actions=state.actions.filter(action=>!action.deleted).sort((a,b)=>(a.scheduledDate||`${a.scheduledMonth}-01`).localeCompare(b.scheduledDate||`${b.scheduledMonth}-01`)||a.title.localeCompare(b.title,'pt-BR'));
     const monthOf=action=>action.schedule==='date'?action.scheduledDate?.slice(0,7):action.scheduledMonth;
     const [year,month]=selectedActionMonth.split('-').map(Number);
-    if(actionView==='month'){
+    if(actionView==='annual'){
       const columns=Array.from({length:12},(_,i)=>{
         const key=`${year}-${String(i+1).padStart(2,'0')}`,entries=actions.filter(action=>monthOf(action)===key);
         const name=fmtDate(`${key}-01`,{month:'short'});
@@ -747,6 +756,8 @@
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Ações por mês" tabindex="0">${columns.join('')}</div>`;
       const board=$('.action-month-board'),selected=$('.action-month-column.is-selected',board);
       if(selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);
+    }else if(actionView==='monthly'){
+      renderActionMonthly(actions);
     }else if(actionView==='week'){
       renderActionWeekly(actions);
     }else if(actionView==='date'){
@@ -1549,7 +1560,7 @@
     $$('#action-list-filters select').forEach(select=>select.selectedIndex=0);
     renderActions();
   };
-  const shiftActionPeriod=amount=>{const [year,month]=selectedActionMonth.split('-').map(Number),next=new Date(year,month-1+(actionView==='month'?amount*12:amount),1);selectedActionMonth=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;renderActions();};
+  const shiftActionPeriod=amount=>{const [year,month]=selectedActionMonth.split('-').map(Number),next=new Date(year,month-1+(actionView==='annual'?amount*12:amount),1);selectedActionMonth=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}`;renderActions();};
   $('#action-prev-month').onclick=()=>shiftActionPeriod(-1);$('#action-next-month').onclick=()=>shiftActionPeriod(1);
   $('#action-current-month').onclick=()=>{selectedActionMonth=isoToday().slice(0,7);renderActions();};
   $('#action-month').onchange=event=>{if(event.target.value){selectedActionMonth=event.target.value;renderActions();}};
@@ -1584,7 +1595,7 @@
       draggedWeeklyActionId=weeklyCard.dataset.dragActionWeek;weeklyCard.classList.add('is-dragging');
       event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedWeeklyActionId);return;
     }
-    if(actionView!=='month'||!card)return;
+    if(actionView!=='annual'||!card)return;
     draggedActionId=card.dataset.dragAction;
     card.classList.add('is-dragging');
     event.dataTransfer.effectAllowed='move';
@@ -1619,7 +1630,7 @@
     touchActionDrag=null;setActionDropTarget(null);
   };
   actionsContent.addEventListener('touchstart',event=>{
-    if(!['month','week'].includes(actionView)||event.touches.length!==1)return;
+    if(!['annual','week'].includes(actionView)||event.touches.length!==1)return;
     const weekly=actionView==='week',card=event.target.closest(weekly?'[data-drag-action-week]':'[data-drag-action]');if(!card)return;
     const touch=event.touches[0];
     touchActionDrag={id:weekly?card.dataset.dragActionWeek:card.dataset.dragAction,weekly,touchId:touch.identifier,startX:touch.clientX,startY:touch.clientY,x:touch.clientX,y:touch.clientY,source:card,preview:null,active:false,timer:null};

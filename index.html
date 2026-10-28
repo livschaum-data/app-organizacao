@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css?v=20261027-summary-colors">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261028-actions-weekly-drag"></script>
+  <script defer src="app.js?v=20261028-actions-monthly-simple"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -166,7 +166,7 @@
       <section id="actions-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">AÇÕES</div><h1>Planos em movimento.</h1><p>Ações agendadas para um mês inteiro ou para uma data específica.</p></div>
         <div class="section-heading"><div><div class="eyebrow">SEU PLANEJAMENTO</div><h2>Ações</h2></div><button type="button" class="primary-button" id="add-action">＋ Nova ação</button></div>
-        <nav class="tabs" aria-label="Visões de ações"><button type="button" class="tab action-tab active" data-action-view="month">Por mês</button><button type="button" class="tab action-tab" data-action-view="week">Visão semanal</button><button type="button" class="tab action-tab" data-action-view="date">Calendário</button><button type="button" class="tab action-tab" data-action-view="list">Lista</button></nav>
+        <nav class="tabs" aria-label="Visões de ações"><button type="button" class="tab action-tab active" data-action-view="annual">Visão anual</button><button type="button" class="tab action-tab" data-action-view="monthly">Visão mensal</button><button type="button" class="tab action-tab" data-action-view="week">Visão semanal</button><button type="button" class="tab action-tab" data-action-view="date">Calendário</button><button type="button" class="tab action-tab" data-action-view="list">Lista</button></nav>
         <div class="date-navigator action-month-navigator"><button type="button" id="action-prev-month" class="round-button" aria-label="Período anterior">←</button><input id="action-month" type="month" aria-label="Escolher mês ou ano das ações"><button type="button" id="action-next-month" class="round-button" aria-label="Próximo período">→</button><button type="button" id="action-current-month" class="today-button">Atual</button></div>
         <div class="date-navigator action-week-navigator hidden"><button type="button" id="action-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="action-week-date" type="date" aria-label="Escolher semana das ações"><button type="button" id="action-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="action-week-today" class="today-button">Esta semana</button></div>
         <div id="action-list-filters" class="action-list-filters hidden">
