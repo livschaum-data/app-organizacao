@@ -117,6 +117,7 @@
   let selectedTaskWeekDate = isoToday();
   let selectedSummaryMonth = isoToday().slice(0,7);
   let selectedActionMonth = isoToday().slice(0,7);
+  let selectedActionWeekDate = isoToday();
   let actionView = 'month';
   let selectedOccurrenceMonth = isoToday().slice(0,7);
   let occurrenceView = 'month';
@@ -454,7 +455,7 @@
     const task=ensureTaskDay(date).tasks[id];
     if(!task||!taskIsVisibleOnDay(task,date))return;
     activeTaskId=id;activeTaskDate=date;
-    $('#task-focus-done').textContent=fromWeek?'Voltar à semana':'Voltar ao dia';
+    $('#task-focus-done').textContent='Voltar à lista de tarefas';
     renderTaskFocus();$('#task-focus-dialog').showModal();
   }
   function mutateTaskDay(fn){
@@ -608,7 +609,7 @@
     $('#summary-content').innerHTML=`<div class="summary-totals"><article><span>ROTINAS</span><strong>${monthCounts.routines}</strong><p>${monthCounts.routines===1?'dia incompleto':'dias incompletos'} no mês</p></article><article><span>TAREFAS</span><strong>${monthCounts.tasks}</strong><p>${monthCounts.tasks===1?'dia incompleto':'dias incompletos'} no mês</p></article></div><details class="summary-period" data-summary-period="month"${openPeriods.has('month')?' open':''}><summary><span>Mês de ${escapeHTML(fmtDate(`${selectedSummaryMonth}-01`,{month:'long',year:'numeric'}))}</span><strong>${pending.length} ${pending.length===1?'dia pendente':'dias pendentes'}</strong></summary><div class="summary-days">${pending.length?pending.map(dayRow).join(''):'<p>Nenhum dia incompleto até agora.</p>'}</div></details><h2 class="summary-week-heading">Por semana</h2>${[...weeks].map(([monday,days])=>{const total=counts(days),pendingDays=days.filter(day=>day.routinePending||day.taskPending);return `<details class="summary-period" data-summary-period="${monday}"${openPeriods.has(monday)?' open':''}><summary><span>${escapeHTML(fmtDate(days[0].date,{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(days[days.length-1].date,{day:'numeric',month:'short'}))}</span><strong>${total.routines} rotinas · ${total.tasks} tarefas</strong></summary><div class="summary-days">${pendingDays.length?pendingDays.map(dayRow).join(''):'<p>Nenhum dia incompleto nesta semana.</p>'}</div></details>`;}).join('')}`;
   }
   function weeklyHeaders(dates,kind='both'){
-    return dates.map((date,index)=>{const status=dayStatus(date),incomplete=status.past&&(kind==='tasks'?status.taskPending:status.routinePending||status.taskPending);return `<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}${incomplete?' weekly-incomplete':''}" ${date===isoToday()?'aria-current="date"':''}><strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small>${incomplete?'<em>Incompleto</em>':''}</th>`;}).join('');
+    return dates.map((date,index)=>{const status=dayStatus(date),incomplete=kind==='actions'?false:status.past&&(kind==='tasks'?status.taskPending:status.routinePending||status.taskPending);return `<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}${incomplete?' weekly-incomplete':''}" ${date===isoToday()?'aria-current="date"':''}><strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small>${incomplete?'<em>Incompleto</em>':''}</th>`;}).join('');
   }
   function renderWeekly(){
     const dates=weekDates(selectedWeekDate);
@@ -694,6 +695,16 @@
     return '';
   }
   function actionStatus(action){return action.completed?'Concluída':actionDueDate(action)<isoToday()&&actionDueDate(action)?'Vencida':'Em aberto';}
+  function renderActionWeekly(actions){
+    const dates=weekDates(selectedActionWeekDate);
+    $('#action-week-date').value=selectedActionWeekDate;
+    $('#action-week-today').classList.toggle('hidden',dates.includes(isoToday()));
+    const cells=dates.map(date=>{
+      const entries=actions.filter(action=>actionIsScheduled(action,date));
+      return `<td data-action-week-date="${date}"><div class="weekly-action-dropzone">${entries.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</div></td>`;
+    }).join('');
+    $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Planejamento</span></th>${cells}</tr></tbody></table></div>`;
+  }
   function renderActionList(actions){
     const areaSelect=$('#action-filter-area'),selectedArea=areaSelect.value;
     areaSelect.innerHTML='<option value="">Todas</option>'+state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
@@ -720,7 +731,8 @@
   function renderActions(){
     $('#action-month').value=selectedActionMonth;
     $('#action-current-month').classList.toggle('hidden',selectedActionMonth===isoToday().slice(0,7));
-    $('.action-month-navigator').classList.toggle('hidden',actionView==='list');
+    $('.action-month-navigator').classList.toggle('hidden',actionView==='list'||actionView==='week');
+    $('.action-week-navigator').classList.toggle('hidden',actionView!=='week');
     $('#action-list-filters').classList.toggle('hidden',actionView!=='list');
     $$('.action-tab').forEach(button=>{const active=button.dataset.actionView===actionView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const actions=state.actions.filter(action=>!action.deleted).sort((a,b)=>(a.scheduledDate||`${a.scheduledMonth}-01`).localeCompare(b.scheduledDate||`${b.scheduledMonth}-01`)||a.title.localeCompare(b.title,'pt-BR'));
@@ -735,6 +747,8 @@
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Ações por mês" tabindex="0">${columns.join('')}</div>`;
       const board=$('.action-month-board'),selected=$('.action-month-column.is-selected',board);
       if(selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);
+    }else if(actionView==='week'){
+      renderActionWeekly(actions);
     }else if(actionView==='date'){
       const first=new Date(year,month-1,1),start=new Date(year,month-1,1-(first.getDay()+6)%7),last=new Date(year,month,0),weeks=Math.ceil(((first.getDay()+6)%7+last.getDate())/7);
       const dateKey=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -819,6 +833,20 @@
     action.updatedAt=stamp();selectedActionMonth=monthKey;
     saveLocal();renderActions();renderPlanner();
     toast(`Ação movida para ${fmtDate(`${monthKey}-01`,{month:'long',year:'numeric'})}.`);
+  }
+  function moveActionToWeekDate(id,date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);if(!action)return;
+    if(action.schedule==='date'){
+      if(action.scheduledDate===date)return;
+      action.scheduledDate=date;
+    }else{
+      const month=date.slice(0,7),week=monthWeekNumber(date);
+      if(action.scheduledMonth===month&&Number(action.week)===week)return;
+      action.scheduledMonth=month;action.week=week;
+    }
+    action.updatedAt=stamp();selectedActionWeekDate=date;selectedActionMonth=date.slice(0,7);
+    saveLocal();renderActions();renderPlanner();toast('Ação movida para a semana escolhida.');
   }
   function openActionAreaDialog(id=null){
     const area=state.actionAreas.find(entry=>entry.id===id&&!entry.deleted);
@@ -1509,6 +1537,10 @@
   $('#task-week-prev').onclick=()=>shiftTaskWeek(-1);$('#task-week-next').onclick=()=>shiftTaskWeek(1);
   $('#task-week-today').onclick=()=>{selectedTaskWeekDate=isoToday();renderTaskWeekly();};
   $('#task-week-date').onchange=e=>{if(e.target.value){selectedTaskWeekDate=e.target.value;renderTaskWeekly();}};
+  const shiftActionWeek=amount=>{const date=safeDate(selectedActionWeekDate);date.setDate(date.getDate()+amount*7);selectedActionWeekDate=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;renderActions();};
+  $('#action-week-prev').onclick=()=>shiftActionWeek(-1);$('#action-week-next').onclick=()=>shiftActionWeek(1);
+  $('#action-week-today').onclick=()=>{selectedActionWeekDate=isoToday();renderActions();};
+  $('#action-week-date').onchange=e=>{if(e.target.value){selectedActionWeekDate=e.target.value;renderActions();}};
   $$('.action-tab').forEach(button=>button.onclick=()=>{actionView=button.dataset.actionView;renderActions();});
   $('#action-list-filters').addEventListener('input',renderActions);
   $('#action-list-filters').addEventListener('change',renderActions);
@@ -1538,7 +1570,7 @@
   $('#occurrence-type').onchange=updateOccurrenceForm;$('#occurrence-schedule').onchange=updateOccurrenceForm;$('#occurrence-repeat-mode').onchange=updateOccurrenceForm;
   $('#occurrences-content').addEventListener('click',event=>{const edit=event.target.closest('[data-edit-occurrence]');if(edit){openOccurrenceDialog(edit.dataset.editOccurrence);return;}const month=event.target.closest('[data-add-occurrence-month]');if(month){openOccurrenceDialog();$('#occurrence-schedule').value='month';$('#occurrence-scheduled-month').value=month.dataset.addOccurrenceMonth;updateOccurrenceForm();return;}const date=event.target.closest('[data-add-occurrence-date]');if(date){openOccurrenceDialog();$('#occurrence-schedule').value='date';$('#occurrence-scheduled-date').value=date.dataset.addOccurrenceDate;updateOccurrenceForm();}});
   const actionsContent=$('#actions-content');
-  let draggedActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
+  let draggedActionId='',draggedWeeklyActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
   const setActionDropTarget=column=>{
     if(actionDropTarget===column)return;
     actionDropTarget?.classList.remove('is-drop-target');
@@ -1547,6 +1579,11 @@
   };
   actionsContent.addEventListener('dragstart',event=>{
     const card=event.target.closest('[data-drag-action]');
+    if(actionView==='week'){
+      const weeklyCard=event.target.closest('[data-drag-action-week]');if(!weeklyCard)return;
+      draggedWeeklyActionId=weeklyCard.dataset.dragActionWeek;weeklyCard.classList.add('is-dragging');
+      event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedWeeklyActionId);return;
+    }
     if(actionView!=='month'||!card)return;
     draggedActionId=card.dataset.dragAction;
     card.classList.add('is-dragging');
@@ -1554,6 +1591,7 @@
     event.dataTransfer.setData('text/plain',draggedActionId);
   });
   actionsContent.addEventListener('dragover',event=>{
+    if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]');if(target){event.preventDefault();target.classList.add('is-drop-target');}return;}
     if(!draggedActionId)return;
     const board=$('.action-month-board'),rect=board?.getBoundingClientRect();
     if(rect&&event.clientX>rect.right-34)board.scrollLeft+=18;
@@ -1563,10 +1601,12 @@
     if(column){event.preventDefault();event.dataTransfer.dropEffect='move';}
   });
   actionsContent.addEventListener('drop',event=>{
+    if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]'),id=draggedWeeklyActionId;$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';if(target){event.preventDefault();moveActionToWeekDate(id,target.dataset.actionWeekDate);}return;}
     const column=event.target.closest('[data-action-month]'),id=draggedActionId;
     if(column&&id){event.preventDefault();setActionDropTarget(null);draggedActionId='';moveActionToMonth(id,column.dataset.actionMonth);}
   });
   actionsContent.addEventListener('dragend',()=>{
+    actionsContent.querySelector('.weekly-action.is-dragging')?.classList.remove('is-dragging');$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';
     actionsContent.querySelector('.action-card.is-dragging')?.classList.remove('is-dragging');
     setActionDropTarget(null);draggedActionId='';
   });
@@ -1575,13 +1615,14 @@
     clearTimeout(touchActionDrag.timer);
     touchActionDrag.preview?.remove();
     touchActionDrag.source.classList.remove('is-dragging');
+    $$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));
     touchActionDrag=null;setActionDropTarget(null);
   };
   actionsContent.addEventListener('touchstart',event=>{
-    if(actionView!=='month'||event.touches.length!==1)return;
-    const card=event.target.closest('[data-drag-action]');if(!card)return;
+    if(!['month','week'].includes(actionView)||event.touches.length!==1)return;
+    const weekly=actionView==='week',card=event.target.closest(weekly?'[data-drag-action-week]':'[data-drag-action]');if(!card)return;
     const touch=event.touches[0];
-    touchActionDrag={id:card.dataset.dragAction,touchId:touch.identifier,startX:touch.clientX,startY:touch.clientY,x:touch.clientX,y:touch.clientY,source:card,preview:null,active:false,timer:null};
+    touchActionDrag={id:weekly?card.dataset.dragActionWeek:card.dataset.dragAction,weekly,touchId:touch.identifier,startX:touch.clientX,startY:touch.clientY,x:touch.clientX,y:touch.clientY,source:card,preview:null,active:false,timer:null};
     touchActionDrag.timer=setTimeout(()=>{
       const drag=touchActionDrag;if(!drag)return;
       drag.active=true;drag.source.classList.add('is-dragging');
@@ -1598,17 +1639,15 @@
     if(!drag.active){if(Math.hypot(drag.x-drag.startX,drag.y-drag.startY)>10)finishTouchActionDrag();return;}
     event.preventDefault();
     drag.preview.style.left=`${drag.x}px`;drag.preview.style.top=`${drag.y}px`;
-    const board=$('.action-month-board'),rect=board?.getBoundingClientRect();
-    if(rect&&drag.x>rect.right-34)board.scrollLeft+=18;
-    else if(rect&&drag.x<rect.left+34)board.scrollLeft-=18;
-    setActionDropTarget(document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-month]')||null);
+    if(drag.weekly){const target=document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-week-date]');$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
+    else{const board=$('.action-month-board'),rect=board?.getBoundingClientRect();if(rect&&drag.x>rect.right-34)board.scrollLeft+=18;else if(rect&&drag.x<rect.left+34)board.scrollLeft-=18;setActionDropTarget(document.elementFromPoint(drag.x,drag.y)?.closest('[data-action-month]')||null);}
   },{passive:false});
   actionsContent.addEventListener('touchend',event=>{
     const drag=touchActionDrag;if(!drag)return;
     const touch=[...event.changedTouches].find(item=>item.identifier===drag.touchId);if(!touch)return;
-    const id=drag.id,active=drag.active,month=document.elementFromPoint(touch.clientX,touch.clientY)?.closest('[data-action-month]')?.dataset.actionMonth;
+    const id=drag.id,active=drag.active,target=document.elementFromPoint(touch.clientX,touch.clientY),month=target?.closest('[data-action-month]')?.dataset.actionMonth,date=target?.closest('[data-action-week-date]')?.dataset.actionWeekDate;
     finishTouchActionDrag();
-    if(active){ignoreActionClickUntil=Date.now()+500;if(month)moveActionToMonth(id,month);}
+    if(active){ignoreActionClickUntil=Date.now()+500;if(drag.weekly&&date)moveActionToWeekDate(id,date);else if(month)moveActionToMonth(id,month);}
   });
   actionsContent.addEventListener('touchcancel',finishTouchActionDrag);
   $('#actions-content').addEventListener('click',event=>{
@@ -1646,7 +1685,8 @@
       if(task.kind!=='block'&&(task.items.every(entry=>entry.done)||!input.checked)){task.done=task.items.every(entry=>entry.done);task.doneTouched=true;task.doneChangedAt=stamp();}
     });
   });
-  $('#close-task-focus').onclick=$('#task-focus-done').onclick=()=>$('#task-focus-dialog').close();
+  $('#close-task-focus').onclick=()=>$('#task-focus-dialog').close();
+  $('#task-focus-done').onclick=()=>{ $('#task-focus-dialog').close();setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'}); };
   $('#task-focus-dialog').addEventListener('close',()=>{activeTaskId=null;activeTaskDate=null;});
   $('#add-task').onclick=()=>openTaskDialog();
   $('#task-form').addEventListener('submit',saveTask);$('#task-delete').onclick=deleteTask;

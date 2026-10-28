@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="styles.css?v=20261027-summary-colors">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261028-group-views"></script>
+  <script defer src="app.js?v=20261028-actions-weekly-drag"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -166,8 +166,9 @@
       <section id="actions-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">AÇÕES</div><h1>Planos em movimento.</h1><p>Ações agendadas para um mês inteiro ou para uma data específica.</p></div>
         <div class="section-heading"><div><div class="eyebrow">SEU PLANEJAMENTO</div><h2>Ações</h2></div><button type="button" class="primary-button" id="add-action">＋ Nova ação</button></div>
-        <nav class="tabs" aria-label="Visões de ações"><button type="button" class="tab action-tab active" data-action-view="month">Por mês</button><button type="button" class="tab action-tab" data-action-view="date">Calendário</button><button type="button" class="tab action-tab" data-action-view="list">Lista</button></nav>
+        <nav class="tabs" aria-label="Visões de ações"><button type="button" class="tab action-tab active" data-action-view="month">Por mês</button><button type="button" class="tab action-tab" data-action-view="week">Visão semanal</button><button type="button" class="tab action-tab" data-action-view="date">Calendário</button><button type="button" class="tab action-tab" data-action-view="list">Lista</button></nav>
         <div class="date-navigator action-month-navigator"><button type="button" id="action-prev-month" class="round-button" aria-label="Período anterior">←</button><input id="action-month" type="month" aria-label="Escolher mês ou ano das ações"><button type="button" id="action-next-month" class="round-button" aria-label="Próximo período">→</button><button type="button" id="action-current-month" class="today-button">Atual</button></div>
+        <div class="date-navigator action-week-navigator hidden"><button type="button" id="action-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="action-week-date" type="date" aria-label="Escolher semana das ações"><button type="button" id="action-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="action-week-today" class="today-button">Esta semana</button></div>
         <div id="action-list-filters" class="action-list-filters hidden">
           <div class="action-filter-grid">
             <label>Buscar<input id="action-filter-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label>
@@ -228,7 +229,7 @@
 
   <dialog id="task-focus-dialog" class="focus-dialog" aria-labelledby="task-focus-name">
     <div class="focus-shell"><div class="focus-topbar"><span class="focus-brand">âncora<span>·</span></span><button type="button" class="focus-close" id="close-task-focus" aria-label="Fechar tarefa">×</button></div>
-      <div class="focus-content"><div class="eyebrow" id="task-focus-date"></div><div class="focus-title-row"><span id="task-focus-icon" class="focus-icon"></span><div><h2 id="task-focus-name"></h2><p id="task-focus-count"></p></div></div><p id="task-focus-description" class="focus-routine-description hidden"></p><label class="task-completion"><input type="checkbox" id="task-focus-complete"><span>Marcar tarefa como concluída</span></label><fieldset id="task-focus-block-result" class="block-result hidden"><legend>Resultado do bloco</legend><label><input type="radio" name="block-result" value="realized"><span>Realizado</span></label><label><input type="radio" name="block-result" value="partial"><span>Realizado parcialmente</span></label><label><input type="radio" name="block-result" value="not-realized"><span>Não realizado</span></label><button type="button" id="task-focus-block-clear" class="text-button hidden">Limpar registro</button></fieldset><div id="task-focus-step-section" class="hidden"><div class="focus-section-label">PASSOS DESTA TAREFA</div><div id="task-focus-steps" class="focus-steps"></div></div><div class="focus-actions"><button type="button" id="task-focus-done" class="primary-button">Voltar ao dia</button></div></div>
+      <div class="focus-content"><div class="eyebrow" id="task-focus-date"></div><div class="focus-title-row"><span id="task-focus-icon" class="focus-icon"></span><div><h2 id="task-focus-name"></h2><p id="task-focus-count"></p></div></div><p id="task-focus-description" class="focus-routine-description hidden"></p><label class="task-completion"><input type="checkbox" id="task-focus-complete"><span>Marcar tarefa como concluída</span></label><fieldset id="task-focus-block-result" class="block-result hidden"><legend>Resultado do bloco</legend><label><input type="radio" name="block-result" value="realized"><span>Realizado</span></label><label><input type="radio" name="block-result" value="partial"><span>Realizado parcialmente</span></label><label><input type="radio" name="block-result" value="not-realized"><span>Não realizado</span></label><button type="button" id="task-focus-block-clear" class="text-button hidden">Limpar registro</button></fieldset><div id="task-focus-step-section" class="hidden"><div class="focus-section-label">PASSOS DESTA TAREFA</div><div id="task-focus-steps" class="focus-steps"></div></div><div class="focus-actions"><button type="button" id="task-focus-done" class="primary-button">Voltar à lista de tarefas</button></div></div>
     </div>
   </dialog>
 
