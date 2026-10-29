@@ -329,6 +329,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .weekly-task{flex-wrap:wrap}
 .weekly-task>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
 .weekly-task.is-done>span:nth-child(2){color:#75847d;text-decoration:line-through}
+.task-month-table{min-width:900px}.task-annual-table{min-width:1750px}.task-annual-table thead th:first-child{width:145px}.task-planning-card{display:flex;padding:6px 4px;border-radius:5px}.task-planning-card:hover{background:#ffffff80}.task-planning-card>span:last-child{min-width:0}.task-planning-card small{display:block;margin-top:3px;color:#7a8580;font-size:8px;font-weight:500;line-height:1.25}
 .weekly-block-result{flex:1 0 calc(100% - 16px);width:max-content;margin-left:16px;padding:2px 4px;border-radius:4px;font-size:9px;font-weight:700}
 .workspace-heading{padding-top:47px}.area-heading{margin-top:42px}
 .anchor-filter{display:flex;align-items:center;gap:10px;margin:-4px 0 17px;color:var(--muted);font-size:11px;font-weight:600}
