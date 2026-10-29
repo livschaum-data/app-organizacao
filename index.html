@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261029-monthly-task-visibility">
+  <link rel="stylesheet" href="styles.css?v=20261029-scheduling-audit">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261029-monthly-task-visibility"></script>
+  <script defer src="app.js?v=20261029-scheduling-audit"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -198,6 +198,7 @@
         <div class="section-heading"><div><div class="eyebrow">SEU CALENDÁRIO</div><h2>Acontecimentos</h2></div><button type="button" class="primary-button" id="add-occurrence">＋ Novo acontecimento</button></div>
         <nav class="tabs" aria-label="Visões de acontecimentos"><button type="button" class="tab occurrence-tab active" data-occurrence-view="annual">Visão anual</button><button type="button" class="tab occurrence-tab" data-occurrence-view="monthly">Visão mensal</button><button type="button" class="tab occurrence-tab" data-occurrence-view="week">Visão semanal</button><button type="button" class="tab occurrence-tab" data-occurrence-view="date">Calendário</button><button type="button" class="tab occurrence-tab" data-occurrence-view="list">Lista</button></nav>
         <div class="date-navigator occurrence-month-navigator"><button type="button" id="occurrence-prev-month" class="round-button" aria-label="Período anterior">←</button><input id="occurrence-month" type="month" aria-label="Escolher mês ou ano dos acontecimentos"><button type="button" id="occurrence-next-month" class="round-button" aria-label="Próximo período">→</button><button type="button" id="occurrence-current-month" class="today-button">Atual</button></div>
+        <div class="date-navigator occurrence-week-navigator hidden"><button type="button" id="occurrence-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="occurrence-week-date" type="date" aria-label="Escolher semana dos acontecimentos"><button type="button" id="occurrence-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="occurrence-week-today" class="today-button">Esta semana</button></div>
         <div id="occurrence-list-filters" class="action-list-filters hidden">
           <div class="action-filter-grid occurrence-filter-grid">
             <label>Buscar<input id="occurrence-filter-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label>
