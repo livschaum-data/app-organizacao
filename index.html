@@ -7,10 +7,10 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261029-monthly-tasks">
+  <link rel="stylesheet" href="styles.css?v=20261029-task-filters">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261029-monthly-tasks"></script>
+  <script defer src="app.js?v=20261029-task-filters"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -162,7 +162,7 @@
         <section id="task-month-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">MÊS</div><h2>Tarefas por semana</h2><p id="task-month-range-label" class="planner-date-label"></p></div></div><div class="date-navigator"><button type="button" id="task-month-prev" class="round-button" aria-label="Mês anterior">←</button><input id="task-month-date" type="month" aria-label="Escolher mês das tarefas"><button type="button" id="task-month-next" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="task-month-today" class="today-button">Este mês</button></div><div id="task-month-grid" class="weekly-scroll"></div></section>
         <section id="task-annual-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">ANO</div><h2>Tarefas por mês</h2><p id="task-annual-range-label" class="planner-date-label"></p></div></div><div class="date-navigator"><button type="button" id="task-annual-prev" class="round-button" aria-label="Ano anterior">←</button><input id="task-annual-year" type="number" min="2000" max="2100" aria-label="Escolher ano das tarefas"><button type="button" id="task-annual-next" class="round-button" aria-label="Próximo ano">→</button><button type="button" id="task-annual-today" class="today-button">Este ano</button></div><div id="task-annual-grid" class="weekly-scroll"></div></section>
         <section id="task-history-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">REGISTROS</div><h2>Histórico de tarefas</h2></div><button type="button" class="text-button" id="task-history-export">↓ Exportar CSV</button></div><div id="task-history-list" class="history-list"></div></section>
-        <section id="task-manage-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">DO SEU JEITO</div><h2>Minhas tarefas</h2></div></div><p class="section-intro">Cadastre tarefas com ou sem passos e escolha repetições semanais, quinzenais ou periódicas por mês.</p><div id="task-manage-list" class="manage-list"></div></section>
+        <section id="task-manage-view" class="view task-view"><div class="section-heading"><div><div class="eyebrow">DO SEU JEITO</div><h2>Minhas tarefas</h2></div></div><p class="section-intro">Cadastre tarefas com ou sem passos e escolha repetições semanais, quinzenais ou periódicas por mês.</p><div id="task-manage-filters" class="task-manage-filters"><label>Frequência<select id="task-filter-frequency" class="text-input"><option value="">Todas</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option><option value="bimonthly">Bimestral</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option></select></label><label>Tipo de tarefa<select id="task-filter-kind" class="text-input"><option value="">Todos</option><option value="regular">Tarefa</option><option value="block">Bloco</option><option value="consultation">Consulta</option></select></label><button type="button" id="task-clear-filters" class="text-button">Limpar filtros</button></div><p id="task-filter-count" class="action-list-count"></p><div id="task-manage-list" class="manage-list"></div></section>
       </section>
 
       <section id="actions-workspace" class="workspace-view">

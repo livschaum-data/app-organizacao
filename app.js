@@ -442,11 +442,14 @@
     $('#finish-tasks-day').textContent=day.finalized?'Tarefas e blocos concluídos ✓':'Concluir tarefas e blocos';
     $('#finish-tasks-day').disabled=Boolean(day.finalized);
     $('#task-day-list').innerHTML=taskGroup(day,'weekly')+taskGroup(day,'biweekly')+monthlyTaskGroups(day)+blockGroup(day);
-    const tasks=state.tasks.filter(task=>!task.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    const allTasks=state.tasks.filter(task=>!task.deleted),frequencyFilter=$('#task-filter-frequency').value,kindFilter=$('#task-filter-kind').value;
+    const taskKind=task=>task.consultation===true?'consultation':task.kind==='block'?'block':'regular';
+    const tasks=allTasks.filter(task=>(!frequencyFilter||task.frequency===frequencyFilter)&&(!kindFilter||taskKind(task)===kindFilter)).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    $('#task-filter-count').textContent=(frequencyFilter||kindFilter)?`${tasks.length} de ${allTasks.length} ${allTasks.length===1?'item':'itens'}`:'';
     $('#task-manage-list').innerHTML=tasks.length?tasks.map(task=>{
       const items=(task.items||[]).filter(item=>item.active!==false),expanded=openManageTasks.has(task.id);
       return `<article class="manage-card task-manage-card${expanded?' is-open':''}" style="--routine-color:${escapeHTML(task.color)}"><div class="manage-card-main"><span class="routine-icon">${escapeHTML(task.icon||'✓')}</span><div class="manage-info"><strong>${escapeHTML(task.name)}</strong><small>${task.consultation?'Consulta · ':task.kind==='block'?'Bloco · ':''}${taskFrequencyLabel(task.frequency)}${MONTHLY_TASK_FREQUENCIES.includes(task.frequency)?` · semana ${Number(task.monthWeek)||1}`:''} · ${items.length} passos · ${(task.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${task.startDate?` · desde ${escapeHTML(fmtDate(task.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small></div>${items.length?`<button type="button" class="manage-toggle" data-task-manage-toggle="${escapeHTML(task.id)}" aria-expanded="${expanded}" aria-controls="task-manage-steps-${escapeHTML(task.id)}" aria-label="${expanded?'Ocultar':'Mostrar'} passos de ${escapeHTML(task.name)}">▾</button>`:''}<button type="button" class="small-edit" data-edit-task="${escapeHTML(task.id)}">Editar</button></div>${items.length?`<div id="task-manage-steps-${escapeHTML(task.id)}" class="manage-step-list${expanded?'':' hidden'}"><ol>${items.map(item=>`<li>${escapeHTML(item.label)}</li>`).join('')}</ol></div>`:''}</article>`;
-    }).join(''):'<div class="empty-state"><span>✓</span><h3>Suas tarefas começam aqui</h3><p>Crie uma tarefa semanal, quinzenal ou periódica por mês, com passos se desejar.</p></div>';
+    }).join(''):allTasks.length?'<div class="empty-state"><span>⌕</span><h3>Nenhuma tarefa encontrada</h3><p>Altere ou limpe os filtros para ver outras tarefas.</p></div>':'<div class="empty-state"><span>✓</span><h3>Suas tarefas começam aqui</h3><p>Crie uma tarefa semanal, quinzenal ou periódica por mês, com passos se desejar.</p></div>';
     const dates=Object.keys(state.taskHistory).filter(date=>Object.values(state.taskHistory[date]?.tasks||{}).some(task=>taskIsVisibleOnDay(task,date))).sort((a,b)=>b.localeCompare(a));
     $('#task-history-list').innerHTML=dates.length?dates.map(date=>{
       const entries=Object.values(state.taskHistory[date].tasks).filter(task=>taskIsVisibleOnDay(task,date)),registered=entries.filter(task=>taskIsRegistered(task)).length;
@@ -1674,6 +1677,8 @@
   $('#task-week-prev').onclick=()=>shiftTaskWeek(-1);$('#task-week-next').onclick=()=>shiftTaskWeek(1);
   $('#task-week-today').onclick=()=>{selectedTaskWeekDate=isoToday();renderTaskWeekly();};
   $('#task-week-date').onchange=e=>{if(e.target.value){selectedTaskWeekDate=e.target.value;renderTaskWeekly();}};
+  $('#task-manage-filters').addEventListener('change',renderTasks);
+  $('#task-clear-filters').onclick=()=>{$('#task-filter-frequency').value='';$('#task-filter-kind').value='';renderTasks();};
   const shiftTaskMonth=amount=>{const [year,month]=selectedTaskMonth.split('-').map(Number),date=new Date(year,month-1+amount,1);selectedTaskMonth=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;renderTaskMonthly();};
   $('#task-month-prev').onclick=()=>shiftTaskMonth(-1);$('#task-month-next').onclick=()=>shiftTaskMonth(1);$('#task-month-today').onclick=()=>{selectedTaskMonth=isoToday().slice(0,7);renderTaskMonthly();};$('#task-month-date').onchange=event=>{if(event.target.value){selectedTaskMonth=event.target.value;renderTaskMonthly();}};
   $('#task-annual-prev').onclick=()=>{selectedTaskYear--;renderTaskAnnual();};$('#task-annual-next').onclick=()=>{selectedTaskYear++;renderTaskAnnual();};$('#task-annual-today').onclick=()=>{selectedTaskYear=Number(isoToday().slice(0,4));renderTaskAnnual();};$('#task-annual-year').onchange=event=>{const year=Number(event.target.value);if(year>=2000&&year<=2100){selectedTaskYear=year;renderTaskAnnual();}};

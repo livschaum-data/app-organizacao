@@ -250,6 +250,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-tab-bar{display:flex;align-items:flex-end;gap:14px;border-bottom:1px solid var(--line)}
 .task-tab-bar .tabs{flex:1;min-width:0;margin-top:12px;border-bottom:0;white-space:nowrap}
 .task-add-button{flex:none;margin-bottom:6px;white-space:nowrap;color:white}
+.task-manage-filters{display:flex;align-items:end;gap:12px;flex-wrap:wrap;padding:14px 15px;margin:15px 0 10px;border:1px solid #dce4df;border-radius:12px;background:#f3f6f2}.task-manage-filters label{min-width:190px;color:#52615d;font-size:10px;font-weight:700}.task-manage-filters .text-input{display:block;margin-top:5px}.task-manage-filters .text-button{margin:0 0 9px auto}@media(max-width:560px){.task-manage-filters{align-items:stretch}.task-manage-filters label{width:100%}.task-manage-filters .text-button{margin:0}}
 @media(max-width:700px){.task-tab-bar{flex-wrap:wrap;justify-content:flex-end;gap:0}.task-tab-bar .tabs{order:2;flex:0 0 100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}.task-tab-bar .tabs::-webkit-scrollbar{display:none}.task-add-button{order:1;margin:0}}
 .task-group{min-width:0;padding:13px 15px;background:var(--paper);border:1px solid var(--line);border-radius:12px}
 .task-group h3{margin:0 0 9px;color:var(--ink);font:700 14px Manrope,sans-serif}
