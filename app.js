@@ -957,6 +957,33 @@
     const rows=filtered.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder;return `<tr><td><div class="action-list-title"><span>${escapeHTML(item.icon||kind.icon)}</span><strong>${escapeHTML(item.title)}</strong></div></td><td><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span></td><td>${escapeHTML(occurrenceScheduleLabel(item))}</td><td>${item.createdAt?escapeHTML(fmtDate(item.createdAt.slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'})):'—'}</td><td><button type="button" class="small-edit" data-edit-occurrence="${escapeHTML(item.id)}">Editar</button></td></tr>`;}).join('');
     $('#occurrences-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'acontecimento encontrado':'acontecimentos encontrados'}</p><div class="action-list-scroll"><table class="action-list-table occurrence-list-table"><thead><tr><th>Acontecimento</th><th>Tipo</th><th>Agendamento</th><th>Criação</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="5" class="action-list-empty">Nenhum acontecimento corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
   }
+  function renderOccurrenceCalendarCells(items,start,weeks,visibleMonth){
+    const keyOf=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    const weekMarkup=[];
+    for(let week=0;week<weeks;week++){
+      const days=Array.from({length:7},(_,index)=>{const date=new Date(start);date.setDate(start.getDate()+week*7+index);return {date,key:keyOf(date)};});
+      const segments=[];
+      for(const item of items){
+        if(item.schedule==='month')continue;
+        if(item.schedule==='date'&&item.scheduledDate&&item.scheduledEndDate&&item.scheduledEndDate>item.scheduledDate){
+          const first=days.findIndex(day=>day.key>=item.scheduledDate&&day.key<=item.scheduledEndDate),last=days.findLastIndex(day=>day.key>=item.scheduledDate&&day.key<=item.scheduledEndDate);
+          if(first>=0)segments.push({item,start:first,end:last});
+        }else days.forEach((day,index)=>{if(occurrenceIsScheduled(item,day.key))segments.push({item,start:index,end:index});});
+      }
+      segments.sort((a,b)=>a.start-b.start||(b.end-b.start)-(a.end-a.start)||a.item.title.localeCompare(b.item.title,'pt-BR'));
+      const lanes=[];
+      for(const segment of segments){let lane=lanes.findIndex(occupied=>Array.from({length:segment.end-segment.start+1},(_,offset)=>!occupied[segment.start+offset]).every(Boolean));if(lane<0){lane=lanes.length;lanes.push(Array(7).fill(false));}for(let index=segment.start;index<=segment.end;index++)lanes[lane][index]=true;segment.lane=lane;}
+      for(let dayIndex=0;dayIndex<7;dayIndex++){
+        const {date,key}=days[dayIndex],slots=Array.from({length:lanes.length},(_,lane)=>{
+          const segment=segments.find(entry=>entry.lane===lane&&entry.start===dayIndex);
+          if(segment){const {item}=segment,kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder,span=segment.end-segment.start+1,width=`calc(${span*100}% + ${(span-1)*13}px)`;return `<button type="button" class="action-calendar-item occurrence-calendar-item occurrence-calendar-range" style="--action-color:${escapeHTML(item.color||'#5DFF5D')};width:${width}" data-edit-occurrence="${escapeHTML(item.id)}"><span>${escapeHTML(item.icon||kind.icon)}</span><span>${escapeHTML(item.title)}<small>${escapeHTML(kind.label)}</small></span></button>`;}
+          return `<span class="occurrence-calendar-slot${segments.some(entry=>entry.lane===lane&&entry.start<dayIndex&&entry.end>=dayIndex)?' is-continuation':''}" aria-hidden="true"></span>`;
+        }).join('');
+        weekMarkup.push(`<div class="action-calendar-day occurrence-calendar-day${date.getMonth()!==visibleMonth-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${date.getDate()}</span><button type="button" data-add-occurrence-date="${key}" aria-label="Adicionar acontecimento em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items occurrence-calendar-items">${slots}</div></div>`);
+      }
+    }
+    return weekMarkup.join('');
+  }
   function renderOccurrences(){
     $('#occurrence-month').value=selectedOccurrenceMonth;
     $('#occurrence-current-month').classList.toggle('hidden',selectedOccurrenceMonth===isoToday().slice(0,7));
@@ -979,7 +1006,7 @@
     }else if(occurrenceView==='date'){
       const first=new Date(year,month-1,1),start=new Date(year,month-1,1-(first.getDay()+6)%7),last=new Date(year,month,0),weeks=Math.ceil(((first.getDay()+6)%7+last.getDate())/7),dateKey=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
       const heads=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'].map(label=>`<div class="action-calendar-heading">${label}</div>`).join('');
-      const cells=Array.from({length:weeks*7},(_,index)=>{const day=new Date(start);day.setDate(start.getDate()+index);const key=dateKey(day),entries=items.filter(item=>item.schedule!=='month'&&occurrenceIsScheduled(item,key)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-occurrence-date="${key}" aria-label="Adicionar acontecimento em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder;return `<button type="button" class="action-calendar-item occurrence-calendar-item" style="--action-color:${escapeHTML(item.color||'#5DFF5D')}" data-edit-occurrence="${escapeHTML(item.id)}"><span>${escapeHTML(item.icon||kind.icon)}</span><span>${escapeHTML(item.title)}<small>${escapeHTML(kind.label)}</small></span></button>`;}).join('')}</div></div>`;}).join('');
+      const cells=renderOccurrenceCalendarCells(items,start,weeks,month);
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedOccurrenceMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
     }else renderOccurrenceList(items);
   }
