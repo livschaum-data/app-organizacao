@@ -12,6 +12,7 @@
   const TASK_FREQUENCY_LABELS={weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
   const TASK_FREQUENCY_PLURAL={weekly:'Semanais',biweekly:'Quinzenais',monthly:'Mensais',bimonthly:'Bimestrais',quarterly:'Trimestrais',semiannual:'Semestrais',annual:'Anuais'};
   const TASK_FREQUENCY_MONTHS={monthly:1,bimonthly:2,quarterly:3,semiannual:6,annual:12};
+  const MONTH_WEEK_OPTIONS=[1,2,3,4,5,6];
   const SEED = [
     ['💗✨','Preparo para o dia','#d98ba8',['Hidratar estrias','Vestir roupa dia','Tomar café da manhã','Comida pets','Tour pets manhã (recolher cacas, ver nível água)','Ajustar janelas','Lavar o rosto','Skincare manhã','Escovar os dentes','Make do dia','Captura e registros digitais (entradas, hábitos, vestuário, Elisa, sono)']],
     ['💼✨','Preparo para o trabalho focado','#7484a8',['Limpar mesa e notebooks','Limpar caixa de entrada de e-mails','Escrever tarefas do dia','Ligar música de fundo','Ligar contador','Bloquear notificações e distrações']],
@@ -156,7 +157,7 @@
     if(!Array.isArray(data.areas))data.areas=[];
     if(!Array.isArray(data.anchors))data.anchors=[];
     if(!Array.isArray(data.tasks))data.tasks=[];
-    for(const task of data.tasks)if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)&&(!Number.isInteger(Number(task.monthWeek))||Number(task.monthWeek)<1||Number(task.monthWeek)>5))task.monthWeek=1;
+    for(const task of data.tasks)if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)&&(!Number.isInteger(Number(task.monthWeek))||Number(task.monthWeek)<1||Number(task.monthWeek)>6))task.monthWeek=1;
     if(!Array.isArray(data.actions))data.actions=[];
     if(!Array.isArray(data.occurrences))data.occurrences=[];
     if(!Array.isArray(data.actionAreas))data.actionAreas=[];
@@ -212,17 +213,24 @@
     thursday.setDate(thursday.getDate()-(thursday.getDay()+6)%7+3);
     return Math.ceil(thursday.getDate()/7);
   }
+  function lastMonthWeekNumber(monthKey){
+    const [year,month]=monthKey.slice(0,7).split('-').map(Number),lastDay=new Date(year,month,0).getDate();let thursdays=0;
+    for(let day=1;day<=lastDay;day++)if(new Date(year,month-1,day,12).getDay()===4)thursdays++;
+    return thursdays;
+  }
+  function monthWeekMatches(week,date){const value=Number(week);return value===6?monthWeekNumber(date)===lastMonthWeekNumber(date.slice(0,7)):value===monthWeekNumber(date);}
+  function monthWeekLabel(week,withPrefix=true){return Number(week)===6?'Última semana':`${withPrefix?'Semana ':''}${Number(week)}`;}
   function dayIsScheduled(routine, date) {
     if (routine.deleted) return false;
     if (routine.startDate && date < routine.startDate) return false;
     if (routine.endDate && date > routine.endDate) return false;
-    if (Array.isArray(routine.monthWeeks) && routine.monthWeeks.length && !routine.monthWeeks.includes(monthWeekNumber(date))) return false;
+    if (Array.isArray(routine.monthWeeks) && routine.monthWeeks.length && !routine.monthWeeks.some(week=>monthWeekMatches(week,date))) return false;
     return (routine.weekdays || []).includes(safeDate(date).getDay());
   }
   function taskIsScheduled(task,date){
     if(!dayIsScheduled(task,date))return false;
     if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)){
-      if(!task.startDate||monthWeekNumber(date)!==Number(task.monthWeek||1))return false;
+      if(!task.startDate||!monthWeekMatches(task.monthWeek||1,date))return false;
       const current=safeDate(date),start=safeDate(task.startDate),months=(current.getFullYear()-start.getFullYear())*12+current.getMonth()-start.getMonth();
       return months>=0&&months%TASK_FREQUENCY_MONTHS[task.frequency]===0;
     }
@@ -237,7 +245,7 @@
   function actionIsScheduled(action,date){
     if(action.deleted)return false;
     if(action.schedule==='date')return action.scheduledDate===date;
-    return action.scheduledMonth===date.slice(0,7)&&(!action.week||Number(action.week)===monthWeekNumber(date));
+    return action.scheduledMonth===date.slice(0,7)&&(!action.week||monthWeekMatches(action.week,date));
   }
   function dailyViewOfGroup(group){return state.dailyViews?.[group]?.view==='primary'?'primary':'secondary';}
   function groupInWeekly(group){return state.dailyViews?.[group]?.weekly!==false;}
@@ -245,7 +253,7 @@
   function actionAreaName(action){return state.actionAreas.find(area=>area.id===action.areaId&&!area.deleted)?.name||'';}
   function actionScheduleLabel(action){
     if(action.schedule==='date'&&action.scheduledDate)return fmtDate(action.scheduledDate,{day:'numeric',month:'short'});
-    return action.week?`Semana ${action.week}`:'';
+    return action.week?monthWeekLabel(action.week):'';
   }
   function taskIsConsultation(task){
     const catalog=state.tasks.find(entry=>entry.id===(task.taskId||task.id));
@@ -448,7 +456,7 @@
     $('#task-filter-count').textContent=(frequencyFilter||kindFilter)?`${tasks.length} de ${allTasks.length} ${allTasks.length===1?'item':'itens'}`:'';
     $('#task-manage-list').innerHTML=tasks.length?tasks.map(task=>{
       const items=(task.items||[]).filter(item=>item.active!==false),expanded=openManageTasks.has(task.id);
-      return `<article class="manage-card task-manage-card${expanded?' is-open':''}" style="--routine-color:${escapeHTML(task.color)}"><div class="manage-card-main"><span class="routine-icon">${escapeHTML(task.icon||'✓')}</span><div class="manage-info"><strong>${escapeHTML(task.name)}</strong><small>${task.consultation?'Consulta · ':task.kind==='block'?'Bloco · ':''}${taskFrequencyLabel(task.frequency)}${MONTHLY_TASK_FREQUENCIES.includes(task.frequency)?` · semana ${Number(task.monthWeek)||1}`:''} · ${items.length} passos · ${(task.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${task.startDate?` · desde ${escapeHTML(fmtDate(task.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small></div>${items.length?`<button type="button" class="manage-toggle" data-task-manage-toggle="${escapeHTML(task.id)}" aria-expanded="${expanded}" aria-controls="task-manage-steps-${escapeHTML(task.id)}" aria-label="${expanded?'Ocultar':'Mostrar'} passos de ${escapeHTML(task.name)}">▾</button>`:''}<button type="button" class="small-edit" data-edit-task="${escapeHTML(task.id)}">Editar</button></div>${items.length?`<div id="task-manage-steps-${escapeHTML(task.id)}" class="manage-step-list${expanded?'':' hidden'}"><ol>${items.map(item=>`<li>${escapeHTML(item.label)}</li>`).join('')}</ol></div>`:''}</article>`;
+      return `<article class="manage-card task-manage-card${expanded?' is-open':''}" style="--routine-color:${escapeHTML(task.color)}"><div class="manage-card-main"><span class="routine-icon">${escapeHTML(task.icon||'✓')}</span><div class="manage-info"><strong>${escapeHTML(task.name)}</strong><small>${task.consultation?'Consulta · ':task.kind==='block'?'Bloco · ':''}${taskFrequencyLabel(task.frequency)}${MONTHLY_TASK_FREQUENCIES.includes(task.frequency)?` · ${monthWeekLabel(task.monthWeek||1).toLowerCase()}`:''} · ${items.length} passos · ${(task.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${task.startDate?` · desde ${escapeHTML(fmtDate(task.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small></div>${items.length?`<button type="button" class="manage-toggle" data-task-manage-toggle="${escapeHTML(task.id)}" aria-expanded="${expanded}" aria-controls="task-manage-steps-${escapeHTML(task.id)}" aria-label="${expanded?'Ocultar':'Mostrar'} passos de ${escapeHTML(task.name)}">▾</button>`:''}<button type="button" class="small-edit" data-edit-task="${escapeHTML(task.id)}">Editar</button></div>${items.length?`<div id="task-manage-steps-${escapeHTML(task.id)}" class="manage-step-list${expanded?'':' hidden'}"><ol>${items.map(item=>`<li>${escapeHTML(item.label)}</li>`).join('')}</ol></div>`:''}</article>`;
     }).join(''):allTasks.length?'<div class="empty-state"><span>⌕</span><h3>Nenhuma tarefa encontrada</h3><p>Altere ou limpe os filtros para ver outras tarefas.</p></div>':'<div class="empty-state"><span>✓</span><h3>Suas tarefas começam aqui</h3><p>Crie uma tarefa semanal, quinzenal ou periódica por mês, com passos se desejar.</p></div>';
     const dates=Object.keys(state.taskHistory).filter(date=>Object.values(state.taskHistory[date]?.tasks||{}).some(task=>taskIsVisibleOnDay(task,date))).sort((a,b)=>b.localeCompare(a));
     $('#task-history-list').innerHTML=dates.length?dates.map(date=>{
@@ -676,7 +684,7 @@
     $('#weekly-grid').innerHTML=`<table class="weekly-table"><thead><tr><th scope="col" class="weekly-corner">Grupo</th>${headers}</tr></thead><tbody>${areaRows}${groupRows}</tbody></table>`;
   }
   function renderMonthly(){
-    const [year,month]=selectedMonthlyMonth.split('-').map(Number),weeks=[1,2,3,4,5];
+    const [year,month]=selectedMonthlyMonth.split('-').map(Number),weeks=MONTH_WEEK_OPTIONS;
     const firstThursday=new Date(year,month-1,1,12);
     while(firstThursday.getDay()!==4)firstThursday.setDate(firstThursday.getDate()+1);
     const firstMonday=new Date(firstThursday);firstMonday.setDate(firstMonday.getDate()-3);
@@ -686,16 +694,17 @@
       const monday=new Date(firstMonday);monday.setDate(firstMonday.getDate()+(week-1)*7);
       return [week,thursday.getMonth()===month-1?weekDates(asISO(monday)):[]];
     }));
-    const specificAnchors=state.anchors.filter(anchor=>!anchor.deleted&&Array.isArray(anchor.monthWeeks)&&anchor.monthWeeks.length>0&&!weeks.every(week=>anchor.monthWeeks.includes(week)));
+    datesByWeek.set(6,datesByWeek.get(lastMonthWeekNumber(selectedMonthlyMonth))||[]);
+    const specificAnchors=state.anchors.filter(anchor=>!anchor.deleted&&Array.isArray(anchor.monthWeeks)&&anchor.monthWeeks.length>0&&(![1,2,3,4,5].every(week=>anchor.monthWeeks.includes(week))||anchor.monthWeeks.includes(6)));
     const areas=orderedAreas().filter(area=>specificAnchors.some(anchor=>anchor.areaId===area.id&&weeks.some(week=>anchor.monthWeeks.includes(week)&&datesByWeek.get(week).some(date=>dayIsScheduled(anchor,date)))));
     $('#monthly-date').value=selectedMonthlyMonth;
     $('#monthly-range-label').textContent=fmtDate(`${selectedMonthlyMonth}-01`,{month:'long',year:'numeric'});
     $('#monthly-today').classList.toggle('hidden',selectedMonthlyMonth===isoToday().slice(0,7));
     const headers=weeks.map(week=>{
       const days=datesByWeek.get(week),range=days.length?`${fmtDate(days[0],{day:'numeric',month:'short'})} a ${fmtDate(days[days.length-1],{day:'numeric',month:'short'})}`:'Sem dias neste mês';
-      return `<th scope="col" class="monthly-week monthly-week-${week}${days.length?'':' is-empty'}"><span class="monthly-week-pill">semana ${week}</span><small>${escapeHTML(range)}</small></th>`;
+      return `<th scope="col" class="monthly-week monthly-week-${week}${days.length?'':' is-empty'}"><span class="monthly-week-pill">${monthWeekLabel(week).toLowerCase()}</span><small>${escapeHTML(range)}</small></th>`;
     }).join('');
-    if(!areas.length){$('#monthly-grid').innerHTML=`<table class="weekly-table monthly-table"><thead><tr><th scope="col" class="weekly-corner">Área</th>${headers}</tr></thead><tbody><tr><td colspan="6" class="monthly-empty">Nenhuma âncora de semanas específicas neste mês. Edite uma âncora e escolha as semanas para vê-la aqui.</td></tr></tbody></table>`;return;}
+    if(!areas.length){$('#monthly-grid').innerHTML=`<table class="weekly-table monthly-table"><thead><tr><th scope="col" class="weekly-corner">Área</th>${headers}</tr></thead><tbody><tr><td colspan="7" class="monthly-empty">Nenhuma âncora de semanas específicas neste mês. Edite uma âncora e escolha as semanas para vê-la aqui.</td></tr></tbody></table>`;return;}
     const rows=areas.map(area=>{
       const cells=weeks.map(week=>{
         const entries=specificAnchors.filter(anchor=>anchor.areaId===area.id&&anchor.monthWeeks.includes(week)).map(anchor=>({anchor,days:datesByWeek.get(week).filter(date=>dayIsScheduled(anchor,date))})).filter(entry=>entry.days.length).sort((left,right)=>left.anchor.title.localeCompare(right.anchor.title,'pt-BR'));
@@ -733,12 +742,12 @@
     return dates;
   }
   function taskPlanningCard(task){
-    return `<button type="button" class="weekly-anchor weekly-task task-planning-card" data-edit-task="${escapeHTML(task.id)}"><span aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span>${escapeHTML(task.name)}<small>Semana ${Number(task.monthWeek)||1} · ${(task.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}</small></span></button>`;
+    return `<button type="button" class="weekly-anchor weekly-task task-planning-card" data-edit-task="${escapeHTML(task.id)}"><span aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span>${escapeHTML(task.name)}<small>${monthWeekLabel(task.monthWeek||1)} · ${(task.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}</small></span></button>`;
   }
   function renderTaskMonthly(){
     $('#task-month-date').value=selectedTaskMonth;$('#task-month-range-label').textContent=fmtDate(`${selectedTaskMonth}-01`,{month:'long',year:'numeric'});$('#task-month-today').classList.toggle('hidden',selectedTaskMonth===isoToday().slice(0,7));
-    const weeks=[1,2,3,4,5],headers=weeks.map(week=>`<th scope="col" class="monthly-week"><span class="monthly-week-pill">semana ${week}</span></th>`).join(''),tasks=state.tasks.filter(task=>!task.deleted&&MONTHLY_TASK_FREQUENCIES.includes(task.frequency));
-    const rows=MONTHLY_TASK_FREQUENCIES.map(frequency=>{const cells=weeks.map(week=>`<td>${tasks.filter(task=>task.frequency===frequency&&taskDatesInMonth(task,selectedTaskMonth).some(date=>monthWeekNumber(date)===week)).map(taskPlanningCard).join('')}</td>`).join('');return `<tr style="--area-color:#e6e9f3"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">▦</span><span>${TASK_FREQUENCY_PLURAL[frequency]}</span></th>${cells}</tr>`;}).join('');
+    const weeks=MONTH_WEEK_OPTIONS,headers=weeks.map(week=>`<th scope="col" class="monthly-week"><span class="monthly-week-pill">${monthWeekLabel(week).toLowerCase()}</span></th>`).join(''),tasks=state.tasks.filter(task=>!task.deleted&&MONTHLY_TASK_FREQUENCIES.includes(task.frequency));
+    const rows=MONTHLY_TASK_FREQUENCIES.map(frequency=>{const cells=weeks.map(week=>`<td>${tasks.filter(task=>task.frequency===frequency&&Number(task.monthWeek||1)===week&&taskDatesInMonth(task,selectedTaskMonth).length).map(taskPlanningCard).join('')}</td>`).join('');return `<tr style="--area-color:#e6e9f3"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">▦</span><span>${TASK_FREQUENCY_PLURAL[frequency]}</span></th>${cells}</tr>`;}).join('');
     $('#task-month-grid').innerHTML=`<table class="weekly-table monthly-table task-month-table"><thead><tr><th scope="col" class="weekly-corner">Frequência</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
   }
   function renderTaskAnnual(){
@@ -759,7 +768,7 @@
     if(!/^\d{4}-\d{2}$/.test(action.scheduledMonth||''))return '';
     const [year,month]=action.scheduledMonth.split('-').map(Number),last=new Date(year,month,0).getDate();
     if(!action.week)return `${action.scheduledMonth}-${String(last).padStart(2,'0')}`;
-    for(let day=last;day>=1;day--){const date=`${action.scheduledMonth}-${String(day).padStart(2,'0')}`;if(monthWeekNumber(date)===Number(action.week))return date;}
+    for(let day=last;day>=1;day--){const date=`${action.scheduledMonth}-${String(day).padStart(2,'0')}`;if(monthWeekMatches(action.week,date))return date;}
     return '';
   }
   function actionStatus(action){return action.completed?'Concluída':actionDueDate(action)<isoToday()&&actionDueDate(action)?'Vencida':'Em aberto';}
@@ -772,17 +781,17 @@
       const entries=datedActions.filter(action=>actionIsScheduled(action,date));
       return `<td data-action-week-date="${date}"><div class="weekly-action-dropzone">${entries.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</div></td>`;
     }).join('');
-    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?`Semana ${action.week}`:'Mês inteiro'}</small></button></div>`).join('');
+    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?monthWeekLabel(action.week):'Mês inteiro'}</small></button></div>`).join('');
     $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr></tbody></table></div><aside class="action-monthly-undated"><h4>Não agendadas</h4><p>Agendadas apenas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
   }
   function renderActionMonthly(actions){
-    const [year,month]=selectedActionMonth.split('-').map(Number),weeks=[1,2,3,4,5];
-    const headers=weeks.map(week=>`<th scope="col" class="monthly-week monthly-week-${week}"><span class="monthly-week-pill">semana ${week}</span></th>`).join('');
+    const [year,month]=selectedActionMonth.split('-').map(Number),weeks=MONTH_WEEK_OPTIONS;
+    const headers=weeks.map(week=>`<th scope="col" class="monthly-week monthly-week-${week}"><span class="monthly-week-pill">${monthWeekLabel(week).toLowerCase()}</span></th>`).join('');
     const inMonth=action=>action.schedule==='date'?action.scheduledDate?.slice(0,7)===selectedActionMonth:action.scheduledMonth===selectedActionMonth;
     const datedActions=actions.filter(action=>inMonth(action)&&action.schedule==='date'),undatedActions=actions.filter(action=>inMonth(action)&&action.schedule==='month');
     const cells=weeks.map(week=>{const weekActions=datedActions.filter(action=>actionWeek(action)===week);return `<td data-action-month-week="${week}">${weekActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</td>`;}).join('');
-    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?`Semana ${action.week}`:'Mês inteiro'}</small></button></div>`).join('');
-    $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table monthly-table action-monthly-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${headers}</tr></thead><tbody>${datedActions.length?`<tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr>`:'<tr><td colspan="6" class="monthly-empty">Nenhuma ação com data específica neste mês.</td></tr>'}</tbody></table></div><aside class="action-monthly-undated"><h4>Sem data específica</h4><p>Agendadas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
+    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?monthWeekLabel(action.week):'Mês inteiro'}</small></button></div>`).join('');
+    $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table monthly-table action-monthly-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${headers}</tr></thead><tbody>${datedActions.length?`<tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr>`:'<tr><td colspan="7" class="monthly-empty">Nenhuma ação com data específica neste mês.</td></tr>'}</tbody></table></div><aside class="action-monthly-undated"><h4>Sem data específica</h4><p>Agendadas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
   }
   function renderActionList(actions){
     const areaSelect=$('#action-filter-area'),selectedArea=areaSelect.value;
@@ -797,14 +806,14 @@
       const statusMatches=!status||(status==='open'&&!action.completed)||(status==='completed'&&action.completed)||(status==='overdue'&&actionStatus(action)==='Vencida');
       return (!search||[action.title,action.description,action.notes,actionAreaName(action)].some(value=>String(value||'').toLocaleLowerCase('pt-BR').includes(search)))
         &&statusMatches
-        &&(!area||action.areaId===area)&&(!schedule||action.schedule===schedule)&&(!month||actionMonth(action)===month)&&(!week||actionWeek(action)===Number(week))
+        &&(!area||action.areaId===area)&&(!schedule||action.schedule===schedule)&&(!month||actionMonth(action)===month)&&(!week||(action.schedule==='date'&&action.scheduledDate?monthWeekMatches(week,action.scheduledDate):actionWeek(action)===Number(week)))
         &&within(created,createdFrom,createdTo)&&within(completed,completedFrom,completedTo)&&within(due,dueFrom,dueTo);
     });
     const sortBy=get('#action-sort-by'),direction=get('#action-sort-direction')==='desc'?-1:1;
     const sortValue=action=>({due:actionDueDate(action),title:action.title,area:actionAreaName(action),created:(action.createdAt||'').slice(0,10),completed:(action.completedAt||'').slice(0,10),month:actionMonth(action),week:actionWeek(action)?String(actionWeek(action)).padStart(2,'0'):'',status:actionStatus(action)})[sortBy]||'';
     filtered.sort((a,b)=>{const left=sortValue(a),right=sortValue(b);if(!left)return right?1:0;if(!right)return -1;return direction*left.localeCompare(right,'pt-BR',{numeric:true})||a.title.localeCompare(b.title,'pt-BR');});
     const dateLabel=value=>value?escapeHTML(fmtDate(value.slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'})):'—';
-    const rows=filtered.map(action=>{const due=actionDueDate(action),stateLabel=actionStatus(action);return `<tr class="${action.completed?'is-complete':''}"><td><div class="action-list-title"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span>${action.icon?`${escapeHTML(action.icon)} `:''}<strong>${escapeHTML(action.title)}</strong></span></div></td><td>${escapeHTML(actionAreaName(action)||'—')}</td><td>${actionMonth(action)?escapeHTML(fmtDate(`${actionMonth(action)}-01`,{month:'short',year:'numeric'})):'—'}</td><td>${actionWeek(action)?`Semana ${actionWeek(action)}`:'—'}</td><td>${dateLabel(due)}</td><td>${dateLabel(action.createdAt||'')}</td><td>${dateLabel(action.completedAt||'')}</td><td><span class="action-status is-${stateLabel==='Concluída'?'done':stateLabel==='Vencida'?'late':'open'}">${stateLabel}</span></td><td><button type="button" class="small-edit" data-edit-action="${escapeHTML(action.id)}">Editar</button></td></tr>`;}).join('');
+    const rows=filtered.map(action=>{const due=actionDueDate(action),stateLabel=actionStatus(action);return `<tr class="${action.completed?'is-complete':''}"><td><div class="action-list-title"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span>${action.icon?`${escapeHTML(action.icon)} `:''}<strong>${escapeHTML(action.title)}</strong></span></div></td><td>${escapeHTML(actionAreaName(action)||'—')}</td><td>${actionMonth(action)?escapeHTML(fmtDate(`${actionMonth(action)}-01`,{month:'short',year:'numeric'})):'—'}</td><td>${actionWeek(action)?monthWeekLabel(actionWeek(action)):'—'}</td><td>${dateLabel(due)}</td><td>${dateLabel(action.createdAt||'')}</td><td>${dateLabel(action.completedAt||'')}</td><td><span class="action-status is-${stateLabel==='Concluída'?'done':stateLabel==='Vencida'?'late':'open'}">${stateLabel}</span></td><td><button type="button" class="small-edit" data-edit-action="${escapeHTML(action.id)}">Editar</button></td></tr>`;}).join('');
     $('#actions-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'ação encontrada':'ações encontradas'}</p><div class="action-list-scroll"><table class="action-list-table"><thead><tr><th>Ação</th><th>Área geral</th><th>Mês</th><th>Semana</th><th>Vencimento</th><th>Criação</th><th>Conclusão</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="action-list-empty">Nenhuma ação corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
   }
   function renderActions(){
@@ -906,7 +915,7 @@
       action.scheduledDate=`${monthKey}-${String(day).padStart(2,'0')}`;
     }else{
       action.scheduledMonth=monthKey;
-      if(action.week){
+      if(action.week&&Number(action.week)!==6){
         const weeks=Array.from({length:lastDay},(_,index)=>monthWeekNumber(`${monthKey}-${String(index+1).padStart(2,'0')}`));
         action.week=Math.min(Number(action.week),Math.max(...weeks));
       }
@@ -932,12 +941,12 @@
   function moveActionToMonthlyWeek(id,week){
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted),targetWeek=Number(week);if(!action||!targetWeek)return;
     const [year,month]=selectedActionMonth.split('-').map(Number),lastDay=new Date(year,month,0).getDate();
-    const targetDay=Array.from({length:lastDay},(_,index)=>index+1).find(day=>monthWeekNumber(`${selectedActionMonth}-${String(day).padStart(2,'0')}`)===targetWeek);
+    const targetDay=Array.from({length:lastDay},(_,index)=>index+1).find(day=>monthWeekMatches(targetWeek,`${selectedActionMonth}-${String(day).padStart(2,'0')}`));
     if(!targetDay)return;
     const date=`${selectedActionMonth}-${String(targetDay).padStart(2,'0')}`;
     if(action.schedule==='date'&&action.scheduledDate===date)return;
     action.schedule='date';action.scheduledDate=date;action.scheduledMonth='';action.week=null;action.updatedAt=stamp();
-    saveLocal();renderActions();renderPlanner();toast(`Ação movida para a semana ${targetWeek}.`);
+    saveLocal();renderActions();renderPlanner();toast(`Ação movida para ${monthWeekLabel(targetWeek).toLowerCase()}.`);
   }
   function openActionAreaDialog(id=null){
     const area=state.actionAreas.find(entry=>entry.id===id&&!entry.deleted);
@@ -963,11 +972,11 @@
     if(item.deleted)return false;
     if(item.type==='birthday')return Boolean(item.scheduledDate)&&item.scheduledDate.slice(5)===date.slice(5);
     if(item.schedule==='date')return Boolean(item.scheduledDate)&&date>=item.scheduledDate&&date<=(item.scheduledEndDate||item.scheduledDate);
-    if(item.schedule==='month')return item.scheduledMonth===date.slice(0,7)&&(!item.week||Number(item.week)===monthWeekNumber(date));
+    if(item.schedule==='month')return item.scheduledMonth===date.slice(0,7)&&(!item.week||monthWeekMatches(item.week,date));
     if(item.schedule!=='recurrence'||item.type!=='reminder')return false;
     if(item.startDate&&date<item.startDate)return false;
     if(item.endDate&&date>item.endDate)return false;
-    if(Array.isArray(item.monthWeeks)&&item.monthWeeks.length&&!item.monthWeeks.includes(monthWeekNumber(date)))return false;
+    if(Array.isArray(item.monthWeeks)&&item.monthWeeks.length&&!item.monthWeeks.some(week=>monthWeekMatches(week,date)))return false;
     return (item.weekdays||[]).includes(safeDate(date).getDay());
   }
   function occurrenceDatesInMonth(item,monthKey){
@@ -983,8 +992,8 @@
   function occurrenceScheduleLabel(item){
     if(item.type==='birthday'&&item.scheduledDate)return `Todo ano em ${fmtDate(item.scheduledDate,{day:'numeric',month:'long'})}`;
     if(item.schedule==='date'&&item.scheduledDate){const start=fmtDate(item.scheduledDate,{day:'numeric',month:'short',year:'numeric'});return item.scheduledEndDate&&item.scheduledEndDate!==item.scheduledDate?`${start} a ${fmtDate(item.scheduledEndDate,{day:'numeric',month:'short',year:'numeric'})}`:start;}
-    if(item.schedule==='month')return `${item.week?`Semana ${item.week} · `:''}${fmtDate(`${item.scheduledMonth}-01`,{month:'long',year:'numeric'})}`;
-    const days=(item.weekdays||[]).map(day=>WEEKDAYS[day]).join(', '),weeks=item.monthWeeks?.length?` · semanas ${item.monthWeeks.join(', ')}`:'';
+    if(item.schedule==='month')return `${item.week?`${monthWeekLabel(item.week)} · `:''}${fmtDate(`${item.scheduledMonth}-01`,{month:'long',year:'numeric'})}`;
+    const days=(item.weekdays||[]).map(day=>WEEKDAYS[day]).join(', '),weeks=item.monthWeeks?.length?` · ${item.monthWeeks.map(week=>monthWeekLabel(week).toLowerCase()).join(', ')}`:'';
     return `${days||'Sem dias'}${weeks}`;
   }
   function occurrenceCard(item){
@@ -1039,9 +1048,9 @@
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="Acontecimentos por mês" tabindex="0">${columns.join('')}</div>`;
       const board=$('#occurrences-content .action-month-board'),selected=$('#occurrences-content .action-month-column.is-selected');if(selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);
     }else if(occurrenceView==='monthly'){
-      const weeks=[1,2,3,4,5], headers=weeks.map(week=>`<th scope="col" class="monthly-week"><span class="monthly-week-pill">semana ${week}</span></th>`).join('');
+      const weeks=MONTH_WEEK_OPTIONS, headers=weeks.map(week=>`<th scope="col" class="monthly-week"><span class="monthly-week-pill">${monthWeekLabel(week).toLowerCase()}</span></th>`).join('');
       const entries=items.filter(item=>item.schedule==='month'?occurrenceMonth(item,year)===selectedOccurrenceMonth:occurrenceDatesInMonth(item,selectedOccurrenceMonth).length>0);
-      const cells=weeks.map(week=>`<td>${entries.filter(item=>item.schedule==='month'?Number(item.week)===week||!item.week:occurrenceDatesInMonth(item,selectedOccurrenceMonth).some(date=>monthWeekNumber(date)===week)).map(occurrenceCard).join('')}</td>`).join('');
+      const cells=weeks.map(week=>`<td>${entries.filter(item=>item.schedule==='month'?Number(item.week)===week||!item.week:item.monthWeeks?.length?item.monthWeeks.includes(week)&&occurrenceDatesInMonth(item,selectedOccurrenceMonth).length:week!==6&&occurrenceDatesInMonth(item,selectedOccurrenceMonth).some(date=>monthWeekNumber(date)===week)).map(occurrenceCard).join('')}</td>`).join('');
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedOccurrenceMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table monthly-table"><thead><tr><th class="weekly-corner">Acontecimentos</th>${headers}</tr></thead><tbody><tr><th>Todos</th>${cells}</tr></tbody></table></div>`;
     }else if(occurrenceView==='week'){
       const dates=weekDates(selectedOccurrenceMonth+'-01'), entries=items.filter(item=>dates.some(date=>occurrenceIsScheduled(item,date)));
@@ -1055,7 +1064,7 @@
   }
   function buildOccurrenceOptions(item={}){
     $('#occurrence-weekday-options').innerHTML=WEEKDAYS.map((day,index)=>`<label class="weekday-option"><input type="checkbox" value="${index}" ${(item.weekdays||[]).includes(index)?'checked':''}><span>${day}</span></label>`).join('');
-    $('#occurrence-month-week-options').innerHTML=[1,2,3,4,5].map(week=>`<label class="weekday-option"><input type="checkbox" value="${week}" ${(item.monthWeeks||[]).includes(week)?'checked':''}><span>Semana ${week}</span></label>`).join('');
+    $('#occurrence-month-week-options').innerHTML=MONTH_WEEK_OPTIONS.map(week=>`<label class="weekday-option"><input type="checkbox" value="${week}" ${(item.monthWeeks||[]).includes(week)?'checked':''}><span>${monthWeekLabel(week)}</span></label>`).join('');
   }
   function updateOccurrenceForm(){
     const type=$('#occurrence-type').value,schedule=$('#occurrence-schedule'),recurrenceOption=$('#occurrence-schedule option[value="recurrence"]');
@@ -1096,7 +1105,7 @@
     $('#anchor-area-filter').innerHTML='<option value="">Todas as áreas</option>'+areas.map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
     $('#anchor-area-filter').value=selectedAnchorArea;
     const anchors=state.anchors.filter(anchor=>!anchor.deleted&&(!selectedAnchorArea||anchor.areaId===selectedAnchorArea)).sort((a,b)=>(areaById.get(a.areaId)?.order??999)-(areaById.get(b.areaId)?.order??999)||a.title.localeCompare(b.title,'pt-BR'));
-    $('#anchor-list').innerHTML=anchors.length?anchors.map(anchor=>`<article class="anchor-card"><span class="anchor-icon">${escapeHTML(anchor.icon||'✦')}</span><div class="anchor-info"><strong>${escapeHTML(anchor.title)}</strong><small>${escapeHTML(areaById.get(anchor.areaId)?.name||'Área indisponível')} · ${anchor.weekdays?.length===7?'Todos os dias':(anchor.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${anchor.monthWeeks?.length?` · semanas ${escapeHTML(anchor.monthWeeks.join(', '))}`:''}${anchor.scheduledTime?` · ${escapeHTML(anchor.scheduledTime)} (${Number(anchor.durationMinutes)||45} min)`:''}${anchor.startDate?` · a partir de ${escapeHTML(fmtDate(anchor.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}${anchor.endDate?` · até ${escapeHTML(fmtDate(anchor.endDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div><button type="button" class="small-edit" data-edit-anchor="${escapeHTML(anchor.id)}">Editar</button></article>`).join(''):selectedAnchorArea?'<div class="empty-state"><h3>Nenhuma âncora nesta área</h3><p>Escolha outra área ou crie uma nova âncora.</p></div>':'<div class="empty-state"><h3>Suas âncoras começam aqui</h3><p>Crie uma âncora para organizar seu dia.</p></div>';
+    $('#anchor-list').innerHTML=anchors.length?anchors.map(anchor=>`<article class="anchor-card"><span class="anchor-icon">${escapeHTML(anchor.icon||'✦')}</span><div class="anchor-info"><strong>${escapeHTML(anchor.title)}</strong><small>${escapeHTML(areaById.get(anchor.areaId)?.name||'Área indisponível')} · ${anchor.weekdays?.length===7?'Todos os dias':(anchor.weekdays||[]).map(day=>WEEKDAYS[day]).join(', ')}${anchor.monthWeeks?.length?` · ${escapeHTML(anchor.monthWeeks.map(week=>monthWeekLabel(week).toLowerCase()).join(', '))}`:''}${anchor.scheduledTime?` · ${escapeHTML(anchor.scheduledTime)} (${Number(anchor.durationMinutes)||45} min)`:''}${anchor.startDate?` · a partir de ${escapeHTML(fmtDate(anchor.startDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}${anchor.endDate?` · até ${escapeHTML(fmtDate(anchor.endDate,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div><button type="button" class="small-edit" data-edit-anchor="${escapeHTML(anchor.id)}">Editar</button></article>`).join(''):selectedAnchorArea?'<div class="empty-state"><h3>Nenhuma âncora nesta área</h3><p>Escolha outra área ou crie uma nova âncora.</p></div>':'<div class="empty-state"><h3>Suas âncoras começam aqui</h3><p>Crie uma âncora para organizar seu dia.</p></div>';
     $('#area-list').innerHTML=areas.map((area,index)=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color)}"></span><strong>${escapeHTML(area.name)}</strong><small class="area-view-tag">${area.dailyView==='secondary'?'Visão secundária':'Visão principal'}</small><div class="area-card-actions"><button type="button" data-move-area="up" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para cima" ${index===0?'disabled':''}>↑</button><button type="button" data-move-area="down" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para baixo" ${index===areas.length-1?'disabled':''}>↓</button><button type="button" class="small-edit" data-edit-area="${escapeHTML(area.id)}">Editar</button></div></article>`).join('');
     $('#daily-view-groups').innerHTML=DAILY_VIEW_GROUPS.map(([key,label])=>`<div class="daily-view-group-row"><strong>${escapeHTML(label)}</strong><label class="daily-view-select"><span>Visão diária</span><select class="text-input" id="daily-view-${key}" data-daily-view-group="${key}"><option value="primary" ${dailyViewOfGroup(key)==='primary'?'selected':''}>Principal</option><option value="secondary" ${dailyViewOfGroup(key)==='secondary'?'selected':''}>Secundária</option></select></label><label class="daily-weekly-toggle"><input type="checkbox" data-daily-weekly-group="${key}" ${groupInWeekly(key)?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Visão semanal</span></label><label class="daily-weekly-toggle"><input type="checkbox" data-daily-timeline-group="${key}" ${groupInTimeline(key)?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Cronograma</span></label></div>`).join('');
   }
@@ -1139,7 +1148,7 @@
     $(target).innerHTML = WEEKDAYS.map((day,i)=>`<label class="weekday-option"><input type="checkbox" value="${i}" ${selected.includes(i)?'checked':''}><span>${day}</span></label>`).join('');
   }
   function buildMonthWeekOptions(selected=[]){
-    $('#anchor-month-week-options').innerHTML=[1,2,3,4,5].map(week=>`<label class="weekday-option"><input type="checkbox" value="${week}" ${selected.includes(week)?'checked':''}><span>Semana ${week}</span></label>`).join('');
+    $('#anchor-month-week-options').innerHTML=MONTH_WEEK_OPTIONS.map(week=>`<label class="weekday-option"><input type="checkbox" value="${week}" ${selected.includes(week)?'checked':''}><span>${monthWeekLabel(week)}</span></label>`).join('');
   }
   function updateAnchorRepeatMode(){
     $('#anchor-month-weeks-field').classList.toggle('hidden',$('#anchor-repeat-mode').value!=='month-weeks');
