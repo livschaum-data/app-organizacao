@@ -1058,6 +1058,7 @@
     $$('.task-view').forEach(section=>section.classList.toggle('active-view',section.id===`task-${view}-view`));
     $('#task-day-navigator').classList.toggle('hidden',view==='week');
     $('#task-date-label').classList.toggle('hidden',view==='week');
+    $('#task-open-planner').classList.toggle('hidden',view!=='day');
     if(view==='history'||view==='manage')renderTasks();
     if(view==='week')renderTaskWeekly();
   }
@@ -1574,6 +1575,8 @@
   $('#planner-today').onclick=()=>setSelectedDate(isoToday());$('#planner-date').onchange=e=>setSelectedDate(e.target.value);
   $('#timeline-today').onclick=()=>setSelectedDate(isoToday());$('#timeline-date').onchange=e=>setSelectedDate(e.target.value);
   $('#planner-secondary-today').onclick=()=>setSelectedDate(isoToday());$('#planner-secondary-date').onchange=e=>setSelectedDate(e.target.value);
+  $('#planner-open-tasks').onclick=()=>{setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});};
+  $('#task-open-planner').onclick=()=>{setSection('planner');window.scrollTo({top:0,behavior:'smooth'});};
   $('#planner-notes-input').addEventListener('input',event=>{
     state.dayNotes[selectedDate]={text:event.target.value,updatedAt:stamp()};
     saveLocal();
