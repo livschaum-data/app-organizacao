@@ -7,7 +7,7 @@
   const SIDEBAR_KEY = 'ancora-sidebar-collapsed-v1';
   const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
   const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  const DAILY_VIEW_GROUPS=[['routines','Rotinas','primary',true],['tasks-weekly','Tarefas semanais','secondary',true],['tasks-biweekly','Tarefas quinzenais','secondary',true],['tasks-monthly','Tarefas mensais','secondary',true],['blocks','Blocos','secondary',true],['consultations','Consultas','secondary',true],['actions','Ações','secondary',true],['occurrence-reminder','Lembretes','secondary',true],['occurrence-event','Eventos','secondary',true],['occurrence-holiday','Feriados','secondary',true],['occurrence-birthday','Aniversários','secondary',true],['occurrence-cycle','Ciclos','secondary',true]];
+  const DAILY_VIEW_GROUPS=[['routines','Rotinas','primary',true,true],['tasks-weekly','Tarefas semanais','secondary',true,true],['tasks-biweekly','Tarefas quinzenais','secondary',true,true],['tasks-monthly','Tarefas mensais','secondary',true,true],['blocks','Blocos','secondary',true,true],['consultations','Consultas','secondary',true,true],['actions','Ações','secondary',true,true],['occurrence-reminder','Lembretes','secondary',true,true],['occurrence-event','Eventos','secondary',true,true],['occurrence-holiday','Feriados','secondary',true,true],['occurrence-birthday','Aniversários','secondary',true,true],['occurrence-cycle','Ciclos','secondary',true,true]];
   const MONTHLY_TASK_FREQUENCIES=['monthly','bimonthly','quarterly','semiannual','annual'];
   const TASK_FREQUENCY_LABELS={weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
   const TASK_FREQUENCY_PLURAL={weekly:'Semanais',biweekly:'Quinzenais',monthly:'Mensais',bimonthly:'Bimestrais',quarterly:'Trimestrais',semiannual:'Semestrais',annual:'Anuais'};
@@ -144,7 +144,7 @@
 
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:7, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,,weekly])=>[key,{view,weekly}])),dailyViewsUpdatedAt:'', routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],taskHistory:{},dayNotes:{},globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:7, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])),dailyViewsUpdatedAt:'', routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],taskHistory:{},dayNotes:{},globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',weeklyView:true,order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',weekdays,monthWeeks:[],startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
@@ -163,7 +163,7 @@
     if(!Array.isArray(data.actionAreas))data.actionAreas=[];
     if(!data.dailyViews||typeof data.dailyViews!=='object')data.dailyViews={};
     if(typeof data.dailyViewsUpdatedAt!=='string')data.dailyViewsUpdatedAt='';
-    for(const [key,,view,,weekly] of DAILY_VIEW_GROUPS){if(typeof data.dailyViews[key]==='string')data.dailyViews[key]={view:data.dailyViews[key],weekly};if(!data.dailyViews[key]||typeof data.dailyViews[key]!=='object')data.dailyViews[key]={view,weekly};if(data.dailyViews[key].view!=='primary'&&data.dailyViews[key].view!=='secondary')data.dailyViews[key].view=view;if(typeof data.dailyViews[key].weekly!=='boolean')data.dailyViews[key].weekly=weekly;}
+    for(const [key,,view,weekly,timeline] of DAILY_VIEW_GROUPS){if(typeof data.dailyViews[key]==='string')data.dailyViews[key]={view:data.dailyViews[key],weekly,timeline};if(!data.dailyViews[key]||typeof data.dailyViews[key]!=='object')data.dailyViews[key]={view,weekly,timeline};if(data.dailyViews[key].view!=='primary'&&data.dailyViews[key].view!=='secondary')data.dailyViews[key].view=view;if(typeof data.dailyViews[key].weekly!=='boolean')data.dailyViews[key].weekly=weekly;if(typeof data.dailyViews[key].timeline!=='boolean')data.dailyViews[key].timeline=timeline;}
     for(const action of data.actions){
       if(!action.createdAt)action.createdAt=action.updatedAt||SEED_TIMESTAMP;
       if(action.completed&&!action.completedAt)action.completedAt=action.completionChangedAt||action.updatedAt||'';
@@ -1495,7 +1495,7 @@
     const globalEntries=structuredClone(!leftEntries?rightEntries:!rightEntries?leftEntries:(rightEntries.updatedAt||'')>=(leftEntries.updatedAt||'')?rightEntries:leftEntries);
     const leftDailyViewsAt=a.dailyViewsUpdatedAt||'',rightDailyViewsAt=b.dailyViewsUpdatedAt||'';
     const useRightDailyViews=rightDailyViewsAt?rightDailyViewsAt>=leftDailyViewsAt:!leftDailyViewsAt&&Boolean(b.dailyViews);
-    const dailyViews=structuredClone((useRightDailyViews?b.dailyViews:a.dailyViews)||b.dailyViews||a.dailyViews||Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,,weekly])=>[key,{view,weekly}])));
+    const dailyViews=structuredClone((useRightDailyViews?b.dailyViews:a.dailyViews)||b.dailyViews||a.dailyViews||Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])));
     const dailyViewsUpdatedAt=useRightDailyViews?rightDailyViewsAt:leftDailyViewsAt;
     return {version:7,dailyViews,dailyViewsUpdatedAt,routines:[...routines.values()],tasks,actions,occurrences,actionAreas,areas,anchors,history,taskHistory,dayNotes,globalEntries};
   }
