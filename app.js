@@ -246,7 +246,7 @@
     for(const task of Object.values(day.tasks||{})){
       if(task.consultation===true)continue;
       if(task.kind==='block'&&!blockStatusOf(task)){
-        task.blockStatus='not-realized';task.done=false;task.doneTouched=true;task.doneChangedAt=changedAt;
+        task.blockStatus='not-realized';task.done=true;task.doneTouched=true;task.doneChangedAt=changedAt;
       }else if(task.kind!=='block'&&!task.done&&!task.doneTouched){
         task.done=false;task.doneTouched=true;task.doneChangedAt=changedAt;
       }
@@ -402,7 +402,7 @@
   }
   function taskRow(task,showRemove=true){
     const items=task.items||[],consultation=taskIsConsultation(task),result=blockStatusOf(task);
-    return `<div class="task-entry${showRemove?' has-remove':''}"><button type="button" class="task-row${task.done&&!consultation?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-row-main"><span class="task-row-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${consultation?'<small class="task-consultation-badge">Consulta</small>':task.kind==='block'?`<small class="task-block-frequency">${task.frequency==='biweekly'?'Quinzenal':'Semanal'}</small>${result?`<small class="block-result-badge is-${result}">${blockStatusLabel(result)}</small>`:''}`:''}${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</span>${items.length?`<span class="task-row-steps">${items.map(item=>`<span class="task-row-step${item.done&&!consultation?' is-done':''}">${escapeHTML(item.label)}</span>`).join('')}</span>`:''}</button>${showRemove?`<button type="button" class="task-remove-day" data-remove-task-day="${escapeHTML(task.taskId)}">Remover deste dia</button>`:''}</div>`;
+    return `<div class="task-entry${showRemove?' has-remove':''}"><button type="button" class="task-row${(task.kind==='block'?Boolean(result):task.done)&&!consultation?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-row-main"><span class="task-row-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${consultation?'<small class="task-consultation-badge">Consulta</small>':task.kind==='block'?`<small class="task-block-frequency">${task.frequency==='biweekly'?'Quinzenal':'Semanal'}</small>${result?`<small class="block-result-badge is-${result}">${blockStatusLabel(result)}</small>`:''}`:''}${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</span>${items.length?`<span class="task-row-steps">${items.map(item=>`<span class="task-row-step${item.done&&!consultation?' is-done':''}">${escapeHTML(item.label)}</span>`).join('')}</span>`:''}</button>${showRemove?`<button type="button" class="task-remove-day" data-remove-task-day="${escapeHTML(task.taskId)}">Remover deste dia</button>`:''}</div>`;
   }
   function taskGroup(day,frequency,planner=false,view='',group='',consultation=null){
     const tasks=taskSnapshots(day,frequency,selectedDate,'regular',view,group,consultation),label=consultation?'Consultas':frequency==='biweekly'?'Quinzenais':'Semanais';
@@ -437,7 +437,7 @@
   }
   function renderTaskFocus(){
     if(!activeTaskId)return;
-    const date=activeTaskDate||selectedDate,task=ensureTaskDay(date).tasks[activeTaskId];
+    const date=activeTaskDate||selectedDate,day=ensureTaskDay(date),task=day.tasks[activeTaskId],locked=Boolean(day.finalized);
     if(!task||!taskIsVisibleOnDay(task,date)){$('#task-focus-dialog').close();return;}
     const consultation=taskIsConsultation(task);
     $('#task-focus-dialog').style.setProperty('--routine-color',task.color);
@@ -446,18 +446,19 @@
     $('#task-focus-name').textContent=task.name;
     $('#task-focus-day').textContent=({planner:'Voltar à visão diária','planner-secondary':'Voltar à visão secundária',weekly:'Voltar à visão semanal'}[taskFocusOriginSection]||'Voltar ao dia');
     const done=(task.items||[]).filter(item=>item.done).length,total=task.items?.length||0;
-    $('#task-focus-count').textContent=consultation?`${task.frequency==='biweekly'?'Consulta quinzenal':'Consulta semanal'} · sem conclusão necessária`:`${task.kind==='block'?'Bloco':'Tarefa'} ${task.frequency==='biweekly'?'quinzenal':'semanal'}${total?` · ${done} de ${total} passos`:''}`;
+    $('#task-focus-count').textContent=(consultation?`${task.frequency==='biweekly'?'Consulta quinzenal':'Consulta semanal'} · sem conclusão necessária`:`${task.kind==='block'?'Bloco':'Tarefa'} ${task.frequency==='biweekly'?'quinzenal':'semanal'}${total?` · ${done} de ${total} passos`:''}`)+(locked?' · dia concluído':'');
     $('#task-focus-description').textContent=task.description||'';
     $('#task-focus-description').classList.toggle('hidden',!task.description);
     $('#task-focus-complete').checked=Boolean(task.done);
+    $('#task-focus-complete').disabled=locked;
     $('#task-focus-complete').closest('.task-completion').classList.toggle('hidden',consultation||task.kind==='block');
     const result=blockStatusOf(task);
     $('#task-focus-block-result').classList.toggle('hidden',consultation||task.kind!=='block');
-    $$('#task-focus-block-result input').forEach(input=>{input.checked=input.value===result;});
-    $('#task-focus-block-clear').classList.toggle('hidden',!result);
+    $$('#task-focus-block-result input').forEach(input=>{input.checked=input.value===result;input.disabled=locked;});
+    $('#task-focus-block-clear').classList.toggle('hidden',!result||locked);
     $('#task-focus-step-section').classList.toggle('hidden',!total);
     $('#task-focus-step-section .focus-section-label').textContent=consultation?'ITENS PARA CONSULTA':task.kind==='block'?'PASSOS DESTE BLOCO':'PASSOS DESTA TAREFA';
-    $('#task-focus-steps').innerHTML=(task.items||[]).map(item=>consultation?`<div class="consultation-step"><span>${escapeHTML(item.label)}</span>${item.description?`<small>${escapeHTML(item.description)}</small>`:''}</div>`:`<label class="focus-step ${item.done?'is-done':''}"><input type="checkbox" data-task-item="${escapeHTML(item.id)}" ${item.done?'checked':''}><span class="focus-check"></span><span class="focus-step-copy"><span>${escapeHTML(item.label)}</span>${item.description?`<small>${escapeHTML(item.description)}</small>`:''}</span></label>`).join('');
+    $('#task-focus-steps').innerHTML=(task.items||[]).map(item=>consultation?`<div class="consultation-step"><span>${escapeHTML(item.label)}</span>${item.description?`<small>${escapeHTML(item.description)}</small>`:''}</div>`:`<label class="focus-step ${item.done?'is-done':''}"><input type="checkbox" data-task-item="${escapeHTML(item.id)}" ${item.done?'checked':''} ${locked?'disabled':''}><span class="focus-check"></span><span class="focus-step-copy"><span>${escapeHTML(item.label)}</span>${item.description?`<small>${escapeHTML(item.description)}</small>`:''}</span></label>`).join('');
   }
   function openTaskFocus(id,date=selectedDate,fromWeek=false){
     const task=ensureTaskDay(date).tasks[id];
@@ -466,7 +467,7 @@
     renderTaskFocus();$('#task-focus-dialog').showModal();
   }
   function mutateTaskDay(fn){
-    const day=ensureTaskDay(activeTaskDate||selectedDate);fn(day);day.updatedAt=stamp();saveLocal();renderTasks();renderPlanner();renderWeekly();renderTaskWeekly();renderSummary();renderTaskFocus();
+    const day=ensureTaskDay(activeTaskDate||selectedDate);if(day.finalized){toast('Este dia já foi concluído e não pode mais ser alterado.');renderTaskFocus();return;}fn(day);day.updatedAt=stamp();saveLocal();renderTasks();renderPlanner();renderWeekly();renderTaskWeekly();renderSummary();renderTaskFocus();
   }
   function orderedAreas(){return state.areas.filter(area=>!area.deleted).sort((a,b)=>(a.order??0)-(b.order??0)||a.name.localeCompare(b.name,'pt-BR'));}
   function scheduledRoutines(day){return Object.values(day.routines||{}).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99'));}
@@ -641,7 +642,7 @@
       ['routines','Rotinas','#e2eee6','☑',(date)=>state.routines.filter(item=>!item.deleted&&dayIsScheduled(item,date)).map(item=>card(item.icon,item.name,`data-weekly-routine="${escapeHTML(item.id)}"`))],
       ['tasks-weekly','Tarefas semanais','#e9e3f0','✓',(_,index)=>taskEntries(index,'weekly').map(item=>card(item.done?'✓':item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}" aria-label="${escapeHTML(item.name)}${item.done?' — concluída':' — não concluída'}"`,`weekly-task${item.done?' is-done':''}`))],
       ['tasks-biweekly','Tarefas quinzenais','#eee5dc','◫',(_,index)=>taskEntries(index,'biweekly').map(item=>card(item.done?'✓':item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}" aria-label="${escapeHTML(item.name)}${item.done?' — concluída':' — não concluída'}"`,`weekly-task${item.done?' is-done':''}`))],
-      ['blocks','Blocos','#e6edf2','▣',(_,index)=>taskEntries(index,null,'block',false).map(item=>{const result=blockStatusOf(item);return card(result==='realized'?'✓':item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`,`weekly-task${result==='realized'?' is-done':''}`);} )],
+      ['blocks','Blocos','#e6edf2','▣',(_,index)=>taskEntries(index,null,'block',false).map(item=>{const result=blockStatusOf(item);return card(result?'✓':item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`,`weekly-task${result?' is-done':''}`);} )],
       ['consultations','Consultas','#edf0e5','◌',(_,index)=>taskEntries(index,null,'regular',true).map(item=>card(item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`))],
       ['actions','Ações','#f3e6d7','✦',(date)=>state.actions.filter(item=>!item.deleted&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon,item.title,`data-open-action="${escapeHTML(item.id)}"`))],
       ...Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>[`occurrence-${type}`,`${kind.label}${type==='holiday'?'s':'s'}`,'#e8eeee',kind.icon,(date)=>state.occurrences.filter(item=>!item.deleted&&item.type===type&&occurrenceIsScheduled(item,date)).map(item=>card(item.icon||kind.icon,item.title,`data-open-occurrence="${escapeHTML(item.id)}"`))])
@@ -698,7 +699,7 @@
     const rows=[['weekly','Semanais','#e2eee6','☑','regular','tasks-weekly',false],['biweekly','Quinzenais','#e9e3f0','◫','regular','tasks-biweekly',false],[null,'Consultas','#edf0e5','◌','regular','consultations',true],[null,'Blocos','#e6edf2','▣','block','blocks',null]].map(([frequency,label,color,icon,kind,,consultation])=>{
       const cells=snapshots.map((day,index)=>{
         const tasks=taskSnapshots(day,frequency,dates[index],kind,'','',consultation);
-        return `<td>${tasks.map(task=>{const result=blockStatusOf(task);return `<button type="button" class="weekly-anchor weekly-task${task.done&&!taskIsConsultation(task)?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}" data-task-week-date="${dates[index]}" aria-label="${escapeHTML(task.name)}${taskIsConsultation(task)?' — consulta':task.kind==='block'?` — ${blockStatusLabel(result).toLowerCase()}`:task.done?' — concluída':' — não concluída'}"><span aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span>${escapeHTML(task.name)}</span>${result&&task.kind==='block'?`<small class="weekly-block-result is-${result}">${blockStatusLabel(result)}</small>`:''}</button>`;}).join('')}</td>`;
+        return `<td>${tasks.map(task=>{const result=blockStatusOf(task),completed=task.kind==='block'?Boolean(result):task.done;return `<button type="button" class="weekly-anchor weekly-task${completed&&!taskIsConsultation(task)?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}" data-task-week-date="${dates[index]}" aria-label="${escapeHTML(task.name)}${taskIsConsultation(task)?' — consulta':task.kind==='block'?` — ${blockStatusLabel(result).toLowerCase()}`:task.done?' — concluída':' — não concluída'}"><span aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span>${escapeHTML(task.name)}</span>${result&&task.kind==='block'?`<small class="weekly-block-result is-${result}">${blockStatusLabel(result)}</small>`:''}</button>`;}).join('')}</td>`;
       }).join('');
       return `<tr style="--area-color:${color}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${icon}</span><span>${label}</span></th>${cells}</tr>`;
     }).join('');
@@ -1760,6 +1761,7 @@
   });
   $('#planner-grid').addEventListener('click',event=>{
     if(event.target.closest('[data-open-routine-day]')){setSection('routines');setView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
+    if(event.target.closest('[data-open-task-day]')){setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
     const routine=event.target.closest('[data-planner-routine]'),task=event.target.closest('[data-open-task]'),action=event.target.closest('[data-open-action]'),occurrence=event.target.closest('[data-open-occurrence]');if(routine)openFocusRoutine(routine.dataset.plannerRoutine);else if(task)openTaskFocus(task.dataset.openTask);else if(action)openActionDialog(action.dataset.openAction);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);
   });
   $('#planner-timeline').addEventListener('click',event=>{const routine=event.target.closest('[data-timeline-routine]'),task=event.target.closest('[data-timeline-task]'),action=event.target.closest('[data-timeline-action]');if(routine)openFocusRoutine(routine.dataset.timelineRoutine);else if(task)openTaskFocus(task.dataset.timelineTask);else if(action)openActionDialog(action.dataset.timelineAction);});
@@ -1776,7 +1778,7 @@
   $('#task-focus-complete').onchange=event=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task&&task.kind!=='block'&&!taskIsConsultation(task)){task.done=event.target.checked;task.doneTouched=true;task.doneChangedAt=stamp();}});
   $('#task-focus-block-result').addEventListener('change',event=>{
     const input=event.target.closest('input[name="block-result"]');if(!input)return;
-    mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task?.kind!=='block'||taskIsConsultation(task))return;task.blockStatus=input.value;task.done=input.value==='realized';task.doneTouched=true;task.doneChangedAt=stamp();});
+    mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task?.kind!=='block'||taskIsConsultation(task))return;task.blockStatus=input.value;task.done=true;task.doneTouched=true;task.doneChangedAt=stamp();});
   });
   $('#task-focus-block-clear').onclick=()=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task?.kind!=='block'||taskIsConsultation(task))return;task.blockStatus='';task.done=false;task.doneTouched=true;task.doneChangedAt=stamp();});
   $('#task-focus-steps').addEventListener('change',event=>{
