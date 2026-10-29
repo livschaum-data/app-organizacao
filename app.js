@@ -130,7 +130,7 @@
   let activeRoutineId = null;
   let activeTaskId = null;
   let activeTaskDate = null;
-  let currentSection = 'planner';
+  let currentSection = 'timeline';
   let taskFocusOriginSection = 'planner';
   let supabaseClient = null, session = null, syncTimer = null, saving = false, saveAgain = false;
   let syncKind = 'offline', syncMessage = 'Somente neste aparelho', localRevision = 0, lastAutoSyncAt = 0;
@@ -618,7 +618,7 @@
     $('#summary-content').innerHTML=`<div class="summary-totals"><article><span>ROTINAS</span><strong>${monthCounts.routines}</strong><p>${monthCounts.routines===1?'dia incompleto':'dias incompletos'} no mês</p></article><article><span>TAREFAS</span><strong>${monthCounts.tasks}</strong><p>${monthCounts.tasks===1?'dia incompleto':'dias incompletos'} no mês</p></article></div><details class="summary-period" data-summary-period="month"${openPeriods.has('month')?' open':''}><summary><span>Mês de ${escapeHTML(fmtDate(`${selectedSummaryMonth}-01`,{month:'long',year:'numeric'}))}</span><strong>${pending.length} ${pending.length===1?'dia pendente':'dias pendentes'}</strong></summary><div class="summary-days">${pending.length?pending.map(dayRow).join(''):'<p>Nenhum dia incompleto até agora.</p>'}</div></details><h2 class="summary-week-heading">Por semana</h2>${[...weeks].map(([monday,days])=>{const total=counts(days),pendingDays=days.filter(day=>day.routinePending||day.taskPending);return `<details class="summary-period" data-summary-period="${monday}"${openPeriods.has(monday)?' open':''}><summary><span>${escapeHTML(fmtDate(days[0].date,{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(days[days.length-1].date,{day:'numeric',month:'short'}))}</span><strong>${total.routines} rotinas · ${total.tasks} tarefas</strong></summary><div class="summary-days">${pendingDays.length?pendingDays.map(dayRow).join(''):'<p>Nenhum dia incompleto nesta semana.</p>'}</div></details>`;}).join('')}`;
   }
   function weeklyHeaders(dates,kind='both'){
-    return dates.map((date,index)=>{const status=dayStatus(date),incomplete=kind==='actions'?false:status.past&&(kind==='tasks'?status.taskPending:status.routinePending||status.taskPending);return `<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}${incomplete?' weekly-incomplete':''}" ${date===isoToday()?'aria-current="date"':''}><strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small>${incomplete?'<em>Incompleto</em>':''}</th>`;}).join('');
+    return dates.map((date,index)=>{const status=dayStatus(date),incomplete=kind==='actions'?false:status.past&&(kind==='tasks'?status.taskPending:status.routinePending||status.taskPending),content=`<strong>${escapeHTML(fmtDate(date,{weekday:'long'}))}</strong><small>${escapeHTML(fmtDate(date,{day:'numeric',month:'short'}))}</small>${incomplete?'<em>Incompleto</em>':''}`,body=kind==='both'?`<button type="button" class="weekly-day-link" data-weekly-open-date="${date}" aria-label="Abrir visão diária de ${escapeHTML(fmtDate(date))}">${content}</button>`:content;return `<th scope="col" class="weekly-day weekly-day-${(index+1)%7}${date===isoToday()?' weekly-today':''}${incomplete?' weekly-incomplete':''}" ${date===isoToday()?'aria-current="date"':''}>${body}</th>`;}).join('');
   }
   function renderWeekly(){
     const dates=weekDates(selectedWeekDate);
@@ -1051,6 +1051,7 @@
   function setView(view) {
     $$('#routines-workspace .tab').forEach(t=>t.classList.toggle('active',t.dataset.view===view));
     $$('#routines-workspace .view').forEach(v=>v.classList.toggle('active-view',v.id===`${view}-view`));
+    $('#routines-open-tasks').classList.toggle('hidden',view!=='day');
     if(view==='history')renderHistory(); if(view==='manage')renderManage();
   }
   function setTaskView(view){
@@ -1560,7 +1561,7 @@
   };
   $('#sidebar-scrim').onclick=()=>{document.body.classList.remove('sidebar-open');updateSidebarToggle();};
   window.matchMedia('(max-width:700px)').addEventListener('change',()=>{document.body.classList.remove('sidebar-open');updateSidebarToggle();});
-  $('.brand').onclick=event=>{event.preventDefault();setSection('planner');};
+  $('.brand').onclick=event=>{event.preventDefault();setSection('timeline');};
   $$('#routines-workspace .tab').forEach(tab=>tab.addEventListener('click',()=>setView(tab.dataset.view)));
   $$('.planner-daily-tab').forEach(tab=>tab.addEventListener('click',()=>{
     const view=tab.dataset.plannerView;
@@ -1575,8 +1576,8 @@
   $('#planner-today').onclick=()=>setSelectedDate(isoToday());$('#planner-date').onchange=e=>setSelectedDate(e.target.value);
   $('#timeline-today').onclick=()=>setSelectedDate(isoToday());$('#timeline-date').onchange=e=>setSelectedDate(e.target.value);
   $('#planner-secondary-today').onclick=()=>setSelectedDate(isoToday());$('#planner-secondary-date').onchange=e=>setSelectedDate(e.target.value);
-  $('#planner-open-tasks').onclick=()=>{setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});};
-  $('#task-open-planner').onclick=()=>{setSection('planner');window.scrollTo({top:0,behavior:'smooth'});};
+  $('#routines-open-tasks').onclick=()=>{setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});};
+  $('#task-open-planner').onclick=()=>{setSection('routines');setView('day');window.scrollTo({top:0,behavior:'smooth'});};
   $('#planner-notes-input').addEventListener('input',event=>{
     state.dayNotes[selectedDate]={text:event.target.value,updatedAt:stamp()};
     saveLocal();
@@ -1744,7 +1745,7 @@
     const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);
   });
   $('#task-week-grid').addEventListener('click',event=>{const button=event.target.closest('[data-task-week-date][data-open-task]');if(button)openTaskFocus(button.dataset.openTask,button.dataset.taskWeekDate,true);});
-  $('#weekly-grid').addEventListener('click',event=>{const routine=event.target.closest('[data-weekly-routine]'),task=event.target.closest('[data-task-week-date][data-open-task]'),action=event.target.closest('[data-open-action]'),occurrence=event.target.closest('[data-open-occurrence]');if(routine)openFocusRoutine(routine.dataset.weeklyRoutine);else if(task)openTaskFocus(task.dataset.openTask,task.dataset.taskWeekDate,true);else if(action)openActionDialog(action.dataset.openAction);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);});
+  $('#weekly-grid').addEventListener('click',event=>{const day=event.target.closest('[data-weekly-open-date]'),routine=event.target.closest('[data-weekly-routine]'),task=event.target.closest('[data-task-week-date][data-open-task]'),action=event.target.closest('[data-open-action]'),occurrence=event.target.closest('[data-open-occurrence]');if(day){setSelectedDate(day.dataset.weeklyOpenDate);setSection('planner');window.scrollTo({top:0,behavior:'smooth'});}else if(routine)openFocusRoutine(routine.dataset.weeklyRoutine);else if(task)openTaskFocus(task.dataset.openTask,task.dataset.taskWeekDate,true);else if(action)openActionDialog(action.dataset.openAction);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);});
   $('#task-focus-complete').onchange=event=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task&&task.kind!=='block'&&!taskIsConsultation(task)){task.done=event.target.checked;task.doneTouched=true;task.doneChangedAt=stamp();}});
   $('#task-focus-block-result').addEventListener('change',event=>{
     const input=event.target.closest('input[name="block-result"]');if(!input)return;

@@ -307,6 +307,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .weekly-table .weekly-corner{color:#77746e;text-transform:uppercase;letter-spacing:1px;font-size:10px}
 .weekly-day strong,.weekly-day small{display:block;text-transform:capitalize}
 .weekly-day small{margin-top:3px;color:inherit;opacity:.85;font:500 10px 'DM Sans',sans-serif}
+.weekly-day-link{display:block;width:100%;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}.weekly-day-link:hover strong{text-decoration:underline}.weekly-day-link:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:3px}
 .weekly-table thead .weekly-day-1{background:#55b4aa;color:#173739}
 .weekly-table thead .weekly-day-2{background:#7658eb;color:#fff}
 .weekly-table thead .weekly-day-3{background:#3c6f78;color:#fff}
