@@ -210,9 +210,7 @@
     return fresh;
   }
   function monthWeekNumber(date){
-    const thursday=safeDate(date);
-    thursday.setDate(thursday.getDate()-(thursday.getDay()+6)%7+3);
-    return Math.ceil(thursday.getDate()/7);
+    return Math.ceil(safeDate(date).getDate()/7);
   }
   function monthWeekMatches(week,date){
     const value=Number(week);
@@ -686,17 +684,9 @@
   }
   function renderMonthly(){
     const [year,month]=selectedMonthlyMonth.split('-').map(Number),weeks=MONTH_WEEK_OPTIONS;
-    const firstThursday=new Date(year,month-1,1,12);
-    while(firstThursday.getDay()!==4)firstThursday.setDate(firstThursday.getDate()+1);
-    const firstMonday=new Date(firstThursday);firstMonday.setDate(firstMonday.getDate()-3);
-    const asISO=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-    const datesByWeek=new Map(weeks.map(week=>{
-      const thursday=new Date(firstThursday);thursday.setDate(firstThursday.getDate()+(week-1)*7);
-      const monday=new Date(firstMonday);monday.setDate(firstMonday.getDate()+(week-1)*7);
-      return [week,thursday.getMonth()===month-1?weekDates(asISO(monday)):[]];
-    }));
     const lastDay=new Date(year,month,0).getDate();
-    datesByWeek.set(6,Array.from({length:lastDay},(_,index)=>`${selectedMonthlyMonth}-${String(index+1).padStart(2,'0')}`).filter(date=>monthWeekMatches(6,date)));
+    const monthDates=Array.from({length:lastDay},(_,index)=>`${selectedMonthlyMonth}-${String(index+1).padStart(2,'0')}`);
+    const datesByWeek=new Map(weeks.map(week=>[week,monthDates.filter(date=>monthWeekMatches(week,date))]));
     const specificAnchors=state.anchors.filter(anchor=>!anchor.deleted&&Array.isArray(anchor.monthWeeks)&&anchor.monthWeeks.length>0&&(![1,2,3,4,5].every(week=>anchor.monthWeeks.includes(week))||anchor.monthWeeks.includes(6)));
     const areas=orderedAreas().filter(area=>specificAnchors.some(anchor=>anchor.areaId===area.id&&weeks.some(week=>anchor.monthWeeks.includes(week)&&datesByWeek.get(week).some(date=>dayIsScheduled(anchor,date)))));
     $('#monthly-date').value=selectedMonthlyMonth;
