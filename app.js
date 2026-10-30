@@ -214,12 +214,12 @@
     thursday.setDate(thursday.getDate()-(thursday.getDay()+6)%7+3);
     return Math.ceil(thursday.getDate()/7);
   }
-  function lastMonthWeekNumber(monthKey){
-    const [year,month]=monthKey.slice(0,7).split('-').map(Number),lastDay=new Date(year,month,0).getDate();let thursdays=0;
-    for(let day=1;day<=lastDay;day++)if(new Date(year,month-1,day,12).getDay()===4)thursdays++;
-    return thursdays;
+  function monthWeekMatches(week,date){
+    const value=Number(week);
+    if(value!==6)return value===monthWeekNumber(date);
+    const current=safeDate(date),nextOccurrence=new Date(current);nextOccurrence.setDate(nextOccurrence.getDate()+7);
+    return nextOccurrence.getMonth()!==current.getMonth();
   }
-  function monthWeekMatches(week,date){const value=Number(week);return value===6?monthWeekNumber(date)===lastMonthWeekNumber(date.slice(0,7)):value===monthWeekNumber(date);}
   function monthWeekLabel(week,withPrefix=true){return Number(week)===6?'Última semana':`${withPrefix?'Semana ':''}${Number(week)}`;}
   function dayIsScheduled(routine, date) {
     if (routine.deleted) return false;
@@ -695,7 +695,8 @@
       const monday=new Date(firstMonday);monday.setDate(firstMonday.getDate()+(week-1)*7);
       return [week,thursday.getMonth()===month-1?weekDates(asISO(monday)):[]];
     }));
-    datesByWeek.set(6,datesByWeek.get(lastMonthWeekNumber(selectedMonthlyMonth))||[]);
+    const lastDay=new Date(year,month,0).getDate();
+    datesByWeek.set(6,Array.from({length:lastDay},(_,index)=>`${selectedMonthlyMonth}-${String(index+1).padStart(2,'0')}`).filter(date=>monthWeekMatches(6,date)));
     const specificAnchors=state.anchors.filter(anchor=>!anchor.deleted&&Array.isArray(anchor.monthWeeks)&&anchor.monthWeeks.length>0&&(![1,2,3,4,5].every(week=>anchor.monthWeeks.includes(week))||anchor.monthWeeks.includes(6)));
     const areas=orderedAreas().filter(area=>specificAnchors.some(anchor=>anchor.areaId===area.id&&weeks.some(week=>anchor.monthWeeks.includes(week)&&datesByWeek.get(week).some(date=>dayIsScheduled(anchor,date)))));
     $('#monthly-date').value=selectedMonthlyMonth;
