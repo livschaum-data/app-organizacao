@@ -122,6 +122,7 @@
   let selectedTaskWeekDate = isoToday();
   let selectedTaskMonth = isoToday().slice(0,7);
   let selectedTaskYear = Number(isoToday().slice(0,4));
+  let taskAnnualMonthlyHidden = false;
   let selectedSummaryMonth = isoToday().slice(0,7);
   let selectedActionMonth = isoToday().slice(0,7);
   let selectedActionWeekDate = isoToday();
@@ -745,7 +746,7 @@
   function renderTaskAnnual(){
     $('#task-annual-year').value=String(selectedTaskYear);$('#task-annual-range-label').textContent=String(selectedTaskYear);$('#task-annual-today').classList.toggle('hidden',selectedTaskYear===Number(isoToday().slice(0,4)));
     const months=Array.from({length:12},(_,index)=>`${selectedTaskYear}-${String(index+1).padStart(2,'0')}`),headers=months.map((month,index)=>`<th scope="col"><span class="annual-month-label annual-month-${index+1}">${escapeHTML(fmtDate(`${month}-01`,{month:'short'}))}</span></th>`).join(''),tasks=state.tasks.filter(task=>!task.deleted&&MONTHLY_TASK_FREQUENCIES.includes(task.frequency));
-    const rows=MONTHLY_TASK_FREQUENCIES.map(frequency=>{const cells=months.map(month=>`<td>${tasks.filter(task=>task.frequency===frequency&&taskDatesInMonth(task,month).length).map(taskPlanningCard).join('')}</td>`).join('');return `<tr style="--area-color:#e6e9f3"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">▦</span><span>${TASK_FREQUENCY_PLURAL[frequency]}</span></th>${cells}</tr>`;}).join('');
+    const rows=MONTHLY_TASK_FREQUENCIES.map(frequency=>{const monthly=frequency==='monthly',toggle=monthly?`<button type="button" class="annual-row-toggle" data-toggle-task-annual-monthly aria-expanded="${!taskAnnualMonthlyHidden}" aria-label="${taskAnnualMonthlyHidden?'Mostrar':'Ocultar'} tarefas mensais"><span aria-hidden="true">${taskAnnualMonthlyHidden?'▸':'▾'}</span><span>Mensais</span></button>`:`<span>${TASK_FREQUENCY_PLURAL[frequency]}</span>`;if(monthly&&taskAnnualMonthlyHidden)return `<tr class="task-annual-monthly-row is-collapsed" style="--area-color:#e6e9f3"><th scope="row" colspan="13"><span class="weekly-area-icon" aria-hidden="true">▦</span>${toggle}</th></tr>`;const cells=months.map(month=>`<td>${tasks.filter(task=>task.frequency===frequency&&taskDatesInMonth(task,month).length).map(taskPlanningCard).join('')}</td>`).join('');return `<tr${monthly?' class="task-annual-monthly-row"':''} style="--area-color:#e6e9f3"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">▦</span>${toggle}</th>${cells}</tr>`;}).join('');
     $('#task-annual-grid').innerHTML=`<table class="weekly-table task-annual-table"><thead><tr><th scope="col" class="weekly-corner">Frequência</th>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
   }
   function renderTaskCalendar(){
@@ -1857,6 +1858,7 @@
   });
   $('#task-week-grid').addEventListener('click',event=>{const button=event.target.closest('[data-task-week-date][data-open-task]');if(button)openTaskFocus(button.dataset.openTask,button.dataset.taskWeekDate,true);});
   for(const selector of ['#task-month-grid','#task-annual-grid'])$(selector).addEventListener('click',event=>{const button=event.target.closest('[data-edit-task]');if(button)openTaskDialog(button.dataset.editTask);});
+  $('#task-annual-grid').addEventListener('click',event=>{if(!event.target.closest('[data-toggle-task-annual-monthly]'))return;taskAnnualMonthlyHidden=!taskAnnualMonthlyHidden;renderTaskAnnual();});
   $('#task-calendar-grid').addEventListener('click',event=>{const task=event.target.closest('[data-task-calendar-task-date][data-open-task]');if(task){openTaskFocus(task.dataset.openTask,task.dataset.taskCalendarTaskDate,true);return;}const day=event.target.closest('[data-task-calendar-date]');if(day){setSelectedDate(day.dataset.taskCalendarDate);setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});}});
   $('#weekly-grid').addEventListener('click',event=>{const day=event.target.closest('[data-weekly-open-date]'),routine=event.target.closest('[data-weekly-routine]'),task=event.target.closest('[data-task-week-date][data-open-task]'),action=event.target.closest('[data-open-action]'),occurrence=event.target.closest('[data-open-occurrence]');if(day){setSelectedDate(day.dataset.weeklyOpenDate);setSection('planner');window.scrollTo({top:0,behavior:'smooth'});}else if(routine)openFocusRoutine(routine.dataset.weeklyRoutine);else if(task)openTaskFocus(task.dataset.openTask,task.dataset.taskWeekDate,true);else if(action)openActionDialog(action.dataset.openAction);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);});
   $('#task-focus-complete').onchange=event=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task&&task.kind!=='block'&&!taskIsConsultation(task)){task.done=event.target.checked;task.doneTouched=true;task.doneChangedAt=stamp();}});
