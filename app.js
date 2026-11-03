@@ -136,6 +136,7 @@
   let selectedTaskMonth = isoToday().slice(0,7);
   let selectedTaskYear = Number(isoToday().slice(0,4));
   let taskAnnualMonthlyHidden = false;
+  const annualHiddenMonths={tasks:new Set(),actions:new Set(),occurrences:new Set(),anchors:new Set()};
   let selectedSummaryMonth = isoToday().slice(0,7);
   let selectedActionMonth = isoToday().slice(0,7);
   let selectedActionWeekDate = isoToday();
@@ -1062,7 +1063,7 @@
     if(item.schedule==='month')return item.scheduledMonth===date.slice(0,7)&&(!item.week||monthWeekMatches(item.week,date));
     if(item.schedule!=='recurrence'||item.type!=='reminder')return false;
     if(item.recurrenceMode==='after-completion'){
-      const history=(item.completionHistory||[]).filter(Boolean).sort(),last=history[history.length-1],due=last?safeDate(last):safeDate(item.startDate||item.createdAt||date);if(last)due.setDate(due.getDate()+Math.max(1,Number(item.intervalDays)||1));const dueKey=`${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}-${String(due.getDate()).padStart(2,'0')}`;return date>=dueKey&&(!item.endDate||date<=item.endDate);
+      const history=(item.completionHistory||[]).filter(Boolean).sort(),last=history[history.length-1],due=safeDate(last||item.startDate||item.createdAt||date);if(last)due.setDate(due.getDate()+Math.max(1,Number(item.intervalDays)||1));const dueKey=`${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}-${String(due.getDate()).padStart(2,'0')}`,today=isoToday(),visibleKey=dueKey<today?today:dueKey;return date===visibleKey&&(!item.endDate||visibleKey<=item.endDate);
     }
     if(item.startDate&&date<item.startDate)return false;
     if(item.endDate&&date>item.endDate)return false;
@@ -2149,6 +2150,17 @@
   window.addEventListener('online',refreshFromCloud);
   setInterval(()=>{refreshCalendarDay();updateTimelineNow();refreshFromCloud();},60000);
   const collapsedCategoryRows=new Set();
+  function annualViewForRoot(root){if(root.closest('#task-annual-grid'))return'tasks';if(root.closest('#actions-content'))return'actions';if(root.closest('#occurrences-content'))return'occurrences';if(root.closest('#anchor-annual-grid'))return'anchors';return'';}
+  function applyAnnualMonthVisibility(root,view){
+    const hidden=annualHiddenMonths[view];
+    if(!hidden)return;
+    root.querySelectorAll('[data-annual-month-key]').forEach(element=>element.classList.toggle('annual-month-is-hidden',hidden.has(element.dataset.annualMonthKey)));
+  }
+  function enhanceAnnualMonthControls(root=document){
+    const tables=root.querySelectorAll('.task-annual-table');
+    tables.forEach(table=>{const view=annualViewForRoot(table),headers=[...table.querySelectorAll('thead th')].slice(1);headers.forEach(header=>{const key=header.dataset.openTaskMonth||header.dataset.openOccurrenceMonth||header.dataset.openAnchorMonth;if(!key)return;header.dataset.annualMonthKey=key;header.querySelectorAll(':scope > .annual-month-toggle').length||header.insertAdjacentHTML('beforeend',`<button type="button" class="annual-month-toggle" data-toggle-annual-month="${key}" data-annual-month-view="${view}" aria-label="Ocultar mês">⌄</button>`);[...table.querySelectorAll('tbody tr')].forEach(row=>{const cell=row.children[headers.indexOf(header)+1];if(cell)cell.dataset.annualMonthKey=key;});});applyAnnualMonthVisibility(table,view);});
+    root.querySelectorAll('.action-month-column[data-action-month]').forEach(column=>{const view='actions',key=column.dataset.actionMonth;column.dataset.annualMonthKey=key;column.classList.toggle('annual-month-is-hidden',annualHiddenMonths[view].has(key));const header=column.querySelector('header');if(header&&!header.querySelector('.annual-month-toggle'))header.insertAdjacentHTML('beforeend',`<button type="button" class="annual-month-toggle" data-toggle-annual-month="${key}" data-annual-month-view="${view}" aria-label="Ocultar mês">⌄</button>`);});
+  }
   function enhanceCollapsibleCategoryRows(root=document){
     $$('.weekly-table tbody tr',root).forEach(row=>{
       const heading=row.querySelector(':scope > th');if(!heading||heading.querySelector('.category-row-toggle')||heading.querySelector('.annual-row-toggle'))return;
@@ -2159,5 +2171,7 @@
   }
   document.addEventListener('click',event=>{const button=event.target.closest('.category-row-toggle');if(!button)return;const row=button.closest('tr'),key=row?.dataset.categoryRowKey;if(!row||!key)return;const collapsed=!row.classList.contains('is-category-collapsed');row.classList.toggle('is-category-collapsed',collapsed);if(collapsed)collapsedCategoryRows.add(key);else collapsedCategoryRows.delete(key);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',`${collapsed?'Mostrar':'Ocultar'} categoria ${row.querySelector(':scope > th')?.textContent.replace(/[\u25b8▾]/g,'').trim()||''}`);button.querySelector('span').textContent=collapsed?'▸':'▾';});
   const categoryRowsObserver=new MutationObserver(()=>enhanceCollapsibleCategoryRows());categoryRowsObserver.observe(document.body,{childList:true,subtree:true});
+  const annualMonthsObserver=new MutationObserver(()=>enhanceAnnualMonthControls());annualMonthsObserver.observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('click',event=>{const button=event.target.closest('.annual-month-toggle');if(!button)return;event.preventDefault();event.stopPropagation();const view=button.dataset.annualMonthView,key=button.dataset.toggleAnnualMonth;annualHiddenMonths[view]?.has(key)?annualHiddenMonths[view].delete(key):annualHiddenMonths[view]?.add(key);enhanceAnnualMonthControls();});
   setupColorPalettes();render();initializeSync();
 })();
