@@ -163,7 +163,7 @@
   }
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:9, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])),dailyViewsUpdatedAt:'', routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],projects:makeProjectSeedData(),taskHistory:{},dayNotes:{},globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:10, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])),dailyViewsUpdatedAt:'', routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],projects:makeProjectSeedData(),taskHistory:{},dayNotes:{},globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',weeklyView:true,order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',weekdays,monthWeeks:[],startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
@@ -194,6 +194,7 @@
     if(typeof data.dailyViewsUpdatedAt!=='string')data.dailyViewsUpdatedAt='';
     for(const [key,,view,weekly,timeline] of DAILY_VIEW_GROUPS){if(typeof data.dailyViews[key]==='string')data.dailyViews[key]={view:data.dailyViews[key],weekly,timeline};if(!data.dailyViews[key]||typeof data.dailyViews[key]!=='object')data.dailyViews[key]={view,weekly,timeline};if(data.dailyViews[key].view!=='primary'&&data.dailyViews[key].view!=='secondary')data.dailyViews[key].view=view;if(typeof data.dailyViews[key].weekly!=='boolean')data.dailyViews[key].weekly=weekly;if(typeof data.dailyViews[key].timeline!=='boolean')data.dailyViews[key].timeline=timeline;}
     for(const action of data.actions){
+      if(typeof action.parentId!=='string')action.parentId='';
       if(!action.createdAt)action.createdAt=action.updatedAt||SEED_TIMESTAMP;
       if(action.completed&&!action.completedAt)action.completedAt=action.completionChangedAt||action.updatedAt||'';
       if(!action.completed)action.completedAt='';
@@ -203,7 +204,9 @@
     if(!data.globalEntries||typeof data.globalEntries!=='object')data.globalEntries={text:'',updatedAt:''};
     if(typeof data.globalEntries.text!=='string')data.globalEntries.text='';
     if(typeof data.globalEntries.updatedAt!=='string')data.globalEntries.updatedAt='';
-    data.version=9;
+    const activeActionIds=new Set(data.actions.filter(action=>!action.deleted).map(action=>action.id));
+    for(const action of data.actions)if(action.parentId===action.id||action.parentId&&!activeActionIds.has(action.parentId))action.parentId='';
+    data.version=10;
     const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
     for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
     for(const area of data.areas)if(typeof area.weeklyView!=='boolean')area.weeklyView=true;
@@ -569,7 +572,7 @@
     const taskGroup=task=>task.kind==='block'?'blocks':taskIsConsultation(task)?'consultations':taskFrequencyGroup(task.frequency);
     const visibleTasks=Object.values(taskDay.tasks||{}).filter(task=>taskIsVisibleOnDay(task,date)&&groupInTimeline(taskGroup(task)));
     const scheduledActions=groupInTimeline('actions')?state.actions.filter(action=>actionIsScheduled(action,date)):[];
-    const timed=[...scheduledRoutines.map(routine=>({...routine,type:'routine',id:routine.routineId})),...visibleTasks.map(task=>({...task,type:'task',id:task.taskId})),...scheduledAnchors.map(anchor=>({...anchor,type:'anchor',name:anchor.title,color:areaById.get(anchor.areaId)?.color||'#8eada8'})),...scheduledActions.map(action=>({...action,type:'action',name:action.title}))].filter(hasTime).sort((a,b)=>a.scheduledTime.localeCompare(b.scheduledTime));
+    const timed=[...scheduledRoutines.map(routine=>({...routine,type:'routine',id:routine.routineId})),...visibleTasks.map(task=>({...task,type:'task',id:task.taskId})),...scheduledAnchors.map(anchor=>({...anchor,type:'anchor',name:anchor.title,color:areaById.get(anchor.areaId)?.color||'#8eada8'})),...scheduledActions.map(action=>({...action,type:'action',name:actionDisplayTitle(action)}))].filter(hasTime).sort((a,b)=>a.scheduledTime.localeCompare(b.scheduledTime));
     const untimedRoutines=scheduledRoutines.filter(routine=>!hasTime(routine));
     const untimedTasks=visibleTasks.filter(task=>!hasTime(task));
     const untimedActions=scheduledActions.filter(action=>!hasTime(action));
@@ -599,7 +602,7 @@
       {label:'Tarefas',entries:untimedTasks.filter(task=>task.kind!=='block').map(entry=>`<button type="button" data-timeline-task="${escapeHTML(entry.taskId)}">${entry.icon?`${escapeHTML(entry.icon)} `:''}${escapeHTML(entry.name)}</button>`)},
       {label:'Blocos',entries:untimedTasks.filter(task=>task.kind==='block').map(entry=>`<button type="button" data-timeline-task="${escapeHTML(entry.taskId)}">${entry.icon?`${escapeHTML(entry.icon)} `:''}${escapeHTML(entry.name)}</button>`)},
       ...anchors.map(({area,entries})=>({label:area.name,entries:entries.map(anchor=>`<span>${anchor.icon?`${escapeHTML(anchor.icon)} `:''}${escapeHTML(anchor.title)}</span>`)})),
-      {label:'Ações',entries:untimedActions.map(action=>`<button type="button" data-timeline-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button>`)}
+      {label:'Ações',entries:untimedActions.map(action=>`<button type="button" data-timeline-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(actionDisplayTitle(action))}</button>`)}
     ].filter(group=>group.entries.length);
     const unscheduled=untimedGroups.map(group=>`<div class="timeline-anchor-group"><strong>${escapeHTML(group.label)}</strong>${group.entries.join('')}</div>`);
     const untimedCount=untimedGroups.reduce((total,group)=>total+group.entries.length,0);
@@ -644,7 +647,7 @@
     const taskDay=ensureTaskDay(selectedDate);
     const routineBlock=view=>{const entries=dailyViewOfGroup('routines')===view?routines:[];return `<section class="planner-block planner-routines"><h2><button type="button" class="planner-block-link" data-open-routine-day><span class="planner-heading-icon" aria-hidden="true">☑</span><span>Rotinas do dia</span></button></h2><div class="planner-block-body">${entries.length?entries.map(r=>`<button type="button" class="planner-routine" data-planner-routine="${escapeHTML(r.routineId)}"><span>${escapeHTML(r.icon)}</span><strong>${escapeHTML(r.name)}</strong>${r.scheduledTime?`<time class="planner-routine-time">${escapeHTML(r.scheduledTime)}</time>`:''}</button>`).join(''):'<p class="planner-empty">Nenhuma rotina nesta visão.</p>'}</div></section>`;};
     const actions=state.actions.filter(action=>!action.deleted&&action.schedule==='date'&&action.scheduledDate===selectedDate).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
-    const actionBlock=view=>{const entries=dailyViewOfGroup('actions')===view?actions:[];return entries.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${entries.map(action=>{const area=state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted);return `<div class="planner-item planner-action-item"><button type="button" class="planner-action-link" data-open-action="${escapeHTML(action.id)}">${escapeHTML(action.title)}</button>${area?`<span class="planner-action-area-tag" style="--tag-color:${escapeHTML(area.color||'#dcebe7')};--tag-ink:${plannerHeadingInk(area.color)}">${escapeHTML(area.name)}</span>`:''}</div>`;}).join('')}</div></section>`:'';};
+    const actionBlock=view=>{const entries=dailyViewOfGroup('actions')===view?actions:[];return entries.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${entries.map(action=>{const area=state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted);return `<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-action="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button>${area?`<span class="planner-action-area-tag" style="--tag-color:${escapeHTML(area.color||'#dcebe7')};--tag-ink:${plannerHeadingInk(area.color)}">${escapeHTML(area.name)}</span>`:''}</div>`;}).join('')}</div></section>`:'';};
     const occurrences=state.occurrences.filter(item=>occurrenceIsScheduled(item,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const occurrenceBlock=view=>{const entries=occurrences.filter(item=>dailyViewOfGroup(`occurrence-${item.type}`)===view);return entries.length?`<section class="planner-block planner-block-occurrences"><h2><span class="planner-heading-icon" aria-hidden="true">◉</span><span>Acontecimentos</span></h2><div class="planner-block-body">${entries.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder;return `<div class="planner-item planner-action-item"><span class="planner-item-icon" aria-hidden="true">${escapeHTML(item.icon||kind.icon)}</span><button type="button" class="planner-action-link" data-open-occurrence="${escapeHTML(item.id)}">${escapeHTML(item.title)}</button><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span></div>`;}).join('')}</div></section>`:'';};
     const plannerExtras=view=>`${dailyViewOfGroup('routines')===view?routineBlock(view):''}${dailyViewOfGroup('tasks-weekly')===view?taskGroup(taskDay,'weekly',true,view,'tasks-weekly',false):''}${dailyViewOfGroup('tasks-biweekly')===view?taskGroup(taskDay,'biweekly',true,view,'tasks-biweekly',false):''}${dailyViewOfGroup('tasks-monthly')===view?monthlyTaskGroups(taskDay,true,view):''}${dailyViewOfGroup('consultations')===view?taskGroup(taskDay,null,true,view,'consultations',true):''}${dailyViewOfGroup('blocks')===view?blockGroup(taskDay,true,view):''}${actionBlock(view)}${occurrenceBlock(view)}`;
@@ -701,7 +704,7 @@
       ['tasks-monthly','Tarefas mensais','#e6e9f3','▦',(_,index)=>MONTHLY_TASK_FREQUENCIES.flatMap(frequency=>taskEntries(index,frequency).map(item=>card(item.done?'✓':item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}" aria-label="${escapeHTML(item.name)}${item.done?' — concluída':' — não concluída'}"`,`weekly-task${item.done?' is-done':''}`)))],
       ['blocks','Blocos','#e6edf2','▣',(_,index)=>taskEntries(index,null,'block',false).map(item=>{const result=blockStatusOf(item);return card(result?'✓':item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`,`weekly-task${result?' is-done':''}`);} )],
       ['consultations','Consultas','#edf0e5','◌',(_,index)=>taskEntries(index,null,'regular',true).map(item=>card(item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`))],
-      ['actions','Ações','#f3e6d7','✦',(date)=>state.actions.filter(item=>!item.deleted&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon,item.title,`data-open-action="${escapeHTML(item.id)}"`))],
+      ['actions','Ações','#f3e6d7','✦',(date)=>state.actions.filter(item=>!item.deleted&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon,actionDisplayTitle(item),`data-open-action="${escapeHTML(item.id)}"`))],
       ...Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>[`occurrence-${type}`,`${kind.label}${type==='holiday'?'s':'s'}`,'#e8eeee',kind.icon,(date)=>state.occurrences.filter(item=>!item.deleted&&item.type===type&&occurrenceIsScheduled(item,date)).map(item=>card(item.icon||kind.icon,item.title,`data-open-occurrence="${escapeHTML(item.id)}"`))])
     ];
     const groupRows=groupDefinitions.filter(([key])=>groupInWeekly(key)).map(([,label,color,icon,entriesFor])=>{
@@ -791,9 +794,14 @@
     $('#task-calendar-grid').innerHTML=`<div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
     $('#task-calendar-filter-count').textContent=(frequencyFilter||kindFilter)?`${visibleCount} de ${totalCount} ${totalCount===1?'item no calendário':'itens no calendário'}`:'';
   }
+  function actionParent(action){return action?.parentId?state.actions.find(entry=>entry.id===action.parentId&&!entry.deleted)||null:null;}
+  function actionDisplayTitle(action){const parent=actionParent(action);return parent?`↳ ${action.title} · ${parent.title}`:action.title;}
+  function actionChildren(action){return state.actions.filter(entry=>!entry.deleted&&entry.parentId===action.id).sort((a,b)=>actionDueDate(a).localeCompare(actionDueDate(b))||a.title.localeCompare(b.title,'pt-BR'));}
+  function actionParentHint(action){const parent=actionParent(action);return parent?`<small class="action-parent-hint">↳ ${escapeHTML(parent.title)}</small>`:'';}
   function actionCard(action){
-    const schedule=actionScheduleLabel(action);
-    return `<div class="action-card${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action="${escapeHTML(action.id)}"><button type="button" class="action-card-main" data-edit-action="${escapeHTML(action.id)}" title="Abrir ou arrastar para outro mês"><span class="action-card-title">${action.icon?`<span class="action-card-mark">${escapeHTML(action.icon)}</span>`:''}<strong>${escapeHTML(action.title)}</strong></span>${schedule?`<small>${escapeHTML(schedule)}</small>`:''}</button></div>`;
+    const schedule=actionScheduleLabel(action),children=actionChildren(action),parent=actionParent(action);
+    const childList=children.map(child=>`<div class="action-card-child${child.completed?' is-complete':''}"><button type="button" data-toggle-action="${escapeHTML(child.id)}" aria-label="${child.completed?'Reabrir':'Concluir'} ${escapeHTML(child.title)}">${child.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(child.id)}"><strong>${child.icon?`${escapeHTML(child.icon)} `:''}${escapeHTML(child.title)}</strong><small>${escapeHTML(actionScheduleLabel(child)||'Sem período')}</small></button></div>`).join('');
+    return `<div class="action-card${action.completed?' is-complete':''}${parent?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action="${escapeHTML(action.id)}"><button type="button" class="action-card-main" data-edit-action="${escapeHTML(action.id)}" title="Abrir ou arrastar para outro mês"><span class="action-card-title">${action.icon?`<span class="action-card-mark">${escapeHTML(action.icon)}</span>`:''}<strong>${escapeHTML(action.title)}</strong></span>${parent?`<small class="action-parent-hint">↳ ${escapeHTML(parent.title)}</small>`:''}${schedule?`<small>${escapeHTML(schedule)}</small>`:''}</button>${children.length?`<details class="action-card-children"><summary>${children.length} ${children.length===1?'subação':'subações'}</summary><div>${childList}<button type="button" class="action-card-add-child" data-add-subaction="${escapeHTML(action.id)}">＋ Nova subação</button></div></details>`:''}</div>`;
   }
   function actionMonth(action){return action.schedule==='date'?action.scheduledDate?.slice(0,7)||'':action.scheduledMonth||'';}
   function actionWeek(action){return action.schedule==='date'&&action.scheduledDate?monthWeekNumber(action.scheduledDate):Number(action.week)||null;}
@@ -814,9 +822,9 @@
     const datedActions=actions.filter(action=>action.schedule==='date'),undatedActions=actions.filter(action=>action.schedule==='month'&&dates.some(date=>actionIsScheduled(action,date)));
     const cells=dates.map(date=>{
       const entries=datedActions.filter(action=>actionIsScheduled(action,date));
-      return `<td data-action-week-date="${date}"><div class="weekly-action-dropzone">${entries.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</div></td>`;
+      return `<td data-action-week-date="${date}"><div class="weekly-action-dropzone">${entries.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${actionParentHint(action)}</button></div>`).join('')}</div></td>`;
     }).join('');
-    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?monthWeekLabel(action.week):'Mês inteiro'}</small></button></div>`).join('');
+    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${actionParentHint(action)}<small>${action.week?monthWeekLabel(action.week):'Mês inteiro'}</small></button></div>`).join('');
     $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr></tbody></table></div><aside class="action-monthly-undated"><h4>Não agendadas</h4><p>Agendadas apenas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
   }
   function renderActionMonthly(actions){
@@ -824,8 +832,8 @@
     const headers=weeks.map(week=>`<th scope="col" class="monthly-week monthly-week-${week}"><span class="monthly-week-pill">${monthWeekLabel(week).toLowerCase()}</span></th>`).join('');
     const inMonth=action=>action.schedule==='date'?action.scheduledDate?.slice(0,7)===selectedActionMonth:action.scheduledMonth===selectedActionMonth;
     const datedActions=actions.filter(action=>inMonth(action)&&action.schedule==='date'),undatedActions=actions.filter(action=>inMonth(action)&&action.schedule==='month');
-    const cells=weeks.map(week=>{const weekActions=datedActions.filter(action=>actionWeek(action)===week);return `<td data-action-month-week="${week}">${weekActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}</button></div>`).join('')}</td>`;}).join('');
-    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}<small>${action.week?monthWeekLabel(action.week):'Mês inteiro'}</small></button></div>`).join('');
+    const cells=weeks.map(week=>{const weekActions=datedActions.filter(action=>actionWeek(action)===week);return `<td data-action-month-week="${week}">${weekActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${actionParentHint(action)}</button></div>`).join('')}</td>`;}).join('');
+    const undatedCards=undatedActions.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-monthly="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${actionParentHint(action)}<small>${action.week?monthWeekLabel(action.week):'Mês inteiro'}</small></button></div>`).join('');
     $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table monthly-table action-monthly-table"><thead><tr><th scope="col" class="weekly-corner">Ações</th>${headers}</tr></thead><tbody>${datedActions.length?`<tr style="--area-color:#f3e6d7"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">✦</span><span>Com data</span></th>${cells}</tr>`:'<tr><td colspan="7" class="monthly-empty">Nenhuma ação com data específica neste mês.</td></tr>'}</tbody></table></div><aside class="action-monthly-undated"><h4>Sem data específica</h4><p>Agendadas por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhuma ação nesta categoria.</span>'}</div></aside></div>`;
   }
   function renderActionList(actions){
@@ -839,7 +847,7 @@
     const filtered=actions.filter(action=>{
       const created=(action.createdAt||'').slice(0,10),completed=(action.completedAt||'').slice(0,10),due=actionDueDate(action);
       const statusMatches=!status||(status==='open'&&!action.completed)||(status==='completed'&&action.completed)||(status==='overdue'&&actionStatus(action)==='Vencida');
-      return (!search||[action.title,action.description,action.notes,actionAreaName(action)].some(value=>String(value||'').toLocaleLowerCase('pt-BR').includes(search)))
+      return (!search||[action.title,action.description,action.notes,actionAreaName(action),actionParent(action)?.title].some(value=>String(value||'').toLocaleLowerCase('pt-BR').includes(search)))
         &&statusMatches
         &&(!area||action.areaId===area)&&(!schedule||action.schedule===schedule)&&(!month||actionMonth(action)===month)&&(!week||(action.schedule==='date'&&action.scheduledDate?monthWeekMatches(week,action.scheduledDate):actionWeek(action)===Number(week)))
         &&within(created,createdFrom,createdTo)&&within(completed,completedFrom,completedTo)&&within(due,dueFrom,dueTo);
@@ -848,8 +856,8 @@
     const sortValue=action=>({due:actionDueDate(action),title:action.title,area:actionAreaName(action),created:(action.createdAt||'').slice(0,10),completed:(action.completedAt||'').slice(0,10),month:actionMonth(action),week:actionWeek(action)?String(actionWeek(action)).padStart(2,'0'):'',status:actionStatus(action)})[sortBy]||'';
     filtered.sort((a,b)=>{const left=sortValue(a),right=sortValue(b);if(!left)return right?1:0;if(!right)return -1;return direction*left.localeCompare(right,'pt-BR',{numeric:true})||a.title.localeCompare(b.title,'pt-BR');});
     const dateLabel=value=>value?escapeHTML(fmtDate(value.slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'})):'—';
-    const rows=filtered.map(action=>{const due=actionDueDate(action),stateLabel=actionStatus(action);return `<tr class="${action.completed?'is-complete':''}"><td><div class="action-list-title"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span>${action.icon?`${escapeHTML(action.icon)} `:''}<strong>${escapeHTML(action.title)}</strong></span></div></td><td>${escapeHTML(actionAreaName(action)||'—')}</td><td>${actionMonth(action)?escapeHTML(fmtDate(`${actionMonth(action)}-01`,{month:'short',year:'numeric'})):'—'}</td><td>${actionWeek(action)?monthWeekLabel(actionWeek(action)):'—'}</td><td>${dateLabel(due)}</td><td>${dateLabel(action.createdAt||'')}</td><td>${dateLabel(action.completedAt||'')}</td><td><span class="action-status is-${stateLabel==='Concluída'?'done':stateLabel==='Vencida'?'late':'open'}">${stateLabel}</span></td><td><button type="button" class="small-edit" data-edit-action="${escapeHTML(action.id)}">Editar</button></td></tr>`;}).join('');
-    $('#actions-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'ação encontrada':'ações encontradas'}</p><div class="action-list-scroll"><table class="action-list-table"><thead><tr><th>Ação</th><th>Área geral</th><th>Mês</th><th>Semana</th><th>Vencimento</th><th>Criação</th><th>Conclusão</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="action-list-empty">Nenhuma ação corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
+    const rows=filtered.map(action=>{const due=actionDueDate(action),stateLabel=actionStatus(action),parent=actionParent(action);return `<tr class="${action.completed?'is-complete':''}${parent?' is-subaction':''}"><td><div class="action-list-title"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span>${parent?'<span class="action-tree-mark">↳</span> ':''}${action.icon?`${escapeHTML(action.icon)} `:''}<strong>${escapeHTML(action.title)}</strong></span></div></td><td>${parent?`<button type="button" class="action-parent-link" data-edit-action="${escapeHTML(parent.id)}">${escapeHTML(parent.title)}</button>`:'—'}</td><td>${escapeHTML(actionAreaName(action)||'—')}</td><td>${actionMonth(action)?escapeHTML(fmtDate(`${actionMonth(action)}-01`,{month:'short',year:'numeric'})):'—'}</td><td>${actionWeek(action)?monthWeekLabel(actionWeek(action)):'—'}</td><td>${dateLabel(due)}</td><td>${dateLabel(action.createdAt||'')}</td><td>${dateLabel(action.completedAt||'')}</td><td><span class="action-status is-${stateLabel==='Concluída'?'done':stateLabel==='Vencida'?'late':'open'}">${stateLabel}</span></td><td><button type="button" class="small-edit" data-edit-action="${escapeHTML(action.id)}">Editar</button></td></tr>`;}).join('');
+    $('#actions-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'ação encontrada':'ações encontradas'}</p><div class="action-list-scroll"><table class="action-list-table"><thead><tr><th>Ação</th><th>Ação mãe</th><th>Área geral</th><th>Mês</th><th>Semana</th><th>Vencimento</th><th>Criação</th><th>Conclusão</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="action-list-empty">Nenhuma ação corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
   }
   function renderActions(){
     $('#action-month').value=selectedActionMonth;
@@ -880,7 +888,7 @@
       const heads=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'].map(label=>`<div class="action-calendar-heading">${label}</div>`).join('');
       const cells=Array.from({length:weeks*7},(_,index)=>{
         const day=new Date(start);day.setDate(start.getDate()+index);const key=dateKey(day),entries=actions.filter(action=>action.schedule==='date'&&action.scheduledDate===key);
-        return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-action-date="${key}" aria-label="Adicionar ação em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(action=>`<div class="action-calendar-item${action.completed?' is-complete':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`<span>${escapeHTML(action.icon)}</span>`:''}${escapeHTML(action.title)}<small>${escapeHTML([actionAreaName(action),`Semana ${monthWeekNumber(key)}`].filter(Boolean).join(' · '))}</small></button></div>`).join('')}</div></div>`;
+        return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-action-date="${key}" aria-label="Adicionar ação em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(action=>`<div class="action-calendar-item${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`<span>${escapeHTML(action.icon)}</span>`:''}${escapeHTML(action.title)}${actionParentHint(action)}<small>${escapeHTML([actionAreaName(action),`Semana ${monthWeekNumber(key)}`].filter(Boolean).join(' · '))}</small></button></div>`).join('')}</div></div>`;
       }).join('');
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
     }else{
@@ -889,27 +897,33 @@
     const actionAreas=state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     $('#action-area-list').innerHTML=actionAreas.length?actionAreas.map(area=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color||'#dcebe7')}"></span><strong>${escapeHTML(area.name)}</strong><small class="area-view-tag">${state.actions.filter(action=>!action.deleted&&action.areaId===area.id).length} ações</small><button type="button" class="small-edit" data-edit-action-area="${escapeHTML(area.id)}">Editar</button></article>`).join(''):'<p class="planner-empty">Crie áreas gerais para organizar as ações.</p>';
   }
-  function openActionDialog(id=null){
-    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);
+  function openActionDialog(id=null,parentId=''){
+    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted),suggestedParent=!action&&parentId?state.actions.find(entry=>entry.id===parentId&&!entry.deleted):null;
     $('#action-form').reset();$('#action-id').value=action?.id||'';
-    $('#action-dialog-title').textContent=action?'Editar ação':'Nova ação';
+    $('#action-dialog-title').textContent=action?'Editar ação':suggestedParent?'Nova subação':'Nova ação';
     $('#action-title').value=action?.title||'';$('#action-description').value=action?.description||'';
-    $('#action-icon').value=action?.icon||'';$('#action-color').value=action?.color||'#bbdcd8';
+    $('#action-icon').value=action?.icon||'';$('#action-color').value=action?.color||suggestedParent?.color||'#bbdcd8';
     const actionAreas=state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     $('#action-area').innerHTML='<option value="">Sem área geral</option>'+actionAreas.map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
     if(action?.areaId&&!actionAreas.some(area=>area.id===action.areaId))$('#action-area').insertAdjacentHTML('beforeend',`<option value="${escapeHTML(action.areaId)}">Área indisponível</option>`);
-    $('#action-area').value=action?.areaId||'';
-    $('#action-schedule').value=action?.schedule||'month';
-    $('#action-scheduled-month').value=action?.scheduledMonth||selectedActionMonth;
-    $('#action-scheduled-date').value=action?.scheduledDate||selectedDate;
+    $('#action-area').value=action?.areaId||suggestedParent?.areaId||'';
+    const children=action?actionChildren(action):[],parentOptions=state.actions.filter(entry=>!entry.deleted&&!entry.parentId&&entry.id!==action?.id).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    $('#action-parent').innerHTML='<option value="">Ação principal</option>'+parentOptions.map(entry=>`<option value="${escapeHTML(entry.id)}">${escapeHTML(entry.title)}</option>`).join('');
+    $('#action-parent').value=action?.parentId||suggestedParent?.id||'';$('#action-parent').disabled=children.length>0;
+    $('#action-schedule').value=action?.schedule||suggestedParent?.schedule||'month';
+    $('#action-scheduled-month').value=action?.scheduledMonth||suggestedParent?.scheduledMonth||suggestedParent?.scheduledDate?.slice(0,7)||selectedActionMonth;
+    $('#action-scheduled-date').value=action?.scheduledDate||suggestedParent?.scheduledDate||selectedDate;
     $('#action-due').value=action?.dueDate||'';
-    $('#action-week').value=action?.week||'';
+    $('#action-week').value=action?.week||suggestedParent?.week||'';
     $('#action-completed').checked=action?.completed===true;
     $('#action-created-at').textContent=action?`Criada em ${fmtDate((action.createdAt||action.updatedAt).slice(0,10),{day:'numeric',month:'long',year:'numeric'})}`:'';
     $('#action-created-at').classList.toggle('hidden',!action);
     $('#action-notes').value=action?.notes||'';
     $('#delete-action').classList.toggle('hidden',!action);
-    updateActionSchedule();refreshColorPalettes();$('#action-dialog').showModal();
+    $('#action-subactions-section').classList.toggle('hidden',!action||Boolean(action.parentId));
+    $('#action-subactions-count').textContent=children.length?`${children.length} ${children.length===1?'subação':'subações'}`:'Nenhuma subação';
+    $('#action-subactions-list').innerHTML=children.length?children.map(child=>`<button type="button" class="action-dialog-child${child.completed?' is-complete':''}" data-edit-subaction="${escapeHTML(child.id)}"><span>${child.completed?'✓':'○'}</span><strong>${escapeHTML(child.title)}</strong><small>${escapeHTML(actionScheduleLabel(child)||'Sem período')}</small></button>`).join(''):'<p class="planner-empty">Crie ações menores, cada uma com seu próprio planejamento.</p>';
+    updateActionSchedule();refreshColorPalettes();if(!$('#action-dialog').open)$('#action-dialog').showModal();
   }
   function updateActionSchedule(){
     const date=$('#action-schedule').value==='date';
@@ -922,17 +936,19 @@
     const title=$('#action-title').value.trim(),schedule=$('#action-schedule').value,scheduledMonth=$('#action-scheduled-month').value,scheduledDate=$('#action-scheduled-date').value;
     if(!title){toast('Dê um nome à ação.');return;}
     if(schedule==='date'?!scheduledDate:!scheduledMonth){toast('Escolha a data ou o mês da ação.');return;}
-    const id=$('#action-id').value||uid(),existing=state.actions.find(action=>action.id===id),now=stamp(),completed=$('#action-completed').checked;
-    const next={id,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:$('#action-area').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
+    const id=$('#action-id').value||uid(),existing=state.actions.find(action=>action.id===id),now=stamp(),completed=$('#action-completed').checked,parentId=$('#action-parent').disabled?existing?.parentId||'':$('#action-parent').value;
+    const parent=parentId?state.actions.find(action=>action.id===parentId&&!action.deleted&&!action.parentId):null;if(parentId&&!parent){toast('Escolha uma ação principal válida como ação mãe.');return;}
+    const next={id,parentId:parent?.id||'',title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:$('#action-area').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
     const index=state.actions.findIndex(action=>action.id===id);
     if(index<0)state.actions.push(next);else state.actions[index]=next;
     selectedActionMonth=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
-    saveLocal();$('#action-dialog').close();renderActions();renderPlanner();toast('Ação salva.');
+    saveLocal();$('#action-dialog').close();renderActions();renderPlanner();toast(next.parentId?'Subação salva.':'Ação salva.');
   }
   function deleteAction(){
     const action=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted);if(!action)return;
-    if(!confirm(`Excluir a ação “${action.title}”?`))return;
-    action.deleted=true;action.updatedAt=stamp();saveLocal();$('#action-dialog').close();renderActions();renderPlanner();toast('Ação excluída.');
+    const children=actionChildren(action),message=children.length?`Excluir a ação “${action.title}”? As ${children.length} subações serão mantidas como ações principais.`:`Excluir a ação “${action.title}”?`;
+    if(!confirm(message))return;
+    action.deleted=true;action.updatedAt=stamp();for(const child of children){child.parentId='';child.updatedAt=action.updatedAt;}saveLocal();$('#action-dialog').close();renderActions();renderPlanner();toast(children.length?'Ação excluída; subações mantidas como ações principais.':'Ação excluída.');
   }
   function toggleAction(id){
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);if(!action)return;
@@ -1598,7 +1614,7 @@
     const useRightDailyViews=rightDailyViewsAt?rightDailyViewsAt>=leftDailyViewsAt:!leftDailyViewsAt&&Boolean(b.dailyViews);
     const dailyViews=structuredClone((useRightDailyViews?b.dailyViews:a.dailyViews)||b.dailyViews||a.dailyViews||Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])));
     const dailyViewsUpdatedAt=useRightDailyViews?rightDailyViewsAt:leftDailyViewsAt;
-    return {version:9,dailyViews,dailyViewsUpdatedAt,routines:[...routines.values()],tasks,actions,occurrences,actionAreas,projects,areas,anchors,history,taskHistory,dayNotes,globalEntries};
+    return {version:10,dailyViews,dailyViewsUpdatedAt,routines:[...routines.values()],tasks,actions,occurrences,actionAreas,projects,areas,anchors,history,taskHistory,dayNotes,globalEntries};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -1832,6 +1848,8 @@
   $('#action-schedule').onchange=updateActionSchedule;
   $('#action-scheduled-date').onchange=updateActionSchedule;
   $('#action-form').addEventListener('submit',saveAction);$('#delete-action').onclick=deleteAction;
+  $('#add-subaction').onclick=()=>{const parentId=$('#action-id').value;if(parentId)openActionDialog(null,parentId);};
+  $('#action-subactions-list').addEventListener('click',event=>{const child=event.target.closest('[data-edit-subaction]');if(child)openActionDialog(child.dataset.editSubaction);});
   $$('.occurrence-tab').forEach(button=>button.onclick=()=>{occurrenceView=button.dataset.occurrenceView;if(occurrenceView==='week'&&selectedOccurrenceWeekDate.slice(0,7)!==selectedOccurrenceMonth)selectedOccurrenceWeekDate=`${selectedOccurrenceMonth}-01`;renderOccurrences();});
   $('#occurrence-list-filters').addEventListener('input',renderOccurrences);$('#occurrence-list-filters').addEventListener('change',renderOccurrences);
   $('#occurrence-clear-filters').onclick=()=>{$$('#occurrence-list-filters input').forEach(input=>input.value='');$$('#occurrence-list-filters select').forEach(select=>select.selectedIndex=0);renderOccurrences();};
@@ -1854,6 +1872,7 @@
   };
   actionsContent.addEventListener('dragstart',event=>{
     const card=event.target.closest('[data-drag-action]');
+    if(event.target.closest('.action-card-children')){event.preventDefault();return;}
     if(actionView==='monthly'){
       const monthlyCard=event.target.closest('[data-drag-action-monthly]');if(!monthlyCard)return;
       draggedMonthlyActionId=monthlyCard.dataset.dragActionMonthly;monthlyCard.classList.add('is-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedMonthlyActionId);return;
@@ -1936,6 +1955,7 @@
   actionsContent.addEventListener('touchcancel',finishTouchActionDrag);
   $('#actions-content').addEventListener('click',event=>{
     if(Date.now()<ignoreActionClickUntil){event.preventDefault();return;}
+    const addChild=event.target.closest('[data-add-subaction]');if(addChild){openActionDialog(null,addChild.dataset.addSubaction);return;}
     const toggle=event.target.closest('[data-toggle-action]');if(toggle){toggleAction(toggle.dataset.toggleAction);return;}
     const edit=event.target.closest('[data-edit-action]');if(edit){openActionDialog(edit.dataset.editAction);return;}
     const month=event.target.closest('[data-add-action-month]');if(month){openActionDialog();$('#action-schedule').value='month';$('#action-scheduled-month').value=month.dataset.addActionMonth;updateActionSchedule();return;}
