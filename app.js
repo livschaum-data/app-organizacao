@@ -178,7 +178,7 @@
     if(!Array.isArray(data.areas))data.areas=[];
     if(!Array.isArray(data.anchors))data.anchors=[];
     if(!Array.isArray(data.tasks))data.tasks=[];
-    for(const task of data.tasks)if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)&&(!Number.isInteger(Number(task.monthWeek))||Number(task.monthWeek)<1||Number(task.monthWeek)>6))task.monthWeek=1;
+    for(const task of data.tasks){if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)&&(!Number.isInteger(Number(task.monthWeek))||Number(task.monthWeek)<1||Number(task.monthWeek)>6))task.monthWeek=1;if(!task.createdAt)task.createdAt=task.startDate||task.updatedAt||SEED_TIMESTAMP;}
     if(!Array.isArray(data.actions))data.actions=[];
     if(!Array.isArray(data.occurrences))data.occurrences=[];
     if(!Array.isArray(data.actionAreas))data.actionAreas=[];
@@ -262,6 +262,7 @@
     return (routine.weekdays || []).includes(safeDate(date).getDay());
   }
   function taskIsScheduled(task,date){
+    if(!task.startDate&&task.createdAt&&date<String(task.createdAt).slice(0,10))return false;
     if(!dayIsScheduled(task,date))return false;
     if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)){
       if(!task.startDate||!monthWeekMatches(task.monthWeek||1,date))return false;
@@ -326,7 +327,7 @@
     if(!day.excludedTasks)day.excludedTasks={};
     const scheduled=new Map(tasks.filter(task=>taskIsScheduled(task,date)).map(task=>[task.id,task]));
     const now=stamp();let changed=false;
-    for(const id of Object.keys(day.tasks||{}))if(!scheduled.has(id)||day.excludedTasks[id]){delete day.tasks[id];changed=true;}
+    for(const id of Object.keys(day.tasks||{}))if((!scheduled.has(id)&&!day.tasks[id]?.manualOccurrence)||day.excludedTasks[id]){delete day.tasks[id];changed=true;}
     for(const [id,task] of scheduled){
       if(day.excludedTasks[id])continue;
       let snapshot=day.tasks[id];
@@ -497,6 +498,36 @@
       const entries=Object.values(state.taskHistory[date].tasks).filter(task=>taskIsVisibleOnDay(task,date)),registered=entries.filter(task=>taskIsRegistered(task)).length;
       return `<button class="history-card${date<isoToday()&&dayStatus(date).taskPending?' is-incomplete':''}" data-task-history-date="${date}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${registered}/${entries.length}</strong><small>tarefas registradas</small></span><span class="history-arrow">→</span></button>`;
     }).join(''):'<div class="empty-state"><span>✓</span><h3>Seu histórico vai aparecer aqui</h3><p>As tarefas programadas ficam registradas por dia.</p></div>';
+  }
+  function taskOccurrenceStatus(task){
+    if(['postponed','canceled','not-realized','completed'].includes(task.reviewStatus))return task.reviewStatus;
+    if(task.kind==='block'){const result=blockStatusOf(task);if(result==='realized'||result==='partial')return'completed';if(result==='not-realized')return'not-realized';}
+    if(task.done)return'completed';if(task.doneTouched)return'not-realized';return'open';
+  }
+  function taskReviewOccurrences(){
+    const today=isoToday(),period=$('#task-review-period').value,end=safeDate(today);end.setDate(end.getDate()-1);let start=new Date(end);
+    if(period==='all'){const candidates=[...state.tasks.map(task=>task.startDate).filter(Boolean),...Object.keys(state.taskHistory)];start=safeDate(candidates.sort()[0]||today);const floor=new Date(end);floor.setFullYear(floor.getFullYear()-5);if(start<floor)start=floor;}else start.setDate(start.getDate()-(Number(period)||90)+1);
+    const catalog=new Map(state.tasks.filter(task=>!task.deleted).map(task=>[task.id,task])),occurrences=[];
+    for(const cursor=new Date(start);cursor<=end;cursor.setDate(cursor.getDate()+1)){
+      const date=`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`,day=state.taskHistory[date],snapshots=day?.tasks||{},ids=new Set([...Object.keys(snapshots),...state.tasks.filter(task=>!task.deleted&&!task.consultation&&date>=String(task.startDate||task.createdAt||task.updatedAt||date).slice(0,10)&&taskIsScheduled(task,date)).map(task=>task.id)]);
+      for(const id of ids){const source=snapshots[id]||catalog.get(id);if(!source||taskIsConsultation(source))continue;const task={...source,taskId:source.taskId||id},status=taskOccurrenceStatus(task);occurrences.push({date,id,task,status});}
+    }
+    return occurrences.sort((a,b)=>b.date.localeCompare(a.date)||a.task.name.localeCompare(b.task.name,'pt-BR'));
+  }
+  function renderTaskReview(){
+    const all=taskReviewOccurrences(),frequency=$('#task-review-frequency').value,statusFilter=$('#task-review-status').value,closed=status=>status!=='open',visible=all.filter(item=>{const matchesStatus=!statusFilter||statusFilter==='closed'?(!statusFilter||closed(item.status)):item.status===statusFilter;return(!frequency||item.task.frequency===frequency)&&matchesStatus;});
+    const openCount=all.filter(item=>item.status==='open').length,closedCount=all.length-openCount;$('#task-review-summary').innerHTML=`<article><span>ABERTAS</span><strong>${openCount}</strong></article><article><span>FECHADAS</span><strong>${closedCount}</strong></article><article><span>OCORRÊNCIAS</span><strong>${all.length}</strong></article>`;
+    const labels={open:'Aberta',completed:'Concluída','not-realized':'Não realizada',postponed:'Adiada',canceled:'Cancelada'},groups=new Map();for(const item of visible){const key=item.task.frequency||'weekly';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);}
+    $('#task-review-list').innerHTML=visible.length?[...groups].map(([frequency,items])=>`<section class="task-review-group"><h3>${TASK_FREQUENCY_PLURAL[frequency]||taskFrequencyLabel(frequency)}</h3>${items.map(({date,id,task,status})=>`<article class="task-review-card is-${status}" data-review-date="${date}" data-review-task="${escapeHTML(id)}"><span class="task-review-icon">${escapeHTML(task.icon||'✓')}</span><div class="task-review-copy"><strong>${escapeHTML(task.name)}</strong><small>Prevista para ${escapeHTML(fmtDate(date,{weekday:'short',day:'numeric',month:'short',year:'numeric'}))}${task.reviewStatus==='postponed'&&task.postponedTo?` · adiada para ${escapeHTML(fmtDate(task.postponedTo,{day:'numeric',month:'short',year:'numeric'}))}`:''}</small></div><span class="task-review-status">${labels[status]}</span><div class="task-review-actions">${status==='open'?'<button type="button" data-review-action="complete">Concluir</button><button type="button" data-review-action="not-realized">Não realizada</button><button type="button" data-review-action="postpone">Adiar</button><button type="button" data-review-action="cancel">Cancelar</button>':'<button type="button" data-review-action="reopen">Reabrir</button>'}</div></article>`).join('')}</section>`).join(''):'<div class="empty-state"><span>✓</span><h3>Nenhuma ocorrência encontrada</h3><p>Altere os filtros ou o período da revisão.</p></div>';
+  }
+  function reviewTaskOccurrence(date,id,action){
+    const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return;const now=stamp();
+    if(action==='complete'){task.done=true;task.doneTouched=true;task.reviewStatus='completed';if(task.kind==='block')task.blockStatus='realized';for(const item of task.items||[]){item.done=true;item.touched=true;item.changedAt=now;}}
+    if(action==='not-realized'){task.done=false;task.doneTouched=true;task.reviewStatus='not-realized';if(task.kind==='block')task.blockStatus='not-realized';}
+    if(action==='cancel'){task.done=false;task.doneTouched=true;task.reviewStatus='canceled';}
+    if(action==='reopen'){task.done=false;task.doneTouched=false;task.reviewStatus='';task.blockStatus='';task.postponedTo='';}
+    if(action==='postpone'){const suggested=new Date(safeDate(date));suggested.setDate(suggested.getDate()+7);const suggestedKey=`${suggested.getFullYear()}-${String(suggested.getMonth()+1).padStart(2,'0')}-${String(suggested.getDate()).padStart(2,'0')}`,target=prompt('Para qual data deseja adiar?',suggestedKey);if(!target||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(target))return;task.done=false;task.doneTouched=true;task.reviewStatus='postponed';task.postponedTo=target;const targetDay=ensureTaskDay(target);if(!targetDay.tasks[id])targetDay.tasks[id]={...structuredClone(task),done:false,doneTouched:false,reviewStatus:'',postponedTo:'',manualOccurrence:true,originalDate:date,items:(task.items||[]).map(item=>({...item,done:false,touched:false}))};targetDay.updatedAt=now;}
+    task.doneChangedAt=now;task.reviewChangedAt=now;day.updatedAt=now;saveLocal();renderTasks();renderTaskReview();renderPlanner();renderWeekly();renderTaskWeekly();renderTaskCalendar();renderSummary();toast('Ocorrência atualizada.');
   }
   function renderTaskFocus(){
     if(!activeTaskId)return;
@@ -1242,7 +1273,7 @@
   function parseProjectFrequency(title){const text=String(title||'').toLocaleLowerCase('pt-BR');if(/15 dias|duas semanas|2 semanas/.test(text))return'biweekly';if(/cada 2 meses|a cada 2 meses|bimestr/.test(text))return'bimonthly';if(/cada 3 meses|a cada 3 meses|trimestr/.test(text))return'quarterly';if(/cada 6 meses|a cada 6 meses|semestr/.test(text))return'semiannual';if(/anual|cada ano|uma vez ao ano|anivers/.test(text))return'annual';if(/seman/.test(text))return'weekly';return'monthly';}
   function sheetHistory(row,headers){const history={};for(let index=18;index<headers.length;index++){const period=String(headers[index]??'');if(/^20\d{4}$/.test(period)){const value=projectValue(row[index]);if(value!==null)history[period]=value;}}return history;}
   async function importProjectsWorkbook(file){if(!window.XLSX){toast('O leitor de planilhas não carregou. Verifique a conexão e tente novamente.');return;}const status=$('#project-import-status');status.textContent='Lendo a planilha…';try{const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'}),sheet=workbook.Sheets.Objetivos;if(!sheet)throw new Error('A aba “Objetivos” não foi encontrada.');const rows=XLSX.utils.sheet_to_json(sheet,{header:1,raw:true,defval:null}),headers=rows[0]||[],projectsByCode=new Map();for(const row of rows.slice(1)){const code=String(row[9]??'').trim(),order=Number(row[10]);if(!code||!Number.isFinite(order))continue;const title=String(row[13]??'').trim(),area=String(row[8]??'').replace(/^\(\d+\)\s*/,'').trim(),statusValue=String(row[16]??'Em andamento'),progress=projectValue(row[17]),history=sheetHistory(row,headers),start=row[14]?`${String(row[14]).slice(0,4)}-01-01`:'',end=row[15]?`${String(row[15]).slice(0,4)}-12-31`:'';if(order===0){projectsByCode.set(code,{id:`project-${code}`,code,order:projectsByCode.size,title,description:'',area,status:statusValue,type:String(row[11]??'Descrição'),startDate:start,endDate:end,icon:'◈',color:projectColorForArea(area),notes:'',history,source:'spreadsheet',tasks:[],updatedAt:stamp(),deleted:false});continue;}let project=projectsByCode.get(code);if(!project){project={id:`project-${code}`,code,order:projectsByCode.size,title:`Projeto ${code}`,description:'',area,status:'Em andamento',type:'Descrição',startDate:'',endDate:'',icon:'◈',color:projectColorForArea(area),notes:'',history:{},source:'spreadsheet',tasks:[],updatedAt:stamp(),deleted:false};projectsByCode.set(code,project);}const recurring=String(row[12]??'').toLocaleLowerCase()==='s',taskId=`project-task-${code}-${order}`,criteria=[];const aux=workbook.Sheets[`${code}-${order}`];if(aux){const auxRows=XLSX.utils.sheet_to_json(aux,{header:1,raw:true,defval:null});for(let criterionIndex=1;criterionIndex<Math.min(auxRows.length,19);criterionIndex++){const weight=Number(auxRows[criterionIndex]?.[0]);if(!Number.isFinite(weight)||weight<=0)continue;criteria.push({id:`criterion-${code}-${order}-${criterionIndex}`,label:`Critério ${criterionIndex}`,weight,progress:projectValue(auxRows[criterionIndex]?.[1])??0,status:'Em andamento',updatedAt:stamp(),deleted:false});}}project.tasks.push({id:taskId,projectId:project.id,code:`${code}-${order}`,order,title,type:String(row[11]??'Tarefa'),recurring,frequency:recurring?parseProjectFrequency(title):'',monthWeek:null,status:statusValue,progress,icon:'▰',color:project.color,notes:'',criteria,occurrences:[],history,startDate:start,endDate:end,completed:!recurring&&statusValue==='Concluída',source:'spreadsheet',updatedAt:stamp(),deleted:false});}const imported=[...projectsByCode.values()],custom=state.projects.filter(project=>!['spreadsheet','example'].includes(project.source)&&!imported.some(item=>item.id===project.id));state.projects=[...imported,...custom];selectedProjectHistoryId=imported[0]?.id||'';openProjects.clear();if(imported[0])openProjects.add(imported[0].id);saveLocal();renderProjects();status.textContent=`Importação concluída: ${imported.length} projetos e ${imported.reduce((sum,project)=>sum+project.tasks.length,0)} atividades.`;toast('Planilha importada com histórico e estrutura completa.');}catch(error){console.error(error);status.textContent=`Não foi possível importar: ${error.message||'arquivo inválido'}`;toast(status.textContent);}finally{$('#project-import-file').value='';}}
-  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderPlanner(); renderWeekly(); renderMonthly(); renderTaskWeekly(); renderTaskMonthly(); renderTaskAnnual(); renderTaskCalendar(); renderSummary(); renderAnchors(); renderActions(); renderProjects(); renderOccurrences(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
+  function render() { renderDay(); renderManage(); renderHistory(); renderTasks(); renderTaskReview(); renderPlanner(); renderWeekly(); renderMonthly(); renderTaskWeekly(); renderTaskMonthly(); renderTaskAnnual(); renderTaskCalendar(); renderSummary(); renderAnchors(); renderActions(); renderProjects(); renderOccurrences(); if($('#routine-focus-dialog').open)renderFocusRoutine(); if($('#task-focus-dialog').open)renderTaskFocus(); }
   function setSection(section){
     currentSection=section;
     $$('.workspace-view').forEach(view=>view.classList.toggle('active-workspace',view.id===`${section}-workspace`));
@@ -1277,6 +1308,7 @@
     if(view==='month')renderTaskMonthly();
     if(view==='annual')renderTaskAnnual();
     if(view==='calendar')renderTaskCalendar();
+    if(view==='review')renderTaskReview();
   }
   function buildWeekdayOptions(selected=[0,1,2,3,4,5,6],target='#weekday-options') {
     $(target).innerHTML = WEEKDAYS.map((day,i)=>`<label class="weekday-option"><input type="checkbox" value="${i}" ${selected.includes(i)?'checked':''}><span>${day}</span></label>`).join('');
@@ -1369,7 +1401,7 @@
     if($('#task-end').value&&$('#task-start').value&&$('#task-end').value<$('#task-start').value){toast('A data final precisa ser igual ou posterior à inicial.');return;}
     const oldItems=new Map((existing?.items||[]).map(item=>[item.id,item]));
     const kind=$('#task-kind').value;
-    const next={id,name,description:$('#task-description').value.trim(),notes:existing?$('#task-notes').value.trim():'',icon:$('#task-icon').value.trim()||'✓',color:$('#task-color').value,scheduledTime:$('#task-time').value,durationMinutes:Number($('#task-duration').value)||45,kind:kind==='block'?'block':'regular',consultation:kind==='consultation',frequency,monthWeek:MONTHLY_TASK_FREQUENCIES.includes(frequency)?Number($('#task-month-week').value)||1:null,weekdays,startDate:$('#task-start').value,endDate:$('#task-end').value,items:items.map(item=>({...oldItems.get(item.id),...item})),updatedAt:stamp(),deleted:false};
+    const next={id,name,description:$('#task-description').value.trim(),notes:existing?$('#task-notes').value.trim():'',icon:$('#task-icon').value.trim()||'✓',color:$('#task-color').value,scheduledTime:$('#task-time').value,durationMinutes:Number($('#task-duration').value)||45,kind:kind==='block'?'block':'regular',consultation:kind==='consultation',frequency,monthWeek:MONTHLY_TASK_FREQUENCIES.includes(frequency)?Number($('#task-month-week').value)||1:null,weekdays,startDate:$('#task-start').value,endDate:$('#task-end').value,items:items.map(item=>({...oldItems.get(item.id),...item})),createdAt:existing?.createdAt||existing?.updatedAt||stamp(),updatedAt:stamp(),deleted:false};
     if(existing)state.tasks=state.tasks.map(task=>task.id===id?next:task);else state.tasks.push(next);
     for(const [date,day] of Object.entries(state.taskHistory))if(date>=isoToday())reconcileTaskDay(date,day,state.tasks);
     saveLocal();$('#task-dialog').close();render();toast('Tarefa salva.');
@@ -1817,6 +1849,9 @@
   const syncTaskFilters=(source,renderSource=true)=>{const calendar=source==='calendar',frequency=$(calendar?'#task-calendar-filter-frequency':'#task-filter-frequency').value,kind=$(calendar?'#task-calendar-filter-kind':'#task-filter-kind').value;$(calendar?'#task-filter-frequency':'#task-calendar-filter-frequency').value=frequency;$(calendar?'#task-filter-kind':'#task-calendar-filter-kind').value=kind;if(renderSource)renderTasks();renderTaskCalendar();};
   $('#task-manage-filters').addEventListener('change',()=>syncTaskFilters('manage'));
   $('#task-calendar-filters').addEventListener('change',()=>syncTaskFilters('calendar'));
+  $('#task-review-filters').addEventListener('change',renderTaskReview);
+  $('#task-review-clear').onclick=()=>{$('#task-review-frequency').value='';$('#task-review-status').value='open';$('#task-review-period').value='90';renderTaskReview();};
+  $('#task-review-list').addEventListener('click',event=>{const action=event.target.closest('[data-review-action]'),card=event.target.closest('[data-review-date][data-review-task]');if(action&&card)reviewTaskOccurrence(card.dataset.reviewDate,card.dataset.reviewTask,action.dataset.reviewAction);});
   const clearTaskFilters=()=>{$('#task-filter-frequency').value='';$('#task-filter-kind').value='';$('#task-calendar-filter-frequency').value='';$('#task-calendar-filter-kind').value='';renderTasks();renderTaskCalendar();};
   $('#task-clear-filters').onclick=$('#task-calendar-clear-filters').onclick=clearTaskFilters;
   const renderTaskMonthViews=()=>{renderTaskMonthly();renderTaskCalendar();};
