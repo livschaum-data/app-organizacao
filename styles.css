@@ -452,6 +452,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 @media(max-width:560px){.summary-totals article{padding:14px}.summary-period summary{align-items:flex-start;flex-wrap:wrap}.summary-period summary strong{flex:0 0 100%;text-align:left;margin-left:21px}.summary-day{align-items:flex-start;flex-direction:column}.summary-day>div{justify-content:flex-start}.timeline-event{font-size:10px;gap:4px;flex-wrap:wrap}.timeline-event time{font-size:9px}}
 /* Abas internas de âncoras e áreas. */
 .anchor-view{display:none;padding:28px 0 40px}.anchor-view.active-view{display:block}.anchor-tabs{margin-top:18px}
+.anchor-planning-card{border-radius:0;font-weight:400}.anchor-planning-card small{display:block;margin-top:3px;color:#7a8580;font-size:8px;font-weight:500;line-height:1.25}.anchor-planning-card:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
 .anchor-month-summary{margin-bottom:16px;padding:14px 16px;border:1px solid #e7e1d9;border-radius:14px;background:#faf8f5}.anchor-month-summary>strong{display:block;margin-bottom:10px;font-size:12px}.anchor-month-summary>div{display:flex;flex-wrap:wrap;gap:8px}.anchor-month-summary .weekly-anchor{width:auto;min-width:150px}
 
 /* Hierarquia de ações e subações. */
