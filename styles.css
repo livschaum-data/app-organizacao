@@ -323,6 +323,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .weekly-table thead .weekly-day-6{background:#81c86d;color:#20351e}
 .weekly-table thead .weekly-day-0{background:#f1d84f;color:#3b3418}
 .weekly-table tbody th{background:color-mix(in srgb,var(--area-color) 85%,white);padding:11px 9px;font:800 11px/1.35 Manrope,sans-serif}
+.weekly-table tbody th{position:relative;padding-right:29px}.category-row-toggle{position:absolute;top:8px;right:7px;display:grid;place-items:center;width:19px;height:19px;padding:0;border:0;border-radius:5px;background:#ffffff80;color:#486d70;font:800 13px/1 Manrope,sans-serif;cursor:pointer}.category-row-toggle:hover{background:#fff}.category-row-toggle:focus-visible{outline:2px solid var(--accent-dark);outline-offset:1px}.weekly-table tbody tr.is-category-collapsed>td{display:none}.weekly-table tbody tr.is-category-collapsed>th{height:42px;vertical-align:middle}.weekly-table tbody tr.is-category-collapsed .weekly-area-icon{display:inline;margin:0 7px 0 0;font-size:14px}
 .weekly-area-icon{display:block;margin-bottom:6px;color:#326f73;font-size:17px}
 .weekly-table tbody td{background:color-mix(in srgb,var(--area-color) 43%,white);padding:8px 6px;min-height:48px}
 .weekly-anchor{display:flex;align-items:flex-start;gap:4px;padding:4px 2px;font-size:10px;line-height:1.3;overflow-wrap:anywhere}

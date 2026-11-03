@@ -2106,5 +2106,16 @@
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){refreshCalendarDay();updateTimelineNow();refreshFromCloud();}});
   window.addEventListener('online',refreshFromCloud);
   setInterval(()=>{refreshCalendarDay();updateTimelineNow();refreshFromCloud();},60000);
+  const collapsedCategoryRows=new Set();
+  function enhanceCollapsibleCategoryRows(root=document){
+    $$('.weekly-table tbody tr',root).forEach(row=>{
+      const heading=row.querySelector(':scope > th');if(!heading||heading.querySelector('.category-row-toggle')||heading.querySelector('.annual-row-toggle'))return;
+      const container=row.closest('[id]'),tables=container?[...container.querySelectorAll('.weekly-table')]:[row.closest('.weekly-table')],table=row.closest('.weekly-table'),tableIndex=Math.max(0,tables.indexOf(table)),label=heading.textContent.trim(),rowIndex=[...row.parentElement.children].indexOf(row),key=`${container?.id||'page'}|${tableIndex}|${label}|${rowIndex}`;
+      row.dataset.categoryRowKey=key;const collapsed=collapsedCategoryRows.has(key);row.classList.toggle('is-category-collapsed',collapsed);
+      heading.insertAdjacentHTML('beforeend',`<button type="button" class="category-row-toggle" aria-expanded="${!collapsed}" aria-label="${collapsed?'Mostrar':'Ocultar'} categoria ${escapeHTML(label)}"><span aria-hidden="true">${collapsed?'▸':'▾'}</span></button>`);
+    });
+  }
+  document.addEventListener('click',event=>{const button=event.target.closest('.category-row-toggle');if(!button)return;const row=button.closest('tr'),key=row?.dataset.categoryRowKey;if(!row||!key)return;const collapsed=!row.classList.contains('is-category-collapsed');row.classList.toggle('is-category-collapsed',collapsed);if(collapsed)collapsedCategoryRows.add(key);else collapsedCategoryRows.delete(key);button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',`${collapsed?'Mostrar':'Ocultar'} categoria ${row.querySelector(':scope > th')?.textContent.replace(/[\u25b8▾]/g,'').trim()||''}`);button.querySelector('span').textContent=collapsed?'▸':'▾';});
+  const categoryRowsObserver=new MutationObserver(()=>enhanceCollapsibleCategoryRows());categoryRowsObserver.observe(document.body,{childList:true,subtree:true});
   setupColorPalettes();render();initializeSync();
 })();
