@@ -9,8 +9,10 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="styles.css?v=20261030-annual-monthly-toggle">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
-  <script defer src="app.js?v=20261030-annual-monthly-toggle"></script>
+  <script src="project-seed-data.js?v=20261102-projects-v2"></script>
+  <script defer src="app.js?v=20261102-projects-v2"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -28,6 +30,7 @@
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
         <button type="button" class="sidebar-link" data-section="tasks"><span>✓</span> Tarefas</button>
         <button type="button" class="sidebar-link" data-section="actions"><span>✦</span> Ações</button>
+        <button type="button" class="sidebar-link" data-section="projects"><span>◈</span> Projetos</button>
         <button type="button" class="sidebar-link" data-section="occurrences"><span>◉</span> Acontecimentos</button>
         <button type="button" class="sidebar-link" data-section="settings"><span>⚙</span> Configuração</button>
       </nav>
@@ -194,6 +197,15 @@
         <div id="action-area-list" class="area-list"></div>
       </section>
 
+      <section id="projects-workspace" class="workspace-view">
+        <div class="planner-hero project-hero"><div class="eyebrow">AÇÕES E PROJETOS</div><h1>Projetos em progresso.</h1><p>Objetivos, etapas e tarefas recorrentes reunidos em uma visão só.</p></div>
+        <div class="section-heading workspace-heading"><div><div class="eyebrow">SEU PLANEJAMENTO</div><h2>Projetos</h2></div><div class="project-heading-actions"><input id="project-import-file" class="sr-only" type="file" accept=".xls,.xlsx,.xlsm"><button type="button" class="secondary-button" id="project-import">↑ Importar planilha</button><button type="button" class="secondary-button" id="project-snapshot">Fechar mês</button><button type="button" class="primary-button" id="add-project">＋ Novo projeto</button></div></div>
+        <nav class="tabs project-tabs" aria-label="Visões de projetos"><button type="button" class="tab project-tab active" data-project-view="progress">Projetos | Progresso</button><button type="button" class="tab project-tab" data-project-view="recurring">Tarefas recorrentes</button><button type="button" class="tab project-tab" data-project-view="list">Lista</button><button type="button" class="tab project-tab" data-project-view="history">Histórico</button></nav>
+        <div class="project-toolbar"><label>Área<select id="project-filter-area" class="text-input"><option value="">Todas</option></select></label><label>Status<select id="project-filter-status" class="text-input"><option value="">Todos</option><option>Em andamento</option><option>Stand-by</option><option>Concluída</option><option>Remodelada</option><option>Descartada</option></select></label><label>Tipo<select id="project-filter-type" class="text-input"><option value="">Todos</option><option>Tarefa</option><option>Hábito</option><option>Meta</option><option>Hábito/Meta</option><option>Tarefa/Hábito</option></select></label><label>Recorrência<select id="project-filter-recurring" class="text-input"><option value="">Todas</option><option value="yes">Recorrentes</option><option value="no">Não recorrentes</option></select></label><label>Ano<input id="project-filter-year" class="text-input" type="number" min="2000" max="2100" placeholder="Todos"></label><label>Progresso<select id="project-filter-progress" class="text-input"><option value="">Todos</option><option value="missing">Sem medição</option><option value="0-24">0–24%</option><option value="25-49">25–49%</option><option value="50-74">50–74%</option><option value="75-99">75–99%</option><option value="100">100%</option></select></label><label>Ordenar<select id="project-sort" class="text-input"><option value="code">Código</option><option value="title">Nome</option><option value="progress-desc">Maior progresso</option><option value="progress-asc">Menor progresso</option><option value="updated">Atualização recente</option></select></label><label class="project-search-field">Buscar<input id="project-filter-search" class="text-input" type="search" placeholder="Projeto ou atividade"></label><button type="button" id="project-clear-filters" class="text-button">Limpar filtros</button></div>
+        <p id="project-import-status" class="project-import-status">A importação aceita a aba “Objetivos” da planilha original e preserva projetos criados manualmente.</p>
+        <div id="projects-content" class="projects-content"></div>
+      </section>
+
       <section id="occurrences-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">ACONTECIMENTOS</div><h1>Datas para lembrar.</h1><p>Lembretes, eventos, feriados e aniversários organizados no tempo.</p></div>
         <div class="section-heading"><div><div class="eyebrow">SEU CALENDÁRIO</div><h2>Acontecimentos</h2></div><button type="button" class="primary-button" id="add-occurrence">＋ Novo acontecimento</button></div>
@@ -254,11 +266,48 @@
     </form>
   </dialog>
 
+  <dialog id="project-dialog" class="dialog" aria-labelledby="project-dialog-title">
+    <form id="project-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">AÇÕES E PROJETOS</div><h2 id="project-dialog-title">Novo projeto</h2></div><button type="button" class="close-button" data-close="project-dialog" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="project-id"><div class="form-row"><div class="field"><label class="field-label" for="project-code">Código</label><input class="text-input" id="project-code" maxlength="20" placeholder="Ex.: 2004"></div><div class="field"><label class="field-label" for="project-order">Ordem</label><input class="text-input" id="project-order" type="number" min="0" step="1"></div></div><label class="field-label" for="project-title">Nome do projeto</label><input class="text-input" id="project-title" maxlength="160" required placeholder="Ex.: Me aproximar dos amigos que quero manter">
+      <label class="field-label" for="project-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="project-description" maxlength="3000" rows="3"></textarea>
+      <div class="form-row"><div class="field"><label class="field-label" for="project-area">Área</label><input class="text-input" id="project-area" maxlength="80" placeholder="Relacionamentos"></div><div class="field"><label class="field-label" for="project-status">Status</label><select class="text-input" id="project-status"><option>Em andamento</option><option>Stand-by</option><option>Concluída</option><option>Remodelada</option><option>Descartada</option></select></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="project-start">Início</label><input class="text-input" id="project-start" type="date"></div><div class="field"><label class="field-label" for="project-end">Fim <span class="optional">(opcional)</span></label><input class="text-input" id="project-end" type="date"></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="project-icon">Ícone</label><input class="text-input icon-input" id="project-icon" maxlength="8" value="◈"></div><div class="field"><label class="field-label" for="project-color">Cor</label><input class="color-input" id="project-color" type="color" value="#6657e8"></div></div>
+      <label class="field-label" for="project-type">Tipo</label><select class="text-input" id="project-type"><option>Descrição</option><option>Meta</option><option>Tarefa</option><option>Hábito</option><option>Hábito/Meta</option><option>Tarefa/Hábito</option></select>
+      <label class="field-label" for="project-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input catalog-notes" id="project-notes" maxlength="20000" rows="5"></textarea>
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-project">Excluir projeto</button><span></span><button type="button" class="secondary-button" data-close="project-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar projeto</button></div>
+    </form>
+  </dialog>
+
   <dialog id="action-area-dialog" class="dialog small-dialog" aria-labelledby="action-area-dialog-title">
     <form id="action-area-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2 id="action-area-dialog-title">Nova área geral</h2></div><button type="button" class="close-button" data-close="action-area-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="action-area-id"><label class="field-label" for="action-area-name">Nome da área geral</label><input class="text-input" id="action-area-name" maxlength="60" required placeholder="Ex.: Casa e ambiente">
       <label class="field-label" for="action-area-color">Cor</label><input class="color-input" id="action-area-color" type="color" value="#dcebe7">
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-action-area">Excluir área</button><span></span><button type="button" class="secondary-button" data-close="action-area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar área</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="project-task-dialog" class="dialog" aria-labelledby="project-task-dialog-title">
+    <form id="project-task-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">TAREFA RECORRENTE</div><h2 id="project-task-dialog-title">Nova tarefa</h2></div><button type="button" class="close-button" data-close="project-task-dialog" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="project-task-id"><div class="form-row"><div class="field"><label class="field-label" for="project-task-code">Código</label><input class="text-input" id="project-task-code" maxlength="30"></div><div class="field"><label class="field-label" for="project-task-order">Ordem</label><input class="text-input" id="project-task-order" type="number" min="1" step="1"></div></div><label class="field-label" for="project-task-title">Nome da atividade</label><input class="text-input" id="project-task-title" maxlength="160" required placeholder="Ex.: conversar com alguém importante">
+      <label class="field-label" for="project-task-project">Projeto</label><select class="text-input" id="project-task-project"></select>
+      <div class="form-row"><div class="field"><label class="field-label" for="project-task-type">Tipo</label><select class="text-input" id="project-task-type"><option>Tarefa</option><option>Hábito</option><option>Meta</option><option>Hábito/Meta</option><option>Tarefa/Hábito</option></select></div><div class="field"><label class="field-label" for="project-task-recurring">Recorrência</label><select class="text-input" id="project-task-recurring"><option value="no">Não recorrente</option><option value="yes">Recorrente</option></select></div></div>
+      <div id="project-task-recurrence-fields" class="form-row hidden"><div class="field"><label class="field-label" for="project-task-frequency">Frequência</label><select class="text-input" id="project-task-frequency"><option value="weekly">Semanal</option><option value="biweekly">A cada 2 semanas</option><option value="monthly">Mensal</option><option value="bimonthly">A cada 2 meses</option><option value="quarterly">A cada 3 meses</option><option value="semiannual">A cada 6 meses</option><option value="annual">Anual</option></select></div><div class="field"><label class="field-label" for="project-task-month-week">Semana do mês</label><select class="text-input" id="project-task-month-week"><option value="">Qualquer semana</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option><option value="6">Última semana</option></select></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="project-task-status">Status</label><select class="text-input" id="project-task-status"><option>Em andamento</option><option>Concluída</option><option>Stand-by</option><option>Remodelada</option><option>Descartada</option></select></div><div class="field"><label class="field-label" for="project-task-progress">Progresso (%)</label><input class="text-input" id="project-task-progress" type="number" min="0" max="100" step="1" value="0"></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="project-task-color">Cor</label><input class="color-input" id="project-task-color" type="color" value="#6657e8"></div><div class="field"></div></div>
+      <div class="project-criteria-editor"><div class="section-heading"><div><div class="eyebrow">CÁLCULO PONDERADO</div><h3>Critérios</h3></div><button type="button" class="text-button" id="project-add-criterion">＋ Adicionar critério</button></div><p class="schedule-hint">Quando houver critérios, o progresso da atividade é calculado pela média ponderada. Critérios remodelados ou descartados não entram no cálculo.</p><div id="project-criteria-list"></div></div>
+      <label class="field-label" for="project-task-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input catalog-notes" id="project-task-notes" maxlength="10000" rows="5"></textarea>
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-project-task">Excluir tarefa</button><span></span><button type="button" class="secondary-button" data-close="project-task-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar tarefa</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="project-occurrence-dialog" class="dialog small-dialog" aria-labelledby="project-occurrence-title">
+    <form id="project-occurrence-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">RECORRÊNCIA</div><h2 id="project-occurrence-title">Registrar ocorrência</h2></div><button type="button" class="close-button" data-close="project-occurrence-dialog" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="project-occurrence-project"><input type="hidden" id="project-occurrence-task"><label class="field-label" for="project-occurrence-date">Data</label><input class="text-input" id="project-occurrence-date" type="date" required>
+      <label class="field-label" for="project-occurrence-result">Resultado</label><select class="text-input" id="project-occurrence-result"><option value="realized">Realizada</option><option value="partial">Parcialmente realizada</option><option value="not-realized">Não realizada</option><option value="skipped">Ignorada</option></select>
+      <label class="field-label" for="project-occurrence-progress">Progresso da ocorrência (%)</label><input class="text-input" id="project-occurrence-progress" type="number" min="0" max="100" step="1" value="100">
+      <label class="field-label" for="project-occurrence-notes">Notas <span class="optional">(opcional)</span></label><textarea class="text-input" id="project-occurrence-notes" rows="4" maxlength="3000"></textarea>
+      <div class="dialog-actions"><span></span><button type="button" class="secondary-button" data-close="project-occurrence-dialog">Cancelar</button><button type="submit" class="primary-button">Registrar</button></div>
     </form>
   </dialog>
 
