@@ -33,6 +33,7 @@
         <button type="button" class="sidebar-link" data-section="actions"><span>✦</span> Ações</button>
         <button type="button" class="sidebar-link" data-section="projects"><span>◈</span> Projetos</button>
         <button type="button" class="sidebar-link" data-section="studies"><span>✎</span> Estudos</button>
+        <button type="button" class="sidebar-link" data-section="leisure"><span>♡</span> Lazer</button>
         <button type="button" class="sidebar-link" data-section="settings"><span>⚙</span> Configuração</button>
       </nav>
       <p class="sidebar-note">Um ponto de apoio para cada dia.</p>
@@ -221,6 +222,15 @@
         <div id="studies-content"></div>
       </section>
 
+      <section id="leisure-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">SEU TEMPO LIVRE</div><h1>Lazer em progresso.</h1><p>Filmes, séries, livros e projetos criativos distribuídos no seu ritmo.</p></div>
+        <div class="section-heading workspace-heading"><div><div class="eyebrow">ORGANIZAR LAZER</div><h2>Lazer</h2></div><button type="button" class="primary-button" id="add-leisure">＋ Nova categoria</button></div>
+        <nav class="tabs leisure-tabs" aria-label="Visões de lazer"><button type="button" class="tab leisure-tab active" data-leisure-view="annual">Visão anual</button><button type="button" class="tab leisure-tab" data-leisure-view="monthly">Visão mensal</button><button type="button" class="tab leisure-tab" data-leisure-view="week">Visão semanal</button><button type="button" class="tab leisure-tab" data-leisure-view="list">Lista</button></nav>
+        <div class="date-navigator leisure-month-navigator"><button type="button" id="leisure-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="leisure-month" type="month" aria-label="Escolher mês do lazer"><button type="button" id="leisure-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="leisure-current-month" class="today-button">Atual</button></div>
+        <div class="date-navigator leisure-week-navigator hidden"><button type="button" id="leisure-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="leisure-week-date" type="date" aria-label="Escolher semana do lazer"><button type="button" id="leisure-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="leisure-week-today" class="today-button">Esta semana</button></div>
+        <div id="leisure-content"></div>
+      </section>
+
       <section id="occurrences-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">ACONTECIMENTOS</div><h1>Datas para lembrar.</h1><p>Lembretes, eventos, feriados e aniversários organizados no tempo.</p></div>
         <div class="section-heading"><div><div class="eyebrow">SEU CALENDÁRIO</div><h2>Acontecimentos</h2></div><button type="button" class="primary-button" id="add-occurrence">＋ Novo acontecimento</button></div>
@@ -266,9 +276,9 @@
 
   <dialog id="action-dialog" class="dialog" aria-labelledby="action-dialog-title">
     <form id="action-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="action-dialog-title">Nova ação</h2></div><button type="button" class="close-button" data-close="action-dialog" aria-label="Fechar">×</button></div>
-      <input type="hidden" id="action-id"><input type="hidden" id="action-study" value="false"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
+      <input type="hidden" id="action-id"><input type="hidden" id="action-study" value="false"><input type="hidden" id="action-leisure" value="false"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
       <label class="field-label" for="action-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="action-description" maxlength="2000" rows="3"></textarea>
-      <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone (opcional)</label><input class="text-input icon-input" id="action-icon" maxlength="8"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone (opcional)</label><input class="text-input icon-input" id="action-icon" maxlength="8"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div><div id="leisure-extra-fields" class="hidden"><div class="form-row"><div class="field"><label class="field-label" for="action-leisure-type">Tipo de lazer</label><select class="text-input" id="action-leisure-type"><option value="">Categoria</option><option value="film">Filme</option><option value="series">Série</option><option value="book">Livro</option><option value="painting">Pintura</option><option value="craft">Artesanato</option><option value="other">Outro</option></select></div><div class="field"><label class="field-label" for="action-season">Temporada <span class="optional">(séries)</span></label><input class="text-input" id="action-season" type="number" min="1" step="1" placeholder="Ex.: 2"></div></div></div>
       <label class="field-label" for="action-area">Área <span class="optional">(opcional)</span></label><select class="text-input" id="action-area"></select>
       <label class="field-label" for="action-parent">Ação mãe <span class="optional">(opcional)</span></label><select class="text-input" id="action-parent"><option value="">Ação principal</option></select><p class="schedule-hint">A subação mantém planejamento, vencimento e conclusão próprios.</p>
       <label class="field-label" for="action-schedule">Agendar por</label><select class="text-input" id="action-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option></select>
