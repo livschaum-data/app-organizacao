@@ -82,14 +82,14 @@
       </section>
 
       <section id="weekly-workspace" class="workspace-view">
-        <div class="planner-hero"><div class="eyebrow">VISÃO SEMANAL</div><h1>Sua semana, de relance.</h1><p id="weekly-range-label" class="planner-date-label"></p><p>As âncoras de cada área distribuídas pelos dias da semana.</p>
+        <div class="planner-hero"><div class="eyebrow">VISÃO SEMANAL</div><h1>Sua semana, de relance.</h1><p id="weekly-range-label" class="planner-date-label"></p><p>As âncoras de cada tipo distribuídas pelos dias da semana.</p>
           <div class="date-navigator"><button type="button" id="weekly-prev" class="round-button" aria-label="Semana anterior">←</button><input id="weekly-date" type="date" aria-label="Escolher semana"><button type="button" id="weekly-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="weekly-today" class="today-button">Esta semana</button></div>
         </div>
         <div id="weekly-grid" class="weekly-scroll"></div>
       </section>
 
       <section id="monthly-workspace" class="workspace-view">
-        <div class="planner-hero"><div class="eyebrow">VISÃO MENSAL</div><h1>Suas semanas do mês.</h1><p id="monthly-range-label" class="planner-date-label"></p><p>Âncoras programadas para semanas específicas, organizadas por área.</p>
+        <div class="planner-hero"><div class="eyebrow">VISÃO MENSAL</div><h1>Suas semanas do mês.</h1><p id="monthly-range-label" class="planner-date-label"></p><p>Âncoras programadas para semanas específicas, organizadas por tipo.</p>
           <div class="date-navigator"><button type="button" id="monthly-prev" class="round-button" aria-label="Mês anterior">←</button><input id="monthly-date" type="month" aria-label="Escolher mês da visão mensal"><button type="button" id="monthly-next" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="monthly-today" class="today-button">Este mês</button></div>
         </div>
         <div id="monthly-grid" class="weekly-scroll"></div>
@@ -103,13 +103,13 @@
 
       <section id="anchors-workspace" class="workspace-view">
         <div class="section-heading workspace-heading"><div><div class="eyebrow">PONTOS DE APOIO</div><h2>Âncoras</h2></div><button type="button" class="primary-button" id="add-anchor">＋ Nova âncora</button></div>
-        <nav class="tabs anchor-tabs" aria-label="Cadastro de âncoras"><button type="button" class="tab anchor-tab active" data-anchor-view="anchors">Âncoras</button><button type="button" class="tab anchor-tab" data-anchor-view="areas">Áreas</button></nav>
-        <div id="anchor-view-anchors" class="anchor-view active-view"><p class="section-intro">Organize atividades por área e escolha em quais dias elas aparecem nas visões diárias.</p><div class="anchor-filter"><label for="anchor-area-filter">Filtrar por área</label><select id="anchor-area-filter" aria-label="Filtrar âncoras por área"></select></div><div id="anchor-list" class="anchor-list"></div></div>
-        <div id="anchor-view-areas" class="anchor-view"><div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Áreas</h2></div><button type="button" class="text-button" id="add-area">＋ Nova área</button></div><div id="area-list" class="area-list"></div>
+        <nav class="tabs anchor-tabs" aria-label="Cadastro de âncoras"><button type="button" class="tab anchor-tab active" data-anchor-view="anchors">Âncoras</button><button type="button" class="tab anchor-tab" data-anchor-view="areas">Tipos de âncora</button></nav>
+        <div id="anchor-view-anchors" class="anchor-view active-view"><p class="section-intro">Organize atividades por tipo e escolha em quais dias elas aparecem nas visões diárias.</p><div class="anchor-filter"><label for="anchor-area-filter">Filtrar por tipo</label><select id="anchor-area-filter" aria-label="Filtrar âncoras por tipo"></select></div><div id="anchor-list" class="anchor-list"></div></div>
+        <div id="anchor-view-areas" class="anchor-view"><div class="section-heading area-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Tipos de âncora</h2></div><button type="button" class="text-button" id="add-area">＋ Novo tipo</button></div><div id="area-list" class="area-list"></div>
         </div>
       </section>
 
-      <section id="settings-workspace" class="workspace-view"><div class="section-heading workspace-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Configuração</h2></div></div><p class="section-intro">Escolha onde cada grupo aparece nas diferentes visões do app.</p><form id="daily-view-groups-form" class="settings-form"><div class="settings-panel"><div class="settings-panel-head"><div><span class="settings-panel-icon" aria-hidden="true">☷</span><div><strong>Organização das visões</strong><small>As alterações valem para todos os dias.</small></div></div></div><div class="settings-columns" aria-hidden="true"><span>Grupo</span><span>Visão diária</span><span>Visão semanal</span><span>Cronograma</span></div><div id="daily-view-groups"></div></div><div class="settings-actions"><span>Você pode alterar estas opções quando quiser.</span><button type="submit" class="primary-button">Salvar alterações</button></div></form></section>
+      <section id="settings-workspace" class="workspace-view"><div class="section-heading workspace-heading"><div><div class="eyebrow">PERSONALIZAR</div><h2>Configuração</h2></div></div><p class="section-intro">Escolha onde cada grupo e tipo de âncora aparece nas diferentes visões do app.</p><form id="daily-view-groups-form" class="settings-form"><div class="settings-panel"><div class="settings-panel-head"><div><span class="settings-panel-icon" aria-hidden="true">☷</span><div><strong>Organização das visões</strong><small>As alterações valem para todos os dias.</small></div></div></div><div class="settings-columns" aria-hidden="true"><span>Grupo</span><span>Visão diária</span><span>Visão semanal</span><span>Cronograma</span></div><div id="daily-view-groups"></div></div><div class="settings-panel"><div class="settings-panel-head"><div><span class="settings-panel-icon" aria-hidden="true">✦</span><div><strong>Tipos de âncora</strong><small>Defina em quais visões aparecem as âncoras de cada tipo.</small></div></div></div><div class="settings-columns" aria-hidden="true"><span>Tipo de âncora</span><span>Visão diária</span><span>Visão semanal</span><span>Cronograma</span></div><div id="anchor-view-groups"></div></div><div class="settings-actions"><span>Você pode alterar estas opções quando quiser.</span><button type="submit" class="primary-button">Salvar alterações</button></div></form></section>
 
       <div id="routines-workspace" class="workspace-view">
       <section class="hero">
@@ -179,7 +179,7 @@
           <div class="action-filter-grid">
             <label>Buscar<input id="action-filter-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label>
             <label>Estado<select id="action-filter-status" class="text-input"><option value="">Todos</option><option value="open">Em aberto</option><option value="completed">Concluídas</option><option value="overdue">Vencidas</option></select></label>
-            <label>Área geral<select id="action-filter-area" class="text-input"><option value="">Todas</option></select></label>
+            <label>Área<select id="action-filter-area" class="text-input"><option value="">Todas</option></select></label>
             <label>Agendamento<select id="action-filter-schedule" class="text-input"><option value="">Todos</option><option value="month">Por mês</option><option value="date">Por data</option></select></label>
             <label>Mês<input id="action-filter-month" class="text-input" type="month"></label>
             <label>Semana<select id="action-filter-week" class="text-input"><option value="">Todas</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option><option value="6">Última semana</option></select></label>
@@ -190,10 +190,10 @@
             <label>Vencimento de<input id="action-filter-due-from" class="text-input" type="date"></label>
             <label>até<input id="action-filter-due-to" class="text-input" type="date"></label>
           </div>
-          <div class="action-list-sort"><label for="action-sort-by">Ordenar por</label><select id="action-sort-by" class="text-input"><option value="due">Vencimento</option><option value="title">Nome</option><option value="area">Área geral</option><option value="created">Criação</option><option value="completed">Conclusão</option><option value="month">Mês</option><option value="week">Semana</option><option value="status">Estado</option></select><select id="action-sort-direction" class="text-input" aria-label="Direção da ordenação"><option value="asc">Crescente</option><option value="desc">Decrescente</option></select><button type="button" id="action-clear-filters" class="text-button">Limpar filtros</button></div>
+          <div class="action-list-sort"><label for="action-sort-by">Ordenar por</label><select id="action-sort-by" class="text-input"><option value="due">Vencimento</option><option value="title">Nome</option><option value="area">Área</option><option value="created">Criação</option><option value="completed">Conclusão</option><option value="month">Mês</option><option value="week">Semana</option><option value="status">Estado</option></select><select id="action-sort-direction" class="text-input" aria-label="Direção da ordenação"><option value="asc">Crescente</option><option value="desc">Decrescente</option></select><button type="button" id="action-clear-filters" class="text-button">Limpar filtros</button></div>
         </div>
         <div id="actions-content" class="actions-content"></div>
-        <div class="section-heading area-heading"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2>Áreas gerais</h2></div><button type="button" class="text-button" id="add-action-area">＋ Nova área geral</button></div>
+        <div class="section-heading area-heading"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2>Áreas</h2></div><button type="button" class="text-button" id="add-action-area">＋ Nova área</button></div>
         <div id="action-area-list" class="area-list"></div>
       </section>
 
@@ -254,7 +254,7 @@
       <input type="hidden" id="action-id"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
       <label class="field-label" for="action-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="action-description" maxlength="2000" rows="3"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone (opcional)</label><input class="text-input icon-input" id="action-icon" maxlength="8"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div>
-      <label class="field-label" for="action-area">Área geral <span class="optional">(opcional)</span></label><select class="text-input" id="action-area"></select>
+      <label class="field-label" for="action-area">Área <span class="optional">(opcional)</span></label><select class="text-input" id="action-area"></select>
       <label class="field-label" for="action-parent">Ação mãe <span class="optional">(opcional)</span></label><select class="text-input" id="action-parent"><option value="">Ação principal</option></select><p class="schedule-hint">A subação mantém planejamento, vencimento e conclusão próprios.</p>
       <label class="field-label" for="action-schedule">Agendar por</label><select class="text-input" id="action-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option></select>
       <div id="action-month-field"><label class="field-label" for="action-scheduled-month">Mês</label><input class="text-input" id="action-scheduled-month" type="month"><label class="field-label" for="action-week">Semana <span class="optional">(opcional)</span></label><select class="text-input" id="action-week"><option value="">Mês inteiro</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option><option value="6">Última semana</option></select></div>
@@ -282,8 +282,8 @@
   </dialog>
 
   <dialog id="action-area-dialog" class="dialog small-dialog" aria-labelledby="action-area-dialog-title">
-    <form id="action-area-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2 id="action-area-dialog-title">Nova área geral</h2></div><button type="button" class="close-button" data-close="action-area-dialog" aria-label="Fechar">×</button></div>
-      <input type="hidden" id="action-area-id"><label class="field-label" for="action-area-name">Nome da área geral</label><input class="text-input" id="action-area-name" maxlength="60" required placeholder="Ex.: Casa e ambiente">
+    <form id="action-area-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">ORGANIZAR AÇÕES</div><h2 id="action-area-dialog-title">Nova área</h2></div><button type="button" class="close-button" data-close="action-area-dialog" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="action-area-id"><label class="field-label" for="action-area-name">Nome da área</label><input class="text-input" id="action-area-name" maxlength="60" required placeholder="Ex.: Casa e ambiente">
       <label class="field-label" for="action-area-color">Cor</label><input class="color-input" id="action-area-color" type="color" value="#dcebe7">
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-action-area">Excluir área</button><span></span><button type="button" class="secondary-button" data-close="action-area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar área</button></div>
     </form>
@@ -369,7 +369,7 @@
       <div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="anchor-dialog-title">Nova âncora</h2></div><button type="button" class="close-button" data-close="anchor-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="anchor-id">
       <label class="field-label" for="anchor-title">Nome da âncora</label><input class="text-input" id="anchor-title" maxlength="120" required placeholder="Ex.: Leitura">
-      <div class="form-row"><div class="field"><label class="field-label" for="anchor-icon">Ícone</label><input class="text-input icon-input" id="anchor-icon" maxlength="8" value="✨"></div><div class="field"><label class="field-label" for="anchor-area">Área</label><select class="text-input" id="anchor-area" required></select></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="anchor-icon">Ícone</label><input class="text-input icon-input" id="anchor-icon" maxlength="8" value="✨"></div><div class="field"><label class="field-label" for="anchor-area">Tipo de âncora</label><select class="text-input" id="anchor-area" required></select></div></div>
       <label class="field-label" for="anchor-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="anchor-description" maxlength="500" rows="3" placeholder="Detalhes desta âncora"></textarea>
       <label class="field-label" for="anchor-time">Horário sugerido <span class="optional">(opcional)</span></label><input class="text-input routine-time-input" id="anchor-time" type="time">
       <label class="field-label" for="anchor-duration">Duração no cronograma <span class="optional">(minutos, opcional)</span></label><input class="text-input routine-time-input" id="anchor-duration" type="number" min="15" max="480" step="15" placeholder="45">
@@ -384,13 +384,11 @@
 
   <dialog id="area-dialog" class="dialog small-dialog" aria-labelledby="area-dialog-title">
     <form id="area-form" method="dialog">
-      <div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="area-dialog-title">Nova área</h2></div><button type="button" class="close-button" data-close="area-dialog" aria-label="Fechar">×</button></div>
+      <div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="area-dialog-title">Novo tipo de âncora</h2></div><button type="button" class="close-button" data-close="area-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="area-id">
-      <label class="field-label" for="area-name">Nome da área</label><input class="text-input" id="area-name" maxlength="40" required placeholder="Ex.: Projetos">
+      <label class="field-label" for="area-name">Nome do tipo</label><input class="text-input" id="area-name" maxlength="40" required placeholder="Ex.: Projetos">
       <label class="field-label" for="area-color">Cor de fundo</label><input class="color-input" id="area-color" type="color" value="#e8e5dd">
-      <label class="field-label" for="area-daily-view">Mostrar na visão diária</label><select class="text-input" id="area-daily-view"><option value="primary">Principal</option><option value="secondary">Secundária</option></select>
-      <label class="daily-weekly-toggle"><input type="checkbox" id="area-weekly-view"> Mostrar na visão semanal global</label>
-      <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-area">Excluir área</button><span></span><button type="button" class="secondary-button" data-close="area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar área</button></div>
+      <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-area">Excluir tipo</button><span></span><button type="button" class="secondary-button" data-close="area-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar tipo</button></div>
     </form>
   </dialog>
 
