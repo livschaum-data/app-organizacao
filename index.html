@@ -32,6 +32,7 @@
         <button type="button" class="sidebar-link" data-section="occurrences"><span>◉</span> Acontecimentos</button>
         <button type="button" class="sidebar-link" data-section="actions"><span>✦</span> Ações</button>
         <button type="button" class="sidebar-link" data-section="projects"><span>◈</span> Projetos</button>
+        <button type="button" class="sidebar-link" data-section="studies"><span>✎</span> Estudos</button>
         <button type="button" class="sidebar-link" data-section="settings"><span>⚙</span> Configuração</button>
       </nav>
       <p class="sidebar-note">Um ponto de apoio para cada dia.</p>
@@ -211,6 +212,15 @@
         <div id="projects-content" class="projects-content"></div>
       </section>
 
+      <section id="studies-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">SEU PLANEJAMENTO</div><h1>Estudos em progresso.</h1><p>Matérias e tópicos distribuídos no tempo, com o seu avanço sempre à vista.</p></div>
+        <div class="section-heading workspace-heading"><div><div class="eyebrow">ORGANIZAR ESTUDOS</div><h2>Estudos</h2></div><button type="button" class="primary-button" id="add-study">＋ Nova matéria</button></div>
+        <nav class="tabs study-tabs" aria-label="Visões de estudos"><button type="button" class="tab study-tab active" data-study-view="annual">Visão anual</button><button type="button" class="tab study-tab" data-study-view="monthly">Visão mensal</button><button type="button" class="tab study-tab" data-study-view="week">Visão semanal</button><button type="button" class="tab study-tab" data-study-view="list">Lista</button></nav>
+        <div class="date-navigator study-month-navigator"><button type="button" id="study-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="study-month" type="month" aria-label="Escolher mês dos estudos"><button type="button" id="study-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="study-current-month" class="today-button">Atual</button></div>
+        <div class="date-navigator study-week-navigator hidden"><button type="button" id="study-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="study-week-date" type="date" aria-label="Escolher semana dos estudos"><button type="button" id="study-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="study-week-today" class="today-button">Esta semana</button></div>
+        <div id="studies-content"></div>
+      </section>
+
       <section id="occurrences-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">ACONTECIMENTOS</div><h1>Datas para lembrar.</h1><p>Lembretes, eventos, feriados e aniversários organizados no tempo.</p></div>
         <div class="section-heading"><div><div class="eyebrow">SEU CALENDÁRIO</div><h2>Acontecimentos</h2></div><button type="button" class="primary-button" id="add-occurrence">＋ Novo acontecimento</button></div>
@@ -256,7 +266,7 @@
 
   <dialog id="action-dialog" class="dialog" aria-labelledby="action-dialog-title">
     <form id="action-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="action-dialog-title">Nova ação</h2></div><button type="button" class="close-button" data-close="action-dialog" aria-label="Fechar">×</button></div>
-      <input type="hidden" id="action-id"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
+      <input type="hidden" id="action-id"><input type="hidden" id="action-study" value="false"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
       <label class="field-label" for="action-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="action-description" maxlength="2000" rows="3"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="action-icon">Ícone (opcional)</label><input class="text-input icon-input" id="action-icon" maxlength="8"></div><div class="field"><label class="field-label" for="action-color">Cor</label><input class="color-input" id="action-color" type="color" value="#bbdcd8"></div></div>
       <label class="field-label" for="action-area">Área <span class="optional">(opcional)</span></label><select class="text-input" id="action-area"></select>
