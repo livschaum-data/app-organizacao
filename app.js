@@ -1207,13 +1207,20 @@
       for(let dayIndex=0;dayIndex<7;dayIndex++){
         const {date,key}=days[dayIndex],slots=Array.from({length:lanes.length},(_,lane)=>{
           const segment=segments.find(entry=>entry.lane===lane&&entry.start===dayIndex);
-          if(segment){const {item}=segment,kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder,span=segment.end-segment.start+1,width=`calc(${span*100}% + ${(span-1)*13}px)`;return `<button type="button" class="action-calendar-item occurrence-calendar-item occurrence-calendar-range" style="--action-color:${escapeHTML(item.color||'#5DFF5D')};width:${width}" data-edit-occurrence="${escapeHTML(item.id)}"><span>${escapeHTML(item.icon||kind.icon)}</span><span>${escapeHTML(item.title)}<small>${escapeHTML(kind.label)}</small></span></button>`;}
+          if(segment){const {item}=segment,kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder,span=segment.end-segment.start+1,width=`calc(${span*100}% + ${(span-1)*13}px)`;return `<button type="button" class="action-calendar-item occurrence-calendar-item occurrence-calendar-range" draggable="true" data-drag-occurrence="${escapeHTML(item.id)}" style="--action-color:${escapeHTML(item.color||'#5DFF5D')};width:${width}" data-edit-occurrence="${escapeHTML(item.id)}"><span>${escapeHTML(item.icon||kind.icon)}</span><span>${escapeHTML(item.title)}<small>${escapeHTML(kind.label)}</small></span></button>`;}
           return `<span class="occurrence-calendar-slot${segments.some(entry=>entry.lane===lane&&entry.start<dayIndex&&entry.end>=dayIndex)?' is-continuation':''}" aria-hidden="true"></span>`;
         }).join('');
-        weekMarkup.push(`<div class="action-calendar-day occurrence-calendar-day${date.getMonth()!==visibleMonth-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${date.getDate()}</span><button type="button" data-add-occurrence-date="${key}" aria-label="Adicionar acontecimento em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items occurrence-calendar-items">${slots}</div></div>`);
+        weekMarkup.push(`<div class="action-calendar-day occurrence-calendar-day${date.getMonth()!==visibleMonth-1?' is-outside':''}${key===isoToday()?' is-today':''}" data-occurrence-calendar-date="${key}"><div class="action-calendar-day-head"><span>${date.getDate()}</span><button type="button" data-add-occurrence-date="${key}" aria-label="Adicionar acontecimento em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items occurrence-calendar-items">${slots}</div></div>`);
       }
     }
     return weekMarkup.join('');
+  }
+  function moveOccurrenceToDate(id,date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+    const item=state.occurrences.find(entry=>entry.id===id&&!entry.deleted);if(!item||item.schedule!=='date'||!item.scheduledDate)return;
+    const start=new Date(`${item.scheduledDate}T12:00:00`),end=item.scheduledEndDate?new Date(`${item.scheduledEndDate}T12:00:00`):start,duration=Math.max(0,Math.round((end-start)/86400000));
+    const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+duration);
+    item.scheduledDate=date;item.scheduledEndDate=duration?`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`:'';item.updatedAt=stamp();selectedOccurrenceMonth=date.slice(0,7);saveLocal();renderOccurrences();renderPlanner();toast('Acontecimento movido para a nova data.');
   }
   function renderOccurrences(){
     $('#occurrence-month').value=selectedOccurrenceMonth;
@@ -2024,6 +2031,11 @@
   $('#occurrence-type').onchange=updateOccurrenceForm;$('#occurrence-schedule').onchange=updateOccurrenceForm;$('#occurrence-repeat-mode').onchange=updateOccurrenceForm;
   $('#occurrences-content').addEventListener('click',event=>{const annualMonth=event.target.closest('[data-open-occurrence-month]');if(annualMonth){selectedOccurrenceMonth=annualMonth.dataset.openOccurrenceMonth;occurrenceView='monthly';renderOccurrences();return;}const edit=event.target.closest('[data-edit-occurrence]');if(edit){openOccurrenceDialog(edit.dataset.editOccurrence);return;}const month=event.target.closest('[data-add-occurrence-month]');if(month){openOccurrenceDialog();$('#occurrence-schedule').value='month';$('#occurrence-scheduled-month').value=month.dataset.addOccurrenceMonth;updateOccurrenceForm();return;}const date=event.target.closest('[data-add-occurrence-date]');if(date){openOccurrenceDialog();$('#occurrence-schedule').value='date';$('#occurrence-scheduled-date').value=date.dataset.addOccurrenceDate;updateOccurrenceForm();}});
   $('#occurrences-content').addEventListener('click',event=>{const complete=event.target.closest('[data-complete-occurrence]');if(complete)completeOccurrence(complete.dataset.completeOccurrence);});
+  let draggedOccurrenceId='';
+  $('#occurrences-content').addEventListener('dragstart',event=>{if(occurrenceView!=='date')return;const card=event.target.closest('[data-drag-occurrence]');if(!card)return;draggedOccurrenceId=card.dataset.dragOccurrence;card.classList.add('is-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedOccurrenceId);});
+  $('#occurrences-content').addEventListener('dragover',event=>{if(!draggedOccurrenceId)return;const target=event.target.closest('[data-occurrence-calendar-date]');if(!target)return;event.preventDefault();$$('[data-occurrence-calendar-date]',$('#occurrences-content')).forEach(day=>day.classList.toggle('is-drop-target',day===target));});
+  $('#occurrences-content').addEventListener('drop',event=>{if(!draggedOccurrenceId)return;const target=event.target.closest('[data-occurrence-calendar-date]'),id=draggedOccurrenceId;draggedOccurrenceId='';$$('[data-occurrence-calendar-date]',$('#occurrences-content')).forEach(day=>day.classList.remove('is-drop-target'));if(target){event.preventDefault();moveOccurrenceToDate(id,target.dataset.occurrenceCalendarDate);}});
+  $('#occurrences-content').addEventListener('dragend',event=>{event.target.closest('[data-drag-occurrence]')?.classList.remove('is-dragging');draggedOccurrenceId='';$$('[data-occurrence-calendar-date]',$('#occurrences-content')).forEach(day=>day.classList.remove('is-drop-target'));});
   const actionsContent=$('#actions-content');
   let draggedActionId='',draggedWeeklyActionId='',draggedMonthlyActionId='',draggedCalendarActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
   const setActionDropTarget=column=>{
