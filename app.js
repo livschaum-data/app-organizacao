@@ -1008,7 +1008,7 @@
       const heads=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'].map(label=>`<div class="action-calendar-heading">${label}</div>`).join('');
       const cells=Array.from({length:weeks*7},(_,index)=>{
         const day=new Date(start);day.setDate(start.getDate()+index);const key=dateKey(day),entries=actions.filter(action=>action.schedule==='date'&&action.scheduledDate===key);
-        return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-action-date="${key}" aria-label="Adicionar ação em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(action=>`<div class="action-calendar-item${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`<span>${escapeHTML(action.icon)}</span>`:''}${escapeHTML(action.title)}${actionParentHint(action)}<small>${escapeHTML([actionAreaName(action),`Semana ${monthWeekNumber(key)}`].filter(Boolean).join(' · '))}</small></button></div>`).join('')}</div></div>`;
+        return `<div class="action-calendar-day${day.getMonth()!==month-1?' is-outside':''}${key===isoToday()?' is-today':''}" data-action-calendar-date="${key}"><div class="action-calendar-day-head"><span>${day.getDate()}</span><button type="button" data-add-action-date="${key}" aria-label="Adicionar ação em ${escapeHTML(fmtDate(key))}">＋</button></div><div class="action-calendar-items">${entries.map(action=>`<div class="action-calendar-item${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-calendar="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`<span>${escapeHTML(action.icon)}</span>`:''}${escapeHTML(action.title)}${actionParentHint(action)}<small>${escapeHTML([actionAreaName(action),`Semana ${monthWeekNumber(key)}`].filter(Boolean).join(' · '))}</small></button></div>`).join('')}</div></div>`;
       }).join('');
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
     }else{
@@ -2025,7 +2025,7 @@
   $('#occurrences-content').addEventListener('click',event=>{const annualMonth=event.target.closest('[data-open-occurrence-month]');if(annualMonth){selectedOccurrenceMonth=annualMonth.dataset.openOccurrenceMonth;occurrenceView='monthly';renderOccurrences();return;}const edit=event.target.closest('[data-edit-occurrence]');if(edit){openOccurrenceDialog(edit.dataset.editOccurrence);return;}const month=event.target.closest('[data-add-occurrence-month]');if(month){openOccurrenceDialog();$('#occurrence-schedule').value='month';$('#occurrence-scheduled-month').value=month.dataset.addOccurrenceMonth;updateOccurrenceForm();return;}const date=event.target.closest('[data-add-occurrence-date]');if(date){openOccurrenceDialog();$('#occurrence-schedule').value='date';$('#occurrence-scheduled-date').value=date.dataset.addOccurrenceDate;updateOccurrenceForm();}});
   $('#occurrences-content').addEventListener('click',event=>{const complete=event.target.closest('[data-complete-occurrence]');if(complete)completeOccurrence(complete.dataset.completeOccurrence);});
   const actionsContent=$('#actions-content');
-  let draggedActionId='',draggedWeeklyActionId='',draggedMonthlyActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
+  let draggedActionId='',draggedWeeklyActionId='',draggedMonthlyActionId='',draggedCalendarActionId='',actionDropTarget=null,touchActionDrag=null,ignoreActionClickUntil=0;
   const setActionDropTarget=column=>{
     if(actionDropTarget===column)return;
     actionDropTarget?.classList.remove('is-drop-target');
@@ -2033,6 +2033,10 @@
     actionDropTarget?.classList.add('is-drop-target');
   };
   actionsContent.addEventListener('dragstart',event=>{
+    if(actionView==='date'){
+      const calendarCard=event.target.closest('[data-drag-action-calendar]');if(!calendarCard)return;
+      draggedCalendarActionId=calendarCard.dataset.dragActionCalendar;calendarCard.classList.add('is-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedCalendarActionId);return;
+    }
     const card=event.target.closest('[data-drag-action]');
     if(event.target.closest('.action-card-children')){event.preventDefault();return;}
     if(actionView==='monthly'){
@@ -2051,6 +2055,7 @@
     event.dataTransfer.setData('text/plain',draggedActionId);
   });
   actionsContent.addEventListener('dragover',event=>{
+    if(actionView==='date'&&draggedCalendarActionId){const target=event.target.closest('[data-action-calendar-date]');if(target){event.preventDefault();$$('[data-action-calendar-date]',actionsContent).forEach(day=>day.classList.toggle('is-drop-target',day===target));}return;}
     if(actionView==='monthly'&&draggedMonthlyActionId){const target=event.target.closest('[data-action-month-week]');if(target){event.preventDefault();target.classList.add('is-drop-target');}return;}
     if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]');if(target){event.preventDefault();target.classList.add('is-drop-target');}return;}
     if(!draggedActionId)return;
@@ -2062,12 +2067,14 @@
     if(column){event.preventDefault();event.dataTransfer.dropEffect='move';}
   });
   actionsContent.addEventListener('drop',event=>{
+    if(actionView==='date'&&draggedCalendarActionId){const target=event.target.closest('[data-action-calendar-date]'),id=draggedCalendarActionId;$$('[data-action-calendar-date]',actionsContent).forEach(day=>day.classList.remove('is-drop-target'));draggedCalendarActionId='';if(target){event.preventDefault();moveActionToWeekDate(id,target.dataset.actionCalendarDate);}return;}
     if(actionView==='monthly'&&draggedMonthlyActionId){const target=event.target.closest('[data-action-month-week]'),id=draggedMonthlyActionId;$$('[data-action-month-week]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedMonthlyActionId='';if(target){event.preventDefault();moveActionToMonthlyWeek(id,target.dataset.actionMonthWeek);}return;}
     if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]'),id=draggedWeeklyActionId;$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';if(target){event.preventDefault();moveActionToWeekDate(id,target.dataset.actionWeekDate);}return;}
     const column=event.target.closest('[data-action-month]'),id=draggedActionId;
     if(column&&id){event.preventDefault();setActionDropTarget(null);draggedActionId='';moveActionToMonth(id,column.dataset.actionMonth);}
   });
   actionsContent.addEventListener('dragend',()=>{
+    actionsContent.querySelector('.action-calendar-item.is-dragging')?.classList.remove('is-dragging');$$('[data-action-calendar-date]',actionsContent).forEach(day=>day.classList.remove('is-drop-target'));draggedCalendarActionId='';
     actionsContent.querySelector('.action-monthly-table .weekly-action.is-dragging')?.classList.remove('is-dragging');$$('[data-action-month-week]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedMonthlyActionId='';
     actionsContent.querySelector('.weekly-action.is-dragging')?.classList.remove('is-dragging');$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';
     actionsContent.querySelector('.action-card.is-dragging')?.classList.remove('is-dragging');
