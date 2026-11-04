@@ -253,7 +253,14 @@
     return fresh;
   }
   function monthWeekNumber(date){
-    return Math.ceil(safeDate(date).getDate()/7);
+    const current=safeDate(date),year=current.getFullYear(),month=current.getMonth(),first=new Date(year,month,1),last=new Date(year,month+1,0),firstMonday=new Date(first);
+    firstMonday.setDate(first.getDate()-((first.getDay()+6)%7));
+    const firstWeekEnd=new Date(firstMonday);firstWeekEnd.setDate(firstWeekEnd.getDate()+6);
+    const overlapStart=first>firstMonday?first:firstMonday,overlapEnd=last<firstWeekEnd?last:firstWeekEnd;
+    const daysInFirstWeek=Math.round((overlapEnd-overlapStart)/86400000)+1;
+    if(daysInFirstWeek<4)firstMonday.setDate(firstMonday.getDate()+7);
+    const monday=new Date(current);monday.setDate(current.getDate()-((current.getDay()+6)%7));
+    return Math.floor((monday-firstMonday)/604800000)+1;
   }
   function monthWeekMatches(week,date){
     const value=Number(week);
