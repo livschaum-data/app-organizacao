@@ -288,6 +288,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .monthly-table thead .monthly-week{background:var(--week-color);color:var(--week-ink);padding:10px 9px 12px}
 .monthly-week-pill{display:inline-block;color:inherit;font:800 10px/1.2 'DM Sans',sans-serif;text-transform:lowercase;white-space:nowrap}
 .monthly-table .monthly-week small{display:block;margin-top:7px;color:inherit;opacity:.8;font-size:9px;font-weight:500;text-transform:capitalize}
+.monthly-table .monthly-week-undated{background:#eee9e1;color:#35575a;min-width:170px}.monthly-undated-cell{background:#faf7f2;vertical-align:top;min-width:170px}.monthly-undated-cell .weekly-action{margin-bottom:6px}.monthly-undated-cell .weekly-action:last-child{margin-bottom:0}
 .monthly-week-1{--week-color:#c5eef5;--week-ink:#17424c}
 .monthly-week-2{--week-color:#78d4e3;--week-ink:#153d45}
 .monthly-week-3{--week-color:#00afca;--week-ink:#052c34}
