@@ -457,6 +457,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 /* Abas internas de âncoras e áreas. */
 .anchor-view{display:none;padding:28px 0 40px}.anchor-view.active-view{display:block}.anchor-tabs{margin-top:18px}
 .anchor-planning-card{border-radius:0;font-weight:400}.anchor-planning-card small{display:block;margin-top:3px;color:#7a8580;font-size:8px;font-weight:500;line-height:1.25}.anchor-planning-card:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+.anchor-planning-card[draggable="true"]{cursor:grab}.anchor-planning-card[draggable="true"].is-dragging{opacity:.4}.monthly-table td.is-drop-target{background:#e4f0ed;outline:2px dashed #467a7a;outline-offset:-3px}
 
 /* Hierarquia de ações e subações. */
 .weekly-action.is-subaction{margin-left:5px;border-left-style:dashed}.weekly-action .action-parent-hint,.action-calendar-item .action-parent-hint{display:block;margin-top:2px;color:#55746f;font-size:8px;font-weight:700;text-decoration:none}.action-calendar-item.is-subaction{border-left-style:dashed}
