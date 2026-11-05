@@ -902,7 +902,7 @@
     const dates=weekDates(selectedActionWeekDate);
     $('#action-week-date').value=selectedActionWeekDate;
     $('#action-week-today').classList.toggle('hidden',dates.includes(isoToday()));
-    const datedActions=actions.filter(action=>action.schedule==='date'||(action.schedule==='month'&&Number(action.week)>0)),undatedActions=actions.filter(action=>action.schedule==='month'&&!Number(action.week));
+    const months=new Set(dates.map(date=>date.slice(0,7))),datedActions=actions.filter(action=>action.schedule==='date'&&dates.includes(action.scheduledDate)),undatedActions=actions.filter(action=>action.schedule==='month'&&months.has(action.scheduledMonth)&&(!Number(action.week)||dates.some(date=>monthWeekMatches(action.week,date))));
     const cells=dates.map(date=>{
       const entries=datedActions.filter(action=>actionIsScheduled(action,date));
       return `<td data-action-week-date="${date}"><div class="weekly-action-dropzone">${entries.map(action=>`<div class="weekly-action${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#bbdcd8')}" draggable="true" data-drag-action-week="${escapeHTML(action.id)}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${actionParentHint(action)}</button></div>`).join('')}</div></td>`;
