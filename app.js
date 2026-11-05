@@ -2198,7 +2198,7 @@
   });
   $('#close-task-focus').onclick=()=>$('#task-focus-dialog').close();
   $('#task-focus-day').onclick=()=>{const origin=taskFocusOriginSection||'planner';$('#task-focus-dialog').close();setSection(origin);window.scrollTo({top:0,behavior:'smooth'});};
-  $('#task-focus-done').onclick=()=>{ $('#task-focus-dialog').close();setSection('tasks');setTaskView('manage');window.scrollTo({top:0,behavior:'smooth'}); };
+  $('#task-focus-done').onclick=()=>{const taskId=activeTaskId;$('#task-focus-dialog').close();openTaskDialog(taskId);};
   $('#task-focus-dialog').addEventListener('close',()=>{activeTaskId=null;activeTaskDate=null;taskFocusOriginSection=currentSection;});
   $('#add-task').onclick=()=>openTaskDialog();
   $('#task-form').addEventListener('submit',saveTask);$('#task-delete').onclick=deleteTask;
@@ -2260,7 +2260,8 @@
     const itemId=e.target.dataset.focusItem,checked=e.target.checked,routineId=activeRoutineId;
     mutateDay(day=>{const item=day.routines[routineId]?.items.find(x=>x.id===itemId);if(item){item.done=checked;item.touched=true;item.changedAt=stamp();}});
   });
-  $('#close-routine-focus').onclick=$('#focus-done').onclick=()=>$('#routine-focus-dialog').close();
+  $('#close-routine-focus').onclick=()=>$('#routine-focus-dialog').close();
+  $('#focus-done').onclick=()=>{const routineId=activeRoutineId;$('#routine-focus-dialog').close();openRoutineDialog(routineId);};
   $('#routine-focus-dialog').addEventListener('close',()=>{activeRoutineId=null;});
   $('#add-routine').onclick=$('#add-routine-from-day').onclick=$('#empty-add').onclick=()=>openRoutineDialog();
   $('#routine-form').addEventListener('submit',saveRoutine);$('#add-item').onclick=()=>addItemEditor();$('#delete-routine').onclick=deleteRoutine;
