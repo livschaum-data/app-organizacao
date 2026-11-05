@@ -281,11 +281,11 @@
   function monthlyWeeksFor(monthKey){return MONTH_WEEK_OPTIONS.filter(week=>Number(week)!==6&&monthWeekHasFourDays(monthKey,week)).concat(6);}
   function dayIsScheduled(routine, date) {
     if (routine.deleted) return false;
-    if(routine.scheduleType&&routine.scheduleType!=='day')return false;
-    if(routine.scheduleType==='day'&&!(routine.weekdays||[]).length)return false;
     if (routine.startDate && date < routine.startDate) return false;
     if (routine.endDate && date > routine.endDate) return false;
-    if (Array.isArray(routine.monthWeeks) && routine.monthWeeks.length && !routine.monthWeeks.some(week=>monthWeekMatches(week,date))) return false;
+    if(routine.scheduleType==='week')return Array.isArray(routine.monthWeeks)&&routine.monthWeeks.length>0&&routine.monthWeeks.some(week=>monthWeekMatches(week,date));
+    if(routine.scheduleType==='month')return Array.isArray(routine.scheduledMonths)&&routine.scheduledMonths.includes(Number(date.slice(5,7)));
+    if(routine.scheduleType&&routine.scheduleType!=='day')return false;
     return (routine.weekdays || []).includes(safeDate(date).getDay());
   }
   function taskIsScheduled(task,date){
