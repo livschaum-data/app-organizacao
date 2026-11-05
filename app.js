@@ -186,7 +186,7 @@
     for(const task of data.tasks){if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)&&(!Number.isInteger(Number(task.monthWeek))||Number(task.monthWeek)<1||Number(task.monthWeek)>6))task.monthWeek=1;if(!task.createdAt)task.createdAt=task.startDate||task.updatedAt||SEED_TIMESTAMP;}
     if(!Array.isArray(data.actions))data.actions=[];
     if(!Array.isArray(data.occurrences))data.occurrences=[];
-    for(const item of data.occurrences){if(!Array.isArray(item.completionHistory))item.completionHistory=[];if(!Array.isArray(item.dateExceptions))item.dateExceptions=[];if(item.repeatMode==='after-completion'&&!item.recurrenceMode)item.recurrenceMode='after-completion';if(!Number.isFinite(Number(item.intervalDays))&&['after-completion','after-date'].includes(item.recurrenceMode))item.intervalDays=1;}
+    for(const item of data.occurrences){if(!Array.isArray(item.completionHistory))item.completionHistory=[];if(!Array.isArray(item.dateExceptions))item.dateExceptions=[];if(item.repeatMode==='after-completion'&&!item.recurrenceMode)item.recurrenceMode='after-completion';if(!Number.isFinite(Number(item.intervalDays))&&['after-completion','after-date'].includes(item.recurrenceMode))item.intervalDays=1;if(item.schedule==='recurrence'&&!item.scheduledDate)item.scheduledDate=item.startDate||(item.createdAt||'').slice(0,10);}
     if(!Array.isArray(data.actionAreas))data.actionAreas=[];
     if(!Array.isArray(data.projects))data.projects=[];
     if(!data.projects.length)data.projects=makeProjectSeedData();
@@ -1139,25 +1139,34 @@
     if(!confirm(`Excluir a área “${area.name}”?`))return;
     area.deleted=true;area.updatedAt=stamp();saveLocal();$('#action-area-dialog').close();renderActions();toast('Área excluída.');
   }
+  function occurrenceRecurrenceStartsOn(item,date){
+    if(item.startDate&&date<item.startDate||item.endDate&&date>item.endDate||item.scheduledDate&&date<item.scheduledDate)return false;
+    if(item.recurrenceMode==='annual'){const base=item.scheduledDate;if(!base||date<base||date.slice(5)!==base.slice(5))return false;return true;}
+    if(item.recurrenceMode==='after-date'){
+      if(!item.scheduledDate||date<item.scheduledDate)return false;const base=safeDate(item.scheduledDate),interval=Math.max(1,Number(item.intervalDays)||1),target=safeDate(base);while(target<safeDate(date))target.setDate(target.getDate()+interval);const targetKey=`${target.getFullYear()}-${String(target.getMonth()+1).padStart(2,'0')}-${String(target.getDate()).padStart(2,'0')}`;return date===targetKey;
+    }
+    if(item.recurrenceMode==='after-completion'){
+      const history=(item.completionHistory||[]).filter(Boolean).sort(),last=history[history.length-1];if(!last&&!item.scheduledDate)return false;const due=safeDate(last||item.scheduledDate);if(last)due.setDate(due.getDate()+Math.max(1,Number(item.intervalDays)||1));const dueKey=`${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}-${String(due.getDate()).padStart(2,'0')}`;return date===dueKey;
+    }
+    if(item.scheduledDate&&date===item.scheduledDate)return true;
+    if(Array.isArray(item.monthWeeks)&&item.monthWeeks.length&&!item.monthWeeks.some(week=>monthWeekMatches(week,date)))return false;
+    return (item.weekdays||[]).includes(safeDate(date).getDay());
+  }
   function occurrenceIsScheduled(item,date){
     if(item.deleted)return false;
+    if(item.schedule==='recurrence'&&item.startDate&&date<item.startDate)return false;
+    if(item.schedule==='recurrence'&&item.endDate&&date>item.endDate)return false;
     if((item.dateExceptions||[]).some(exception=>exception.to===date))return true;
     if((item.dateExceptions||[]).some(exception=>exception.from===date))return false;
     if(item.type==='birthday')return Boolean(item.scheduledDate)&&item.scheduledDate.slice(5)===date.slice(5);
     if(item.schedule==='date')return Boolean(item.scheduledDate)&&date>=item.scheduledDate&&date<=(item.scheduledEndDate||item.scheduledDate);
     if(item.schedule==='month')return Boolean(item.week)&&item.scheduledMonth===date.slice(0,7)&&monthWeekMatches(item.week,date);
     if(item.schedule!=='recurrence'||!['reminder','cycle'].includes(item.type))return false;
-    if(item.recurrenceMode==='annual'){const base=item.startDate||item.scheduledDate;if(!base||date.slice(5)!==base.slice(5))return false;return !item.endDate||date<=item.endDate;}
-    if(item.recurrenceMode==='after-date'){
-      const base=safeDate(item.startDate||item.scheduledDate||item.createdAt||date),interval=Math.max(1,Number(item.intervalDays)||1),target=safeDate(base);while(target<safeDate(date))target.setDate(target.getDate()+interval);const targetKey=`${target.getFullYear()}-${String(target.getMonth()+1).padStart(2,'0')}-${String(target.getDate()).padStart(2,'0')}`;return date===targetKey&&(!item.endDate||targetKey<=item.endDate);
-    }
-    if(item.recurrenceMode==='after-completion'){
-      const history=(item.completionHistory||[]).filter(Boolean).sort(),last=history[history.length-1],due=safeDate(last||item.startDate||item.createdAt||date);if(last)due.setDate(due.getDate()+Math.max(1,Number(item.intervalDays)||1));const dueKey=`${due.getFullYear()}-${String(due.getMonth()+1).padStart(2,'0')}-${String(due.getDate()).padStart(2,'0')}`,today=isoToday(),visibleKey=dueKey<today?today:dueKey;return date===visibleKey&&(!item.endDate||visibleKey<=item.endDate);
-    }
-    if(item.startDate&&date<item.startDate)return false;
-    if(item.endDate&&date>item.endDate)return false;
-    if(Array.isArray(item.monthWeeks)&&item.monthWeeks.length&&!item.monthWeeks.some(week=>monthWeekMatches(week,date)))return false;
-    return (item.weekdays||[]).includes(safeDate(date).getDay());
+    if(occurrenceRecurrenceStartsOn(item,date))return true;
+    if(item.type!=='cycle'||!item.scheduledDate||!item.scheduledEndDate||item.scheduledEndDate<=item.scheduledDate)return false;
+    const duration=Math.round((safeDate(item.scheduledEndDate)-safeDate(item.scheduledDate))/86400000);
+    for(let offset=1;offset<=duration;offset++){const candidate=safeDate(date);candidate.setDate(candidate.getDate()-offset);const key=`${candidate.getFullYear()}-${String(candidate.getMonth()+1).padStart(2,'0')}-${String(candidate.getDate()).padStart(2,'0')}`;if(occurrenceRecurrenceStartsOn(item,key))return true;}
+    return false;
   }
   function occurrenceDatesInMonth(item,monthKey){
     const [year,month]=monthKey.split('-').map(Number),length=new Date(year,month,0).getDate(),dates=[];
@@ -1173,7 +1182,7 @@
     if(item.type==='birthday'&&item.scheduledDate)return `Todo ano em ${fmtDate(item.scheduledDate,{day:'numeric',month:'long'})}`;
     if(item.schedule==='date'&&item.scheduledDate){const start=fmtDate(item.scheduledDate,{day:'numeric',month:'short',year:'numeric'});return item.scheduledEndDate&&item.scheduledEndDate!==item.scheduledDate?`${start} a ${fmtDate(item.scheduledEndDate,{day:'numeric',month:'short',year:'numeric'})}`:start;}
     if(item.schedule==='month')return `${item.week?`${monthWeekLabel(item.week)} · `:''}${fmtDate(`${item.scheduledMonth}-01`,{month:'long',year:'numeric'})}`;
-    if(item.recurrenceMode==='annual')return `Anual · ${item.startDate?fmtDate(item.startDate,{day:'numeric',month:'long'}):'mesma data'}`;
+    if(item.recurrenceMode==='annual')return `Anual · ${item.scheduledDate?fmtDate(item.scheduledDate,{day:'numeric',month:'long'}):'sem data agendada'}`;
     if(item.recurrenceMode==='after-date')return `${item.intervalDays||1} ${Number(item.intervalDays)===1?'dia':'dias'} após a data agendada`;
     if(item.recurrenceMode==='after-completion')return `${item.intervalDays||1} ${Number(item.intervalDays)===1?'dia':'dias'} após a conclusão`;
     const days=(item.weekdays||[]).map(day=>WEEKDAYS[day]).join(', '),weeks=item.monthWeeks?.length?` · ${item.monthWeeks.map(week=>monthWeekLabel(week).toLowerCase()).join(', ')}`:'';
@@ -1223,8 +1232,8 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
     const item=state.occurrences.find(entry=>entry.id===id&&!entry.deleted);if(!item)return;
     if(item.schedule==='month'){item.schedule='date';item.scheduledDate=date;item.scheduledMonth='';item.week=null;item.scheduledEndDate='';item.updatedAt=stamp();selectedOccurrenceMonth=date.slice(0,7);saveLocal();renderOccurrences();renderPlanner();toast('Acontecimento recebeu uma data específica.');return;}
-    if(item.schedule!=='date'||!item.scheduledDate)return;
     if(item.schedule==='recurrence'&&fromDate){if(!Array.isArray(item.dateExceptions))item.dateExceptions=[];item.dateExceptions=item.dateExceptions.filter(exception=>exception.from!==fromDate);item.dateExceptions.push({from:fromDate,to:date});item.updatedAt=stamp();selectedOccurrenceMonth=date.slice(0,7);saveLocal();renderOccurrences();renderPlanner();toast('Data desta ocorrência ajustada.');return;}
+    if(item.schedule!=='date'||!item.scheduledDate)return;
     const start=new Date(`${item.scheduledDate}T12:00:00`),end=item.scheduledEndDate?new Date(`${item.scheduledEndDate}T12:00:00`):start,duration=Math.max(0,Math.round((end-start)/86400000));
     const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+duration);
     item.scheduledDate=date;item.scheduledEndDate=duration?`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`:'';item.updatedAt=stamp();selectedOccurrenceMonth=date.slice(0,7);saveLocal();renderOccurrences();renderPlanner();toast('Acontecimento movido para a nova data.');
@@ -1274,26 +1283,26 @@
     $('#occurrence-month-field').classList.toggle('hidden',mode!=='month');$('#occurrence-date-field').classList.toggle('hidden',mode!=='date');$('#occurrence-recurrence-field').classList.toggle('hidden',mode!=='recurrence');
     $('#occurrence-end-date-field').classList.toggle('hidden',mode!=='date'||!['event','holiday','cycle'].includes(type));
     $('#occurrence-annual-hint').classList.toggle('hidden',type!=='birthday');
-    const repeatMode=$('#occurrence-repeat-mode').value;$('#occurrence-month-weeks-field').classList.toggle('hidden',mode!=='recurrence'||repeatMode!=='month-weeks');$('#occurrence-after-completion-field').classList.toggle('hidden',mode!=='recurrence'||!['after-completion','after-date'].includes(repeatMode));$('#occurrence-weekdays-field').classList.toggle('hidden',mode!=='recurrence'||['after-completion','annual','after-date'].includes(repeatMode));if(repeatMode==='after-date')$('#occurrence-after-completion-field .field-label').textContent='Repetir quantos dias após a data agendada?';else $('#occurrence-after-completion-field .field-label').textContent='Repetir quantos dias após concluir?';
+    const repeatMode=$('#occurrence-repeat-mode').value,dateBasedMode=['after-completion','annual','after-date'].includes(repeatMode);$('#occurrence-recurrence-date-field').classList.toggle('hidden',mode!=='recurrence');$('#occurrence-recurrence-end-date-field').classList.toggle('hidden',mode!=='recurrence'||type!=='cycle');$('#occurrence-month-weeks-field').classList.toggle('hidden',mode!=='recurrence'||repeatMode!=='month-weeks');$('#occurrence-after-completion-field').classList.toggle('hidden',mode!=='recurrence'||!['after-completion','after-date'].includes(repeatMode));$('#occurrence-weekdays-field').classList.toggle('hidden',mode!=='recurrence'||dateBasedMode);if(repeatMode==='after-date')$('#occurrence-after-completion-field .field-label').textContent='Repetir quantos dias após a data agendada?';else $('#occurrence-after-completion-field .field-label').textContent='Repetir quantos dias após concluir?';
   }
   function openOccurrenceDialog(id=null){
     const item=state.occurrences.find(entry=>entry.id===id&&!entry.deleted);
     $('#occurrence-form').reset();$('#occurrence-id').value=item?.id||'';$('#occurrence-dialog-title').textContent=item?'Editar acontecimento':'Novo acontecimento';
     $('#occurrence-title').value=item?.title||'';$('#occurrence-type').value=item?.type||'reminder';$('#occurrence-description').value=item?.description||'';$('#occurrence-icon').value=item?.icon||'';$('#occurrence-color').value=item?.color||'#5DFF5D';
     $('#occurrence-schedule').value=item?.schedule||'date';$('#occurrence-scheduled-month').value=item?.scheduledMonth||selectedOccurrenceMonth;$('#occurrence-scheduled-date').value=item?.scheduledDate||selectedDate;$('#occurrence-scheduled-end-date').value=item?.scheduledEndDate||'';$('#occurrence-week').value=item?.week||'';
-    $('#occurrence-repeat-mode').value=item?.recurrenceMode|| (item?.monthWeeks?.length?'month-weeks':'every-week');$('#occurrence-interval-days').value=item?.intervalDays||'';$('#occurrence-start').value=item?.startDate||'';$('#occurrence-end').value=item?.endDate||'';$('#occurrence-notes').value=item?.notes||'';
+    $('#occurrence-repeat-mode').value=item?.recurrenceMode|| (item?.monthWeeks?.length?'month-weeks':'every-week');$('#occurrence-recurrence-date').value=item?.scheduledDate||item?.startDate||selectedDate;$('#occurrence-recurrence-end-date').value=item?.schedule==='recurrence'?item?.scheduledEndDate||'':'';$('#occurrence-interval-days').value=item?.intervalDays||'';$('#occurrence-start').value=item?.startDate||'';$('#occurrence-end').value=item?.endDate||'';$('#occurrence-notes').value=item?.notes||'';
     buildOccurrenceOptions(item);$('#delete-occurrence').classList.toggle('hidden',!item);updateOccurrenceForm();refreshColorPalettes();$('#occurrence-dialog').showModal();
   }
   function saveOccurrence(event){
     event.preventDefault();const title=$('#occurrence-title').value.trim(),type=$('#occurrence-type').value,schedule=type==='birthday'?'date':$('#occurrence-schedule').value,scheduledMonth=$('#occurrence-scheduled-month').value,scheduledDate=$('#occurrence-scheduled-date').value;
-    const scheduledEndDate=['event','holiday','cycle'].includes(type)&&schedule==='date'?$('#occurrence-scheduled-end-date').value:'',recurrenceStart=$('#occurrence-start').value,recurrenceEnd=$('#occurrence-end').value;
-    if(!title){toast('Dê um nome ao acontecimento.');return;}if(schedule==='date'&&!scheduledDate){toast('Escolha a data do acontecimento.');return;}if(schedule==='month'&&!scheduledMonth){toast('Escolha o mês do acontecimento.');return;}if(scheduledEndDate&&scheduledEndDate<scheduledDate){toast('A data final deve ser igual ou posterior à data inicial.');return;}
+    const scheduledEndDate=type==='cycle'&&schedule==='recurrence'?$('#occurrence-recurrence-end-date').value:['event','holiday','cycle'].includes(type)&&schedule==='date'?$('#occurrence-scheduled-end-date').value:'',recurrenceStart=$('#occurrence-start').value,recurrenceEnd=$('#occurrence-end').value;
+    if(!title){toast('Dê um nome ao acontecimento.');return;}if(schedule==='date'&&!scheduledDate){toast('Escolha a data do acontecimento.');return;}if(schedule==='month'&&!scheduledMonth){toast('Escolha o mês do acontecimento.');return;}if(schedule==='date'&&scheduledEndDate&&scheduledEndDate<scheduledDate){toast('A data final deve ser igual ou posterior à data inicial.');return;}
     if(schedule==='recurrence'&&recurrenceStart&&recurrenceEnd&&recurrenceEnd<recurrenceStart){toast('O término da recorrência deve ser igual ou posterior ao início.');return;}
-    const repeatMode=$('#occurrence-repeat-mode').value,weekdays=['after-completion','annual','after-date'].includes(repeatMode)?[]:$$('#occurrence-weekday-options input:checked').map(input=>Number(input.value)),monthWeeks=repeatMode==='month-weeks'?$$('#occurrence-month-week-options input:checked').map(input=>Number(input.value)):[],intervalDays=['after-completion','after-date'].includes(repeatMode)?Number($('#occurrence-interval-days').value)||0:null;
-    if(schedule==='recurrence'&&!['after-completion','annual','after-date'].includes(repeatMode)&&!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}if(schedule==='recurrence'&&repeatMode==='month-weeks'&&!monthWeeks.length){toast('Escolha ao menos uma semana do mês.');return;}if(schedule==='recurrence'&&['after-completion','after-date'].includes(repeatMode)&&intervalDays<1){toast('Informe um intervalo de dias válido.');return;}if(schedule==='recurrence'&&['after-completion','annual','after-date'].includes(repeatMode)&&!recurrenceStart){toast('Informe a data da primeira ocorrência.');return;}
-    const id=$('#occurrence-id').value||uid(),existing=state.occurrences.find(item=>item.id===id),next={id,title,type,description:$('#occurrence-description').value.trim(),notes:$('#occurrence-notes').value.trim(),icon:$('#occurrence-icon').value.trim(),color:$('#occurrence-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',scheduledEndDate,week:schedule==='month'?Number($('#occurrence-week').value)||null:null,weekdays:schedule==='recurrence'?weekdays:[],monthWeeks:schedule==='recurrence'?monthWeeks:[],recurrenceMode:schedule==='recurrence'?repeatMode:'',intervalDays:schedule==='recurrence'?intervalDays:null,completionHistory:existing?.completionHistory||[],dateExceptions:existing?.dateExceptions||[],startDate:schedule==='recurrence'?recurrenceStart:'',endDate:schedule==='recurrence'?recurrenceEnd:'',createdAt:existing?.createdAt||isoToday(),updatedAt:stamp(),deleted:false};
+    const repeatMode=$('#occurrence-repeat-mode').value,dateBasedMode=['after-completion','annual','after-date'].includes(repeatMode),recurrenceScheduledDate=$('#occurrence-recurrence-date').value,weekdays=dateBasedMode?[]:$$('#occurrence-weekday-options input:checked').map(input=>Number(input.value)),monthWeeks=repeatMode==='month-weeks'?$$('#occurrence-month-week-options input:checked').map(input=>Number(input.value)):[],intervalDays=['after-completion','after-date'].includes(repeatMode)?Number($('#occurrence-interval-days').value)||0:null;
+    if(schedule==='recurrence'&&!dateBasedMode&&!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}if(schedule==='recurrence'&&repeatMode==='month-weeks'&&!monthWeeks.length){toast('Escolha ao menos uma semana do mês.');return;}if(schedule==='recurrence'&&['after-completion','after-date'].includes(repeatMode)&&intervalDays<1){toast('Informe um intervalo de dias válido.');return;}if(schedule==='recurrence'&&!recurrenceScheduledDate){toast('Informe a data agendada da primeira ocorrência.');return;}if(schedule==='recurrence'&&scheduledEndDate&&scheduledEndDate<recurrenceScheduledDate){toast('A data final da primeira ocorrência deve ser igual ou posterior à data agendada.');return;}if(schedule==='recurrence'&&recurrenceStart&&recurrenceScheduledDate&&recurrenceScheduledDate<recurrenceStart){toast('A primeira ocorrência não pode ser anterior ao início da recorrência.');return;}if(schedule==='recurrence'&&recurrenceEnd&&recurrenceScheduledDate&&recurrenceScheduledDate>recurrenceEnd){toast('A primeira ocorrência não pode ser posterior ao fim da recorrência.');return;}
+    const id=$('#occurrence-id').value||uid(),existing=state.occurrences.find(item=>item.id===id),next={id,title,type,description:$('#occurrence-description').value.trim(),notes:$('#occurrence-notes').value.trim(),icon:$('#occurrence-icon').value.trim(),color:$('#occurrence-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:schedule==='recurrence'?recurrenceScheduledDate:'',scheduledEndDate,week:schedule==='month'?Number($('#occurrence-week').value)||null:null,weekdays:schedule==='recurrence'?weekdays:[],monthWeeks:schedule==='recurrence'?monthWeeks:[],recurrenceMode:schedule==='recurrence'?repeatMode:'',intervalDays:schedule==='recurrence'?intervalDays:null,completionHistory:existing?.completionHistory||[],dateExceptions:existing?.dateExceptions||[],startDate:schedule==='recurrence'?recurrenceStart:'',endDate:schedule==='recurrence'?recurrenceEnd:'',createdAt:existing?.createdAt||isoToday(),updatedAt:stamp(),deleted:false};
     const index=state.occurrences.findIndex(item=>item.id===id);if(index<0)state.occurrences.push(next);else state.occurrences[index]=next;
-    selectedOccurrenceMonth=(schedule==='date'?`${selectedOccurrenceMonth.slice(0,4)}-${scheduledDate.slice(5,7)}`:schedule==='month'?scheduledMonth:selectedOccurrenceMonth);saveLocal();$('#occurrence-dialog').close();renderOccurrences();renderPlanner();toast('Acontecimento salvo.');
+    selectedOccurrenceMonth=(schedule==='date'?`${selectedOccurrenceMonth.slice(0,4)}-${scheduledDate.slice(5,7)}`:schedule==='month'?scheduledMonth:schedule==='recurrence'&&recurrenceScheduledDate?recurrenceScheduledDate.slice(0,7):selectedOccurrenceMonth);saveLocal();$('#occurrence-dialog').close();renderOccurrences();renderPlanner();toast('Acontecimento salvo.');
   }
   function completeOccurrence(id){const item=state.occurrences.find(entry=>entry.id===id&&!entry.deleted);if(!item||!['reminder','cycle'].includes(item.type)||item.schedule!=='recurrence'||item.recurrenceMode!=='after-completion')return;if(!Array.isArray(item.completionHistory))item.completionHistory=[];item.completionHistory.push(isoToday());item.updatedAt=stamp();saveLocal();renderOccurrences();renderPlanner();renderWeekly();toast('Acontecimento concluído. A próxima ocorrência será calculada a partir de hoje.');}
   function deleteOccurrence(){
