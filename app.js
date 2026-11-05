@@ -1108,9 +1108,7 @@
       if(action.scheduledDate===date)return;
       action.scheduledDate=date;
     }else{
-      const month=date.slice(0,7),week=monthWeekNumber(date);
-      if(action.scheduledMonth===month&&Number(action.week)===week)return;
-      action.scheduledMonth=month;action.week=week;
+      action.schedule='date';action.scheduledDate=date;action.scheduledMonth='';action.week=null;
     }
     action.updatedAt=stamp();selectedActionWeekDate=date;selectedActionMonth=date.slice(0,7);
     saveLocal();renderActions();renderPlanner();toast('Ação movida para a semana escolhida.');
