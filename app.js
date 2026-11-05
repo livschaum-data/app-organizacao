@@ -656,7 +656,7 @@
     const isToday=date===isoToday(),now=new Date();
     const nowMinutes=now.getHours()*60+now.getMinutes();
     const startHour=Math.min(5,...timed.map(entry=>Math.floor(minutes(entry.scheduledTime)/60)),...(isToday?[Math.floor(nowMinutes/60)]:[]));
-    const duration=entry=>Math.max(15,Math.min(480,Number(entry.durationMinutes)||45));
+    const duration=entry=>Math.max(5,Math.min(480,Number(entry.durationMinutes)||45));
     const endHour=Math.max(isToday?24:23,...timed.map(entry=>Math.ceil((minutes(entry.scheduledTime)+duration(entry))/60)));
     const hourHeight=70,range=(endHour-startHour)*hourHeight;
     const lanes=[];
@@ -1037,6 +1037,8 @@
     $('#action-schedule').value=action?.schedule||suggestedParent?.schedule||'month';
     $('#action-scheduled-month').value=action?.scheduledMonth||suggestedParent?.scheduledMonth||suggestedParent?.scheduledDate?.slice(0,7)||selectedActionMonth;
     $('#action-scheduled-date').value=action?.scheduledDate||suggestedParent?.scheduledDate||selectedDate;
+    $('#action-time').value=action?.scheduledTime||suggestedParent?.scheduledTime||'';
+    $('#action-duration').value=action?.durationMinutes??suggestedParent?.durationMinutes??'';
     $('#action-due').value=action?.dueDate||'';
     $('#action-week').value=action?.week||suggestedParent?.week||'';
     $('#action-completed').checked=action?.completed===true;
@@ -1062,7 +1064,7 @@
     if(schedule==='date'?!scheduledDate:!scheduledMonth){toast('Escolha a data ou o mês da ação.');return;}
     const id=$('#action-id').value||uid(),existing=state.actions.find(action=>action.id===id),now=stamp(),completed=$('#action-completed').checked,parentId=$('#action-parent').disabled?existing?.parentId||'':$('#action-parent').value;
     const parent=parentId?state.actions.find(action=>action.id===parentId&&!action.deleted&&!action.parentId):null;if(parentId&&!parent){toast('Escolha uma ação principal válida como ação mãe.');return;}
-    const next={id,parentId:parent?.id||'',study:$('#action-study').value==='true'||existing?.study===true,leisure:$('#action-leisure').value==='true'||existing?.leisure===true,leisureType:$('#action-leisure-type').value,season:Number($('#action-season').value)||null,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:$('#action-area').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
+    const next={id,parentId:parent?.id||'',study:$('#action-study').value==='true'||existing?.study===true,leisure:$('#action-leisure').value==='true'||existing?.leisure===true,leisureType:$('#action-leisure-type').value,season:Number($('#action-season').value)||null,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:$('#action-area').value,scheduledTime:$('#action-time').value,durationMinutes:$('#action-duration').value?Number($('#action-duration').value):null,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
     const index=state.actions.findIndex(action=>action.id===id);
     if(index<0)state.actions.push(next);else state.actions[index]=next;
     selectedActionMonth=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
