@@ -1104,12 +1104,8 @@
   function moveActionToWeekDate(id,date){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);if(!action)return;
-    if(action.schedule==='date'){
-      if(action.scheduledDate===date)return;
-      action.scheduledDate=date;
-    }else{
-      action.schedule='date';action.scheduledDate=date;action.scheduledMonth='';action.week=null;
-    }
+    if(action.schedule==='date'&&action.scheduledDate===date&&!action.scheduledMonth&&!action.week)return;
+    action.schedule='date';action.scheduledDate=date;action.scheduledMonth='';action.week=null;
     action.updatedAt=stamp();selectedActionWeekDate=date;selectedActionMonth=date.slice(0,7);
     saveLocal();renderActions();renderPlanner();toast('Ação movida para a semana escolhida.');
   }
@@ -2089,7 +2085,7 @@
   actionsContent.addEventListener('dragover',event=>{
     if(actionView==='date'&&draggedCalendarActionId){const target=event.target.closest('[data-action-calendar-date]');if(target){event.preventDefault();$$('[data-action-calendar-date]',actionsContent).forEach(day=>day.classList.toggle('is-drop-target',day===target));}return;}
     if(actionView==='monthly'&&draggedMonthlyActionId){const target=event.target.closest('[data-action-month-week]');if(target){event.preventDefault();target.classList.add('is-drop-target');}return;}
-    if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]');if(target){event.preventDefault();target.classList.add('is-drop-target');}return;}
+    if(actionView==='week'&&(draggedWeeklyActionId||event.dataTransfer?.types?.includes('text/plain'))){const target=event.target.closest('td[data-action-week-date]');if(target){event.preventDefault();target.classList.add('is-drop-target');event.dataTransfer.dropEffect='move';}return;}
     if(!draggedActionId)return;
     const board=$('.action-month-board'),rect=board?.getBoundingClientRect();
     if(rect&&event.clientX>rect.right-34)board.scrollLeft+=18;
@@ -2101,7 +2097,7 @@
   actionsContent.addEventListener('drop',event=>{
     if(actionView==='date'&&draggedCalendarActionId){const target=event.target.closest('[data-action-calendar-date]'),id=draggedCalendarActionId;$$('[data-action-calendar-date]',actionsContent).forEach(day=>day.classList.remove('is-drop-target'));draggedCalendarActionId='';if(target){event.preventDefault();moveActionToWeekDate(id,target.dataset.actionCalendarDate);}return;}
     if(actionView==='monthly'&&draggedMonthlyActionId){const target=event.target.closest('[data-action-month-week]'),id=draggedMonthlyActionId;$$('[data-action-month-week]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedMonthlyActionId='';if(target){event.preventDefault();moveActionToMonthlyWeek(id,target.dataset.actionMonthWeek);}return;}
-    if(actionView==='week'&&draggedWeeklyActionId){const target=event.target.closest('[data-action-week-date]'),id=draggedWeeklyActionId;$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';if(target){event.preventDefault();moveActionToWeekDate(id,target.dataset.actionWeekDate);}return;}
+    if(actionView==='week'&&(draggedWeeklyActionId||event.dataTransfer?.types?.includes('text/plain'))){const target=event.target.closest('td[data-action-week-date]'),id=draggedWeeklyActionId||event.dataTransfer?.getData('text/plain');$$('[data-action-week-date]',actionsContent).forEach(cell=>cell.classList.remove('is-drop-target'));draggedWeeklyActionId='';if(target&&id){event.preventDefault();moveActionToWeekDate(id,target.dataset.actionWeekDate);}return;}
     const column=event.target.closest('[data-action-month]'),id=draggedActionId;
     if(column&&id){event.preventDefault();setActionDropTarget(null);draggedActionId='';moveActionToMonth(id,column.dataset.actionMonth);}
   });
