@@ -155,6 +155,7 @@
   let selectedAnchorDate=isoToday(),selectedAnchorWeekDate=isoToday(),selectedAnchorMonth=isoToday().slice(0,7),selectedAnchorYear=Number(isoToday().slice(0,4));
   const openManageRoutines = new Set();
   const openManageTasks = new Set();
+  const openTaskHistoryDates = new Set();
   let activeRoutineId = null;
   let activeTaskId = null;
   let activeTaskDate = null;
@@ -522,8 +523,8 @@
     }).join(''):allTasks.length?'<div class="empty-state"><span>⌕</span><h3>Nenhuma tarefa encontrada</h3><p>Altere ou limpe os filtros para ver outras tarefas.</p></div>':'<div class="empty-state"><span>✓</span><h3>Suas tarefas começam aqui</h3><p>Crie uma tarefa semanal, quinzenal ou periódica por mês, com passos se desejar.</p></div>';
     const today=isoToday(),dates=Object.keys(state.taskHistory).filter(date=>date<=today&&Object.values(state.taskHistory[date]?.tasks||{}).some(task=>taskIsVisibleOnDay(task,date))).sort((a,b)=>b.localeCompare(a));
     $('#task-history-list').innerHTML=dates.length?dates.map(date=>{
-      const entries=Object.values(state.taskHistory[date].tasks).filter(task=>taskIsVisibleOnDay(task,date)),registered=entries.filter(task=>taskIsRegistered(task)).length;
-      return `<button class="history-card${date<isoToday()&&dayStatus(date).taskPending?' is-incomplete':''}" data-task-history-date="${date}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${registered}/${entries.length}</strong><small>tarefas registradas</small></span><span class="history-arrow">→</span></button>`;
+      const entries=Object.values(state.taskHistory[date].tasks).filter(task=>taskIsVisibleOnDay(task,date)),registered=entries.filter(task=>taskIsRegistered(task)).length,expanded=openTaskHistoryDates.has(date),statusLabel={completed:'Concluída',open:'Pendente','not-realized':'Não realizada',postponed:'Adiada',canceled:'Cancelada'};
+      return `<article class="history-card task-history-card${date<isoToday()&&dayStatus(date).taskPending?' is-incomplete':''}${expanded?' is-open':''}"><button type="button" class="task-history-day" data-task-history-date="${date}" aria-label="Abrir tarefas de ${escapeHTML(fmtDate(date))}"><span class="history-date"><strong>${escapeHTML(fmtDate(date,{day:'numeric'}))}</strong><small>${escapeHTML(fmtDate(date,{weekday:'long',month:'long'}))}</small></span><span class="history-stat"><strong>${registered}/${entries.length}</strong><small>tarefas registradas</small></span><span class="history-arrow" aria-hidden="true">→</span></button><button type="button" class="task-history-toggle" data-task-history-toggle="${date}" aria-expanded="${expanded}" aria-controls="task-history-items-${date}" aria-label="${expanded?'Ocultar':'Mostrar'} tarefas de ${escapeHTML(fmtDate(date))}">▾</button><div id="task-history-items-${date}" class="task-history-items${expanded?'':' hidden'}">${entries.map(task=>{const status=taskOccurrenceStatus(task);return `<div class="task-history-item is-${status}"><span class="task-history-icon">${escapeHTML(task.icon||'✓')}</span><span>${escapeHTML(task.name||'Tarefa')}</span><small>${escapeHTML(statusLabel[status]||'Pendente')}</small></div>`;}).join('')}</div></article>`;
     }).join(''):'<div class="empty-state"><span>✓</span><h3>Seu histórico vai aparecer aqui</h3><p>As tarefas programadas ficam registradas por dia.</p></div>';
   }
   function taskOccurrenceStatus(task){
@@ -1990,6 +1991,7 @@
   $('#summary-prev-month').onclick=()=>shiftSummaryMonth(-1);$('#summary-next-month').onclick=()=>shiftSummaryMonth(1);
   $('#summary-today').onclick=()=>{selectedSummaryMonth=isoToday().slice(0,7);renderSummary();};
   $('#summary-date').onchange=event=>{if(event.target.value){selectedSummaryMonth=event.target.value;renderSummary();}};
+  $('#summary-open-task-review').onclick=()=>{setSection('tasks');setTaskView('review');window.scrollTo({top:0,behavior:'smooth'});};
   $('#summary-content').addEventListener('click',event=>{const button=event.target.closest('[data-summary-date][data-summary-section]');if(!button)return;setSelectedDate(button.dataset.summaryDate);setSection(button.dataset.summarySection==='tasks'?'tasks':'routines');if(button.dataset.summarySection==='tasks')setTaskView('day');else setView('day');});
   $('#weekly-prev').onclick=()=>shiftWeek(-1);$('#weekly-next').onclick=()=>shiftWeek(1);
   $('#weekly-today').onclick=()=>{selectedWeekDate=isoToday();renderWeekly();};
@@ -2287,7 +2289,7 @@
     }
     const button=event.target.closest('[data-edit-task]');if(button)openTaskDialog(button.dataset.editTask);
   });
-  $('#task-history-list').addEventListener('click',event=>{const button=event.target.closest('[data-task-history-date]');if(button){setSelectedDate(button.dataset.taskHistoryDate);setSection('tasks');setTaskView('day');}});
+  $('#task-history-list').addEventListener('click',event=>{const toggle=event.target.closest('[data-task-history-toggle]');if(toggle){const date=toggle.dataset.taskHistoryToggle,expanded=!openTaskHistoryDates.has(date);if(expanded)openTaskHistoryDates.add(date);else openTaskHistoryDates.delete(date);const card=toggle.closest('.task-history-card');card.classList.toggle('is-open',expanded);card.querySelector('.task-history-items').classList.toggle('hidden',!expanded);toggle.setAttribute('aria-expanded',String(expanded));toggle.setAttribute('aria-label',`${expanded?'Ocultar':'Mostrar'} tarefas de ${fmtDate(date)}`);return;}const button=event.target.closest('[data-task-history-date]');if(button){setSelectedDate(button.dataset.taskHistoryDate);setSection('tasks');setTaskView('day');}});
   $('#task-history-export').onclick=exportTaskCSV;
   $('#add-anchor').onclick=()=>openAnchorDialog();$('#anchor-form').addEventListener('submit',saveAnchor);$('#delete-anchor').onclick=deleteAnchor;$('#daily-view-groups-form').addEventListener('submit',saveDailyViewGroups);
   $$('.anchor-tab').forEach(button=>button.onclick=()=>{anchorView=button.dataset.anchorView;$$('.anchor-tab').forEach(tab=>tab.classList.toggle('active',tab===button));$$('.anchor-view').forEach(view=>view.classList.toggle('active-view',view.id===`anchor-view-${anchorView}`));$('#add-anchor').classList.toggle('hidden',anchorView==='areas');renderAnchors();});
