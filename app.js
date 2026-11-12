@@ -161,7 +161,7 @@
   let activeTaskDate = null;
   let currentSection = 'timeline';
   let taskFocusOriginSection = 'planner';
-  let supabaseClient = null, session = null, syncTimer = null, saving = false, saveAgain = false;
+  let supabaseClient = null, session = null, syncTimer = null, saving = false, saveAgain = false, recoveryMode = false, pendingRecovery = false;
   let syncKind = 'offline', syncMessage = 'Somente neste aparelho', localRevision = 0, lastAutoSyncAt = 0;
 
   function makeProjectSeedData(){
@@ -1958,20 +1958,81 @@
       await pushSync();updateAccountDialog();toast('Conta conectada.');
     } catch(error){$('#account-status').textContent=error.message||'Não foi possível conectar.';}
   }
+  function recoveryRequested(){
+    try {
+      const hash=new URLSearchParams(location.hash.replace(/^#/,'')),query=new URLSearchParams(location.search);
+      return hash.get('type')==='recovery'||query.get('type')==='recovery';
+    } catch { return false; }
+  }
+  function enterRecoveryMode() {
+    pendingRecovery=false;recoveryMode=true;
+    $('#recovery-password').value='';$('#recovery-password-confirm').value='';
+    try { const url=new URL(location.href);url.hash='';url.searchParams.delete('type');history.replaceState(null,'',url.toString()); } catch {}
+    updateAccountDialog();
+    if(!$('#account-dialog').open)$('#account-dialog').showModal();
+    setTimeout(()=>$('#recovery-password').focus(),50);
+  }
+  async function setNewPassword() {
+    if(!configureSupabase()||!session?.user)return;
+    const password=$('#recovery-password').value,confirmation=$('#recovery-password-confirm').value;
+    if(password.length<6){$('#account-status').textContent='A nova senha precisa ter pelo menos 6 caracteres.';$('#recovery-password').focus();return;}
+    if(password!==confirmation){$('#account-status').textContent='As senhas não conferem.';$('#recovery-password-confirm').focus();return;}
+    const button=$('#save-password');button.disabled=true;
+    try {
+      const {error}=await supabaseClient.auth.updateUser({password});if(error)throw error;
+      recoveryMode=false;$('#recovery-password').value='';$('#recovery-password-confirm').value='';
+      updateAccountDialog();
+      await pushSync('Senha atualizada.');
+      toast('Senha atualizada. Você continua conectado.');
+    } catch(error){$('#account-status').textContent=error.message||'Não foi possível atualizar a senha.';}
+    finally {button.disabled=false;}
+  }
+  async function cancelRecovery() {
+    recoveryMode=false;
+    try { await supabaseClient?.auth.signOut(); } catch {}
+    session=null;setSyncStatus('offline','Somente neste aparelho');updateAccountDialog();
+    toast('Recuperação cancelada. Você saiu da conta.');
+  }
+  async function requestPasswordReset() {
+    if(!configureSupabase()){updateAccountDialog();return;}
+    const email=$('#account-email').value.trim();
+    if(!email){$('#account-status').textContent='Informe seu e-mail para receber o link de recuperação.';$('#account-email').focus();return;}
+    const button=$('#forgot-password');button.disabled=true;
+    try {
+      const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:`${location.origin}${location.pathname}`});
+      if(error)throw error;
+      $('#account-status').textContent='Enviamos um link de recuperação para o seu e-mail. Confira também a caixa de spam.';
+      toast('Link de recuperação enviado.');
+    } catch(error){$('#account-status').textContent=error.message||'Não foi possível enviar o link de recuperação.';}
+    finally {button.disabled=false;}
+  }
   function updateAccountDialog() {
-    const ready=configured(),logged=Boolean(session?.user);
+    const ready=configured(),logged=Boolean(session?.user),recovering=recoveryMode&&logged;
     $('#account-fields').classList.toggle('hidden',logged||!ready);
-    $('#connected-actions').classList.toggle('hidden',!logged);
-    $('#account-status').textContent=!ready?'Configure o Supabase para sincronizar este aplicativo.':syncMessage;
+    $('#recovery-fields').classList.toggle('hidden',!recovering);
+    $('#connected-actions').classList.toggle('hidden',!logged||recovering);
+    $('#account-status').textContent=!ready?'Configure o Supabase para sincronizar este aplicativo.':recovering?'Link de recuperação reconhecido. Escolha uma nova senha.':syncMessage;
     updateSyncSummary();
   }
   async function initializeSync() {
+    pendingRecovery=recoveryRequested();
     if(!configureSupabase()){setSyncStatus('offline','Somente neste aparelho');return;}
+    const inRecovery=()=>recoveryMode||pendingRecovery;
+    supabaseClient.auth.onAuthStateChange((event,newSession)=>{
+      session=newSession;
+      if(event==='PASSWORD_RECOVERY'||(inRecovery()&&session?.user)){enterRecoveryMode();return;}
+      if(recoveryMode||event==='INITIAL_SESSION')return;
+      if(session?.user)pushSync();else setSyncStatus('offline','Somente neste aparelho');
+      updateAccountDialog();
+    });
     try {
       const {data,error}=await supabaseClient.auth.getSession();if(error)throw error;session=data.session;
-      if(session?.user){await pushSync();}else setSyncStatus('offline','Somente neste aparelho');
+      if(session?.user&&inRecovery())enterRecoveryMode();
+      else if(session?.user){await pushSync();updateAccountDialog();}
+      else if(pendingRecovery){pendingRecovery=false;setSyncStatus('offline','Link de recuperação inválido ou expirado.');}
+      else setSyncStatus('offline','Somente neste aparelho');
     } catch(error){console.error('Não foi possível iniciar sincronização:',error);setSyncStatus('error','Salvo neste aparelho · nuvem indisponível');}
-    supabaseClient.auth.onAuthStateChange((_event,newSession)=>{session=newSession;if(session?.user)pushSync();else setSyncStatus('offline','Somente neste aparelho');updateAccountDialog();});
+    updateAccountDialog();
   }
 
   $$('.sidebar-link').forEach(link=>link.addEventListener('click',()=>setSection(link.dataset.section)));
@@ -2380,6 +2441,7 @@
   $('#history-list').addEventListener('click',e=>{const button=e.target.closest('[data-history-date]');if(button){setSelectedDate(button.dataset.historyDate);setSection('routines');setView('day');}});
   $('#sync-indicator').onclick=()=>{updateAccountDialog();$('#account-dialog').showModal();};
   $('#account-form').addEventListener('submit',e=>e.preventDefault());$('#sign-up').onclick=()=>connectAccount(true);$('#sign-in').onclick=()=>connectAccount(false);
+  $('#forgot-password').onclick=requestPasswordReset;$('#save-password').onclick=setNewPassword;$('#cancel-recovery').onclick=cancelRecovery;
   $('#sync-now').onclick=()=>pushSync();
   $('#sync-download').onclick=()=>pullSync();
   $('#sync-upload').onclick=()=>pushSync('Dados enviados para a nuvem.');
