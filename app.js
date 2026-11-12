@@ -943,6 +943,29 @@
     const rows=filtered.map(action=>{const due=actionDueDate(action),stateLabel=actionStatus(action),parent=actionParent(action);return `<tr class="${action.completed?'is-complete':''}${parent?' is-subaction':''}"><td><div class="action-list-title"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span>${parent?'<span class="action-tree-mark">↳</span> ':''}${action.icon?`${escapeHTML(action.icon)} `:''}<strong>${escapeHTML(action.title)}</strong></span></div></td><td>${parent?`<button type="button" class="action-parent-link" data-edit-action="${escapeHTML(parent.id)}">${escapeHTML(parent.title)}</button>`:'—'}</td><td>${escapeHTML(actionAreaName(action)||'—')}</td><td>${actionMonth(action)?escapeHTML(fmtDate(`${actionMonth(action)}-01`,{month:'short',year:'numeric'})):'—'}</td><td>${actionWeek(action)?monthWeekLabel(actionWeek(action)):'—'}</td><td>${dateLabel(due)}</td><td>${dateLabel(action.createdAt||'')}</td><td>${dateLabel(action.completedAt||'')}</td><td><span class="action-status is-${stateLabel==='Concluída'?'done':stateLabel==='Vencida'?'late':'open'}">${stateLabel}</span></td><td><button type="button" class="small-edit" data-edit-action="${escapeHTML(action.id)}">Editar</button></td></tr>`;}).join('');
     $('#actions-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'ação encontrada':'ações encontradas'}</p><div class="action-list-scroll"><table class="action-list-table"><thead><tr><th>Ação</th><th>Ação mãe</th><th>Área</th><th>Mês</th><th>Semana</th><th>Vencimento</th><th>Criação</th><th>Conclusão</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="action-list-empty">Nenhuma ação corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
   }
+  function renderActionListChronological(actions){
+    renderActionList(actions);
+    const body=$('#actions-content tbody');if(!body)return;
+    const scheduleInfo=action=>{
+      if(action.schedule==='date'){const date=action.scheduledDate||'';return {kind:'date',label:'Data definida',detail:date?fmtDate(date,{day:'numeric',month:'long',year:'numeric'}):'Sem data',sortDate:date,group:`date-${date}`,groupLabel:date?fmtDate(date,{day:'numeric',month:'long',year:'numeric'}):'Sem data'};}
+      const month=action.scheduledMonth||'',week=Number(action.week)||0,monthLabel=month?fmtDate(`${month}-01`,{month:'long',year:'numeric'}):'Sem mês';
+      if(week){const days=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate(),first=Array.from({length:days},(_,index)=>`${month}-${String(index+1).padStart(2,'0')}`).find(date=>monthWeekMatches(week,date))||`${month}-01`;return {kind:'week',label:'Semana do mês',detail:`${monthWeekLabel(week)} · ${monthLabel}`,sortDate:first,group:`week-${month}-${week}`,groupLabel:`${monthWeekLabel(week)} · ${monthLabel}`};}
+      return {kind:'month',label:'Mês inteiro',detail:monthLabel,sortDate:month?`${month}-01`:'',group:`month-${month}`,groupLabel:monthLabel};
+    };
+    const records=[...body.querySelectorAll('tr')].map(row=>{const id=row.querySelector('[data-edit-action]')?.dataset.editAction;const action=state.actions.find(item=>item.id===id);return action?{row,action,schedule:scheduleInfo(action)}:null;}).filter(Boolean).sort((a,b)=>a.schedule.sortDate.localeCompare(b.schedule.sortDate)||a.action.title.localeCompare(b.action.title,'pt-BR'));
+    if(!records.length)return;
+    const fragment=document.createDocumentFragment();let previous='';
+    for(const {row,schedule} of records){
+      if(schedule.group!==previous){const heading=document.createElement('tr');heading.className='action-list-period';heading.innerHTML=`<th colspan="8">${escapeHTML(schedule.groupLabel)}</th>`;fragment.append(heading);previous=schedule.group;}
+      const cells=[...row.cells],completed=cells[7]?.textContent.trim();
+      row.innerHTML=`${cells[0]?.outerHTML||'<td></td>'}<td><span class="action-schedule-type is-${schedule.kind}">${escapeHTML(schedule.label)}</span><small class="action-schedule-detail">${escapeHTML(schedule.detail)}</small></td>${cells[1]?.outerHTML||'<td>-</td>'}${cells[2]?.outerHTML||'<td>-</td>'}${cells[5]?.outerHTML||'<td>-</td>'}<td>${completed&&completed!=='-'?`<span class="action-completed-date">✓ ${escapeHTML(completed)}</span>`:'<span class="action-not-completed">—</span>'}</td>${cells[8]?.outerHTML||'<td></td>'}${cells[9]?.outerHTML||'<td></td>'}`;
+      fragment.append(row);
+    }
+    body.replaceChildren(fragment);
+    const table=body.closest('table');if(table)table.classList.add('action-chronological-list');
+    const head=table?.querySelector('thead tr');if(head)head.innerHTML='<th>Ação</th><th>Agendamento</th><th>Ação mãe</th><th>Área</th><th>Vencimento</th><th>Concluída em</th><th>Estado</th><th></th>';
+    const count=$('.action-list-count','#actions-content');if(count)count.textContent=`${records.length} ${records.length===1?'ação encontrada':'ações encontradas'} · organizadas por agendamento`;
+  }
   function studyActions(){return state.actions.filter(action=>!action.deleted&&action.study);}
   function studyCard(action){return `<div class="weekly-action study-item${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#8e7cae')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-study="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${action.parentId?`<small>↳ ${escapeHTML(actionParent(action)?.title||'Matéria')}</small>`:''}${action.schedule==='month'&&action.week?`<small>${escapeHTML(monthWeekLabel(action.week))}</small>`:''}</button></div>`;}
   function renderCatalogSchedule(items,target,label,editAttr){
@@ -1013,7 +1036,7 @@
       }).join('');
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
     }else{
-      renderActionList(actions);
+      renderActionListChronological(actions);
     }
     const actionAreas=state.actionAreas.filter(area=>!area.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     $('#action-area-list').innerHTML=actionAreas.length?actionAreas.map(area=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color||'#dcebe7')}"></span><strong>${escapeHTML(area.name)}</strong><small class="area-view-tag">${state.actions.filter(action=>!action.deleted&&action.areaId===area.id).length} ações</small><button type="button" class="small-edit" data-edit-action-area="${escapeHTML(area.id)}">Editar</button></article>`).join(''):'<p class="planner-empty">Crie áreas para organizar as ações.</p>';
