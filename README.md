@@ -4,7 +4,7 @@ Aplicativo estático, preparado para hospedagem no GitHub Pages. Rotinas, âncor
 
 O menu lateral reúne as visões diárias, semanais e mensais, além de Âncoras, Rotinas, Tarefas e Ações. A visão diária mostra blocos editáveis de Tema do dia, Casa, Lazer, Estudos, Movimento e Extras, além das rotinas da data. As âncoras pré-cadastradas foram transcritas dos exemplos fornecidos e podem ter nome, ícone, área, descrição, dias da semana e período editados. Áreas também podem ser criadas, renomeadas, coloridas, reordenadas e excluídas quando vazias. Todos esses cadastros usam a mesma sincronização das rotinas.
 
-Além das áreas das âncoras, a seção **Grupos nas visões diárias** permite definir uma única vez se rotinas, tarefas semanais ou quinzenais, blocos, consultas, ações e cada tipo de acontecimento aparecem na **Visão principal** ou **Visão secundária**. A escolha vale para todos os cartões daquele grupo.
+Além das áreas das âncoras, a seção **Grupos nas visões diárias** permite definir uma única vez se rotinas, tarefas vencidas, ações vencidas, tarefas semanais ou quinzenais, blocos, consultas, ações e cada tipo de acontecimento aparecem na **Visão principal** ou **Visão secundária**. A escolha vale para todos os cartões daquele grupo. O cartão **Tarefas vencidas** reúne as ocorrências ainda abertas do mesmo dia da semana em semanas anteriores; cada tarefa mostra quantas pendências acumulou e, ao expandir, as datas para abrir o registro correspondente. O cartão **Ações vencidas** lista as ações não concluídas cuja data de vencimento já passou, com a data e a área de cada uma.
 
 No computador, o botão no cabeçalho recolhe ou expande o menu lateral e lembra a escolha neste navegador. Na Visão diária, as áreas ficam à esquerda e as rotinas ocupam uma coluna inteira à direita; no celular, os blocos ficam em sequência.
 
@@ -38,6 +38,8 @@ Uma tarefa pode ter o tipo **Consulta** no cadastro. Ela aparece normalmente nos
 No cadastro de tarefas, o tipo **Bloco** mantém frequência, agendamento, passos e conclusão das tarefas comuns. Os blocos aparecem em cartões próprios na visão secundária e em Tarefas do dia, além de uma linha separada na visão semanal de tarefas. Sua conclusão entra no histórico, no resumo e na exportação CSV.
 
 Ao abrir um bloco, o resultado pode ser **Realizado**, **Realizado parcialmente** ou **Não realizado**. Qualquer uma dessas respostas registra o bloco para o dia; sem resposta, ele continua pendente. Os passos podem ser marcados separadamente, mas não escolhem o resultado automaticamente. O resultado é sincronizado e exportado com o histórico.
+
+Tarefas e blocos podem ser **adiados** pelo diálogo da tarefa ou pela Revisão de pendências. A ocorrência de origem recebe o selo “Adiada para” e a de destino o selo “Adiada de”, com o histórico de cada adiamento visível no diálogo e na Revisão. O mesmo diálogo permite desfazer o adiamento (“Cancelar adiamento” ou “Voltar à data original”). O histórico de adiamentos também entra na exportação CSV de tarefas.
 
 Âncoras, tarefas e rotinas têm um campo opcional de **Notas**, com até 20.000 caracteres. Ele aparece apenas ao editar um cadastro já existente. As notas ficam no registro do item e seguem a sincronização em nuvem; não aparecem nas listas nem na visualização do dia.
 

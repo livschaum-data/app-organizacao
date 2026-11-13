@@ -7,7 +7,7 @@
   const SIDEBAR_KEY = 'ancora-sidebar-collapsed-v1';
   const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
   const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-  const DAILY_VIEW_GROUPS=[['routines','Rotinas','primary',true,true],['tasks-weekly','Tarefas semanais','secondary',true,true],['tasks-biweekly','Tarefas quinzenais','secondary',true,true],['tasks-monthly','Tarefas mensais','secondary',true,true],['blocks','Blocos','secondary',true,true],['consultations','Consultas','secondary',true,true],['actions','Ações','secondary',true,true],['studies','Estudos','secondary',true,true],['leisure','Lazer','secondary',true,true],['occurrence-reminder','Lembretes','secondary',true,true],['occurrence-event','Eventos','secondary',true,true],['occurrence-holiday','Feriados','secondary',true,true],['occurrence-birthday','Aniversários','secondary',true,true],['occurrence-cycle','Ciclos','secondary',true,true]];
+  const DAILY_VIEW_GROUPS=[['routines','Rotinas','primary',true,true],['overdue','Tarefas vencidas','primary',false,false],['actions-overdue','Ações vencidas','primary',false,false],['tasks-weekly','Tarefas semanais','secondary',true,true],['tasks-biweekly','Tarefas quinzenais','secondary',true,true],['tasks-monthly','Tarefas mensais','secondary',true,true],['blocks','Blocos','secondary',true,true],['consultations','Consultas','secondary',true,true],['actions','Ações','secondary',true,true],['studies','Estudos','secondary',true,true],['leisure','Lazer','secondary',true,true],['occurrence-reminder','Lembretes','secondary',true,true],['occurrence-event','Eventos','secondary',true,true],['occurrence-holiday','Feriados','secondary',true,true],['occurrence-birthday','Aniversários','secondary',true,true],['occurrence-cycle','Ciclos','secondary',true,true]];
   const MONTHLY_TASK_FREQUENCIES=['monthly','bimonthly','quarterly','semiannual','annual'];
   const TASK_FREQUENCY_LABELS={weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
   const TASK_FREQUENCY_PLURAL={weekly:'Semanais',biweekly:'Quinzenais',monthly:'Mensais',bimonthly:'Bimestrais',quarterly:'Trimestrais',semiannual:'Semestrais',annual:'Anuais'};
@@ -159,6 +159,7 @@
   let activeRoutineId = null;
   let activeRoutineDate = null;
   let activeTaskId = null;
+  let postponedOriginsCache = { date: '', map: null };
   let activeTaskDate = null;
   let currentSection = 'timeline';
   let taskFocusOriginSection = 'planner';
@@ -225,7 +226,18 @@
     for(const area of data.areas){if(typeof area.weeklyView!=='boolean')area.weeklyView=true;if(typeof area.timelineView!=='boolean')area.timelineView=area.weeklyView;}
     for(const anchor of makeAnchorSeed())if(!anchorIds.has(anchor.id))data.anchors.push(anchor);
     for(const anchor of data.anchors){if(!['none','day','week','month'].includes(anchor.scheduleType))anchor.scheduleType=anchor.scheduledMonths?.length?'month':anchor.monthWeeks?.length?'week':anchor.weekdays?.length?'day':'none';if(!Array.isArray(anchor.weekdays))anchor.weekdays=[];if(!Array.isArray(anchor.monthWeeks))anchor.monthWeeks=[];if(!Array.isArray(anchor.scheduledMonths))anchor.scheduledMonths=[];}
+    upgradePostponementLinks(data);
     return data;
+  }
+  function upgradePostponementLinks(data){
+    const add=(task,entry)=>{if(!task)return;if(!Array.isArray(task.postponements))task.postponements=[];if(!task.postponements.some(item=>item.from===entry.from&&item.to===entry.to))task.postponements.push(entry);};
+    for(const [originDate,day] of Object.entries(data.taskHistory||{}))for(const [id,task] of Object.entries(day.tasks||{})){
+      if(!task.postponedTo)continue;
+      const targetDay=data.taskHistory[task.postponedTo],targetTask=targetDay?.tasks?.[id];if(!targetTask)continue;
+      const entry={from:originDate,to:task.postponedTo,at:task.reviewChangedAt||task.doneChangedAt||''};
+      add(task,entry);add(targetTask,entry);
+      if(!targetTask.originalDate){targetTask.originalDate=originDate;targetTask.manualOccurrence=true;}
+    }
   }
   function normalizeSeedItemIds(data) {
     for(let i=0;i<SEED.length;i++) {
@@ -406,6 +418,7 @@
     return changed;
   }
   function saveLocal() {
+    postponedOriginsCache = { date: '', map: null };
     localRevision++;
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem(PENDING_KEY,session?.user?.id||'local'); }
     catch { toast('O armazenamento deste navegador está cheio. Exporte seu histórico para guardar uma cópia.'); }
@@ -488,8 +501,9 @@
     return Object.values(day.tasks||{}).filter(task=>(!frequency||task.frequency===frequency)&&(task.kind==='block'?'block':'regular')===kind&&taskIsVisibleOnDay(task,date)&&(consultation===null||taskIsConsultation(task)===consultation)&&(!view||dailyViewOfGroup(group)===view)).sort((a,b)=>(a.scheduledTime||'99:99').localeCompare(b.scheduledTime||'99:99')||a.name.localeCompare(b.name,'pt-BR'));
   }
   function taskRow(task,showRemove=true){
-    const items=task.items||[],consultation=taskIsConsultation(task),result=blockStatusOf(task);
-    return `<div class="task-entry${showRemove?' has-remove':''}"><button type="button" class="task-row${(task.kind==='block'?Boolean(result):task.done)&&!consultation?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-row-main"><span class="task-row-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${consultation?'<small class="task-consultation-badge">Consulta</small>':task.kind==='block'?`<small class="task-block-frequency">${taskFrequencyLabel(task.frequency)}</small>${result?`<small class="block-result-badge is-${result}">${blockStatusLabel(result)}</small>`:''}`:''}${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</span>${items.length?`<span class="task-row-steps">${items.map(item=>`<span class="task-row-step${item.done&&!consultation?' is-done':''}">${escapeHTML(item.label)}</span>`).join('')}</span>`:''}</button>${showRemove?`<button type="button" class="task-remove-day" data-remove-task-day="${escapeHTML(task.taskId)}">Remover deste dia</button>`:''}</div>`;
+    const items=task.items||[],consultation=taskIsConsultation(task),result=blockStatusOf(task),short=value=>fmtDate(value,{day:'2-digit',month:'2-digit'});
+    const postponedTo=task.reviewStatus==='postponed'?task.postponedTo:'',history=taskPostponementHistory(task,selectedDate),last=history[history.length-1],postponedFrom=last&&last.to===selectedDate?last.from:'';
+    return `<div class="task-entry${showRemove?' has-remove':''}"><button type="button" class="task-row${(task.kind==='block'?Boolean(result):task.done)&&!consultation?' is-done':''}" data-open-task="${escapeHTML(task.taskId)}"><span class="task-row-main"><span class="task-row-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="task-row-name">${escapeHTML(task.name)}</span>${postponedTo?`<small class="task-postponed-badge is-out">Adiada para ${short(postponedTo)}</small>`:''}${postponedFrom?`<small class="task-postponed-badge is-in">Adiada de ${short(postponedFrom)}</small>`:''}${consultation?'<small class="task-consultation-badge">Consulta</small>':task.kind==='block'?`<small class="task-block-frequency">${taskFrequencyLabel(task.frequency)}</small>${result?`<small class="block-result-badge is-${result}">${blockStatusLabel(result)}</small>`:''}`:''}${task.scheduledTime?`<time>${escapeHTML(task.scheduledTime)}</time>`:''}</span>${items.length?`<span class="task-row-steps">${items.map(item=>`<span class="task-row-step${item.done&&!consultation?' is-done':''}">${escapeHTML(item.label)}</span>`).join('')}</span>`:''}</button>${showRemove?`<button type="button" class="task-remove-day" data-remove-task-day="${escapeHTML(task.taskId)}">Remover deste dia</button>`:''}</div>`;
   }
   function taskGroup(day,frequency,planner=false,view='',group='',consultation=null){
     const tasks=taskSnapshots(day,frequency,selectedDate,'regular',view,group,consultation),label=consultation?'Consultas':TASK_FREQUENCY_PLURAL[frequency]||'Semanais',icon=frequency==='biweekly'?'◫':MONTHLY_TASK_FREQUENCIES.includes(frequency)?'▦':'☑';
@@ -506,6 +520,7 @@
     return `<section class="task-group task-block-group"><h3>Blocos</h3>${tasks.length?tasks.map(task=>taskRow(task)).join(''):'<p class="planner-empty">Nenhum bloco neste dia.</p>'}</section>`;
   }
   function renderTasks(){
+    postponedOriginsCache={date:'',map:null};
     $('#task-date').value=selectedDate;
     $('#task-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
     $('#task-date-label').textContent=fmtDate(selectedDate);
@@ -534,6 +549,35 @@
     if(task.kind==='block'){const result=blockStatusOf(task);if(result==='realized'||result==='partial')return'completed';if(result==='not-realized')return'not-realized';}
     if(task.done)return'completed';if(task.doneTouched)return'not-realized';return'open';
   }
+  function overdueTaskOccurrences(date=selectedDate){
+    const today=isoToday(),cutDate=date<today?date:today,cutoff=safeDate(cutDate),weekday=safeDate(date).getDay();
+    const activity=[...Object.keys(state.taskHistory||{}),...Object.keys(state.history||{}),...state.tasks.flatMap(task=>[String(task.startDate||'').slice(0,10),String(task.createdAt||'').slice(0,10)])].filter(Boolean).sort();
+    const earliestKey=activity[0];if(!earliestKey)return[];
+    const earliest=safeDate(earliestKey),catalog=new Map(state.tasks.map(task=>[task.id,task])),occurrences=[];
+    const cursor=new Date(cutoff);cursor.setDate(cursor.getDate()-(((cursor.getDay()-weekday)+7)%7||7));
+    for(let weeks=0;weeks<12&&cursor>=earliest;weeks++){
+      const dateKey=`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`,day=state.taskHistory[dateKey],snapshots=day?.tasks||{},excluded=day?.excludedTasks||{},ids=new Set(Object.keys(snapshots));
+      for(const task of state.tasks){
+        if(task.deleted||taskIsConsultation(task)||excluded[task.id])continue;
+        if(dateKey<String(task.startDate||task.createdAt||dateKey).slice(0,10))continue;
+        if(taskIsScheduled(task,dateKey))ids.add(task.id);
+      }
+      for(const id of ids){
+        if(excluded[id])continue;
+        const catalogTask=catalog.get(id);if(catalogTask?.deleted)continue;
+        const source=snapshots[id]||catalogTask;if(!source)continue;
+        const task={...source,taskId:source.taskId||id};
+        if(taskIsConsultation(task)||taskOccurrenceStatus(task)!=='open')continue;
+        occurrences.push({date:dateKey,id,task});
+      }
+      cursor.setDate(cursor.getDate()-7);
+    }
+    return occurrences.sort((a,b)=>a.date.localeCompare(b.date)||a.task.name.localeCompare(b.task.name,'pt-BR'));
+  }
+  function overdueActions(date=selectedDate){
+    const cutoff=date<isoToday()?date:isoToday();
+    return state.actions.filter(action=>!action.deleted&&!action.completed&&!action.study&&!action.leisure&&actionDueDate(action)&&actionDueDate(action)<cutoff).sort((a,b)=>actionDueDate(a).localeCompare(actionDueDate(b))||a.title.localeCompare(b.title,'pt-BR'));
+  }
   function taskReviewOccurrences(){
     const today=isoToday(),period=$('#task-review-period').value,end=safeDate(today);end.setDate(end.getDate()-1);let start=new Date(end);
     if(period==='all'){const candidates=[...state.tasks.map(task=>task.startDate).filter(Boolean),...Object.keys(state.taskHistory)];start=safeDate(candidates.sort()[0]||today);const floor=new Date(end);floor.setFullYear(floor.getFullYear()-5);if(start<floor)start=floor;}else start.setDate(start.getDate()-(Number(period)||90)+1);
@@ -558,8 +602,61 @@
     const openCount=all.filter(item=>item.status==='open').length,closedCount=all.length-openCount;$('#task-review-summary').innerHTML=`<article><span>ABERTAS</span><strong>${openCount}</strong></article><article><span>FECHADAS</span><strong>${closedCount}</strong></article><article><span>OCORRÊNCIAS</span><strong>${all.length}</strong></article>`;
     const labels={open:'Aberta',completed:'Concluída','not-realized':'Não realizada',postponed:'Adiada',canceled:'Cancelada'},groups=new Map();
     for(const item of visible){const key=item.id;if(!groups.has(key))groups.set(key,{task:item.task,items:[]});groups.get(key).items.push(item);}
-    const occurrenceCard=({date,id,task,status})=>`<article class="task-review-occurrence is-${status}" data-review-date="${date}" data-review-task="${escapeHTML(id)}"><div class="task-review-occurrence-date"><strong>${escapeHTML(fmtDate(date,{weekday:'short',day:'numeric',month:'short',year:'numeric'}))}</strong>${task.reviewStatus==='postponed'&&task.postponedTo?`<small>Adiada para ${escapeHTML(fmtDate(task.postponedTo,{day:'numeric',month:'short',year:'numeric'}))}</small>`:''}</div><span class="task-review-status">${labels[status]}</span><div class="task-review-actions">${status==='open'?'<button type="button" data-review-action="complete">Concluir</button><button type="button" data-review-action="not-realized">Não realizada</button><button type="button" data-review-action="postpone">Adiar</button><button type="button" data-review-action="cancel">Cancelar</button>':'<button type="button" data-review-action="reopen">Reabrir</button>'}</div></article>`;
+    const occurrenceCard=({date,id,task,status})=>`<article class="task-review-occurrence is-${status}" data-review-date="${date}" data-review-task="${escapeHTML(id)}"><div class="task-review-occurrence-date"><strong>${escapeHTML(fmtDate(date,{weekday:'short',day:'numeric',month:'short',year:'numeric'}))}</strong>${task.reviewStatus==='postponed'&&task.postponedTo?`<small>Adiada para ${escapeHTML(fmtDate(task.postponedTo,{day:'numeric',month:'short',year:'numeric'}))}</small>`:''}${taskPostponementHistory(task,date).length?`<small class="task-review-postponements">${taskPostponementHistory(task,date).map(entry=>`${escapeHTML(fmtDate(entry.from,{day:'2-digit',month:'2-digit'}))} → ${escapeHTML(fmtDate(entry.to,{day:'2-digit',month:'2-digit'}))}`).join(' · ')}</small>`:''}</div><span class="task-review-status">${labels[status]}</span><div class="task-review-actions">${status==='open'?'<button type="button" data-review-action="complete">Concluir</button><button type="button" data-review-action="not-realized">Não realizada</button><button type="button" data-review-action="postpone">Adiar</button><button type="button" data-review-action="cancel">Cancelar</button>':'<button type="button" data-review-action="reopen">Reabrir</button>'}</div></article>`;
     $('#task-review-list').innerHTML=groups.size?[...groups.values()].sort((a,b)=>a.task.name.localeCompare(b.task.name,'pt-BR')).map(({task,items})=>{const open=items.filter(item=>item.status==='open').length,done=items.length-open;return `<details class="task-review-task-group" open><summary><span class="task-review-icon">${escapeHTML(task.icon||'✓')}</span><span class="task-review-task-title"><strong>${escapeHTML(task.name)}</strong><small>${TASK_FREQUENCY_LABELS[task.frequency]||taskFrequencyLabel(task.frequency)} · ${items.length} ${items.length===1?'ocorrência':'ocorrências'}</small></span><span class="task-review-task-counts"><b class="is-open">${open} abertas</b><b class="is-closed">${done} fechadas</b></span></summary><div class="task-review-occurrences">${items.sort((a,b)=>b.date.localeCompare(a.date)).map(occurrenceCard).join('')}</div></details>`}).join(''):'<div class="empty-state"><span>✓</span><h3>Nenhuma ocorrência encontrada</h3><p>Altere os filtros ou o período da revisão.</p></div>';
+  }
+  function postponedOriginsFor(date){
+    if(postponedOriginsCache.date===date&&postponedOriginsCache.map)return postponedOriginsCache.map;
+    const map=new Map();
+    for(const [originDate,day] of Object.entries(state.taskHistory||{}))for(const [id,task] of Object.entries(day.tasks||{}))if(task.postponedTo===date&&!map.has(id))map.set(id,originDate);
+    postponedOriginsCache={date,map};return map;
+  }
+  function taskPostponementHistory(task,date){
+    const list=Array.isArray(task.postponements)?task.postponements:[];
+    if(list.length)return list;
+    if(task.manualOccurrence&&task.originalDate&&task.originalDate!==date)return [{from:task.originalDate,to:date,at:task.doneChangedAt||task.reviewChangedAt||''}];
+    const origin=postponedOriginsFor(date).get(task.taskId||task.id);
+    return origin?[{from:origin,to:date,at:''}]:[];
+  }
+  function postponeTaskOccurrence(date,id){
+    const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return false;
+    const suggested=new Date(safeDate(date));suggested.setDate(suggested.getDate()+7);
+    const keyOf=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
+    while(keyOf(suggested)<isoToday())suggested.setDate(suggested.getDate()+7);
+    const target=prompt('Para qual data deseja adiar?',keyOf(suggested));
+    if(!target||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(target))return false;
+    const now=stamp(),history=[...(task.postponements||[]),{from:date,to:target,at:now}];
+    task.done=false;task.doneTouched=true;task.reviewStatus='postponed';task.postponedTo=target;task.postponements=history;task.doneChangedAt=now;task.reviewChangedAt=now;day.updatedAt=now;
+    const targetDay=ensureTaskDay(target),existing=targetDay.tasks[id];
+    if(!existing)targetDay.tasks[id]={...structuredClone(task),done:false,doneTouched:false,reviewStatus:'',postponedTo:'',postponements:history,manualOccurrence:true,originalDate:date,items:(task.items||[]).map(item=>({...item,done:false,touched:false}))};
+    else existing.postponements=history;
+    targetDay.updatedAt=now;saveLocal();return true;
+  }
+  function undoPostponement(date,id){
+    const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return false;
+    if(task.postponedTo){
+      const target=task.postponedTo,targetDay=state.taskHistory[target],targetTask=targetDay?.tasks?.[id];
+      if(targetTask?.postponedTo){toast('Desfaça primeiro o adiamento mais recente desta ocorrência.');return false;}
+      const registered=targetTask&&taskIsRegistered(targetTask);
+      const message=registered?`A ocorrência de ${fmtDate(target)} já tem registro. Cancelar o adiamento vai removê-la e reabrir ${fmtDate(date)}. Continuar?`:`Cancelar o adiamento? ${fmtDate(date)} voltará a ficar pendente e a ocorrência de ${fmtDate(target)} será removida.`;
+      if(!confirm(message))return false;
+      if(targetDay&&targetTask){delete targetDay.tasks[id];targetDay.updatedAt=stamp();}
+      task.reviewStatus='';task.postponedTo='';task.doneTouched=false;task.done=false;task.doneChangedAt=stamp();
+      const history=(task.postponements||[]).slice();if(history.length&&history[history.length-1].to===target)history.pop();
+      if(history.length)task.postponements=history;else delete task.postponements;
+      day.updatedAt=stamp();saveLocal();return true;
+    }
+    const history=taskPostponementHistory(task,date).slice(),last=history[history.length-1];
+    if(!last||last.to!==date){toast('Esta ocorrência não foi adiada.');return false;}
+    const originDay=ensureTaskDay(last.from),originTask=originDay.tasks[id];
+    if(!originTask){toast('A ocorrência original não foi encontrada.');return false;}
+    if(originTask.postponedTo!==date){toast('A ocorrência original já foi alterada. Abra a data de origem para desfazer.');return false;}
+    if(!confirm(`Voltar esta ocorrência para ${fmtDate(last.from)}? A ocorrência em ${fmtDate(date)} será removida.`))return false;
+    delete day.tasks[id];day.updatedAt=stamp();
+    originTask.reviewStatus='';originTask.postponedTo='';originTask.doneTouched=false;originTask.done=false;originTask.doneChangedAt=stamp();
+    const originHistory=(originTask.postponements||[]).slice();if(originHistory.length&&originHistory[originHistory.length-1].to===date)originHistory.pop();
+    if(originHistory.length)originTask.postponements=originHistory;else delete originTask.postponements;
+    originDay.updatedAt=stamp();saveLocal();return true;
   }
   function reviewTaskOccurrence(date,id,action){
     const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return;const now=stamp();
@@ -567,7 +664,7 @@
     if(action==='not-realized'){task.done=false;task.doneTouched=true;task.reviewStatus='not-realized';if(task.kind==='block')task.blockStatus='not-realized';}
     if(action==='cancel'){task.done=false;task.doneTouched=true;task.reviewStatus='canceled';}
     if(action==='reopen'){task.done=false;task.doneTouched=false;task.reviewStatus='';task.blockStatus='';task.postponedTo='';}
-    if(action==='postpone'){const suggested=new Date(safeDate(date));suggested.setDate(suggested.getDate()+7);const suggestedKey=`${suggested.getFullYear()}-${String(suggested.getMonth()+1).padStart(2,'0')}-${String(suggested.getDate()).padStart(2,'0')}`,target=prompt('Para qual data deseja adiar?',suggestedKey);if(!target||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(target))return;task.done=false;task.doneTouched=true;task.reviewStatus='postponed';task.postponedTo=target;const targetDay=ensureTaskDay(target);if(!targetDay.tasks[id])targetDay.tasks[id]={...structuredClone(task),done:false,doneTouched:false,reviewStatus:'',postponedTo:'',manualOccurrence:true,originalDate:date,items:(task.items||[]).map(item=>({...item,done:false,touched:false}))};targetDay.updatedAt=now;}
+    if(action==='postpone'){if(!postponeTaskOccurrence(date,id))return;}
     task.doneChangedAt=now;task.reviewChangedAt=now;day.updatedAt=now;saveLocal();renderTasks();renderTaskReview();renderPlanner();renderWeekly();renderTaskWeekly();renderTaskCalendar();renderSummary();toast('Ocorrência atualizada.');
   }
   function renderTaskFocus(){
@@ -584,6 +681,10 @@
     $('#task-focus-count').textContent=(consultation?`Consulta ${taskFrequencyLabel(task.frequency).toLowerCase()} · sem conclusão necessária`:`${task.kind==='block'?'Bloco':'Tarefa'} ${taskFrequencyLabel(task.frequency).toLowerCase()}${total?` · ${done} de ${total} passos`:''}`)+(locked?' · dia concluído':'');
     $('#task-focus-description').textContent=task.description||'';
     $('#task-focus-description').classList.toggle('hidden',!task.description);
+    const postponeHistory=taskPostponementHistory(task,date),postponedTo=task.reviewStatus==='postponed'&&task.postponedTo?task.postponedTo:'',lastPostpone=postponeHistory[postponeHistory.length-1],postponedFrom=lastPostpone&&lastPostpone.to===date?lastPostpone.from:'';
+    const undoPostpone=$('#task-focus-undo-postpone');undoPostpone.classList.toggle('hidden',!(postponedTo||postponedFrom));undoPostpone.textContent=postponedTo?'Cancelar adiamento':'Voltar à data original';
+    const postponeInfo=$('#task-focus-postpone-info');postponeInfo.classList.toggle('hidden',!postponedTo&&!postponedFrom);
+    postponeInfo.innerHTML=`${postponedTo?`<strong>Adiada para ${escapeHTML(fmtDate(postponedTo))}</strong>`:postponedFrom?`<strong>Adiada de ${escapeHTML(fmtDate(postponedFrom))}</strong>`:''}${postponeHistory.length?`<ol class="focus-postpone-history">${postponeHistory.map(entry=>`<li><span>${escapeHTML(fmtDate(entry.from,{day:'2-digit',month:'2-digit'}))}</span><i aria-hidden="true">→</i><span>${escapeHTML(fmtDate(entry.to,{day:'2-digit',month:'2-digit'}))}</span></li>`).join('')}</ol>`:''}`;
     $('#task-focus-complete').checked=Boolean(task.done);
     $('#task-focus-complete').disabled=locked;
     $('#task-focus-complete').closest('.task-completion').classList.toggle('hidden',consultation||task.kind==='block');
@@ -699,6 +800,7 @@
     marker.querySelector('time').textContent=time;
   }
   function renderPlanner(){
+    postponedOriginsCache={date:'',map:null};
     $('#planner-date').value=selectedDate;
     $('#planner-date-label').textContent=fmtDate(selectedDate);
     $('#planner-weekday').textContent=fmtDate(selectedDate,{weekday:'long'});
@@ -725,7 +827,20 @@
     const primaryBlocks=blocksFor(primaryAreas),secondaryBlocks=blocksFor(secondaryAreas);
     const routines=scheduledRoutines(day);
     const taskDay=ensureTaskDay(selectedDate);
+    const overdue=overdueTaskOccurrences(selectedDate);
+    const overdueActionEntries=overdueActions(selectedDate);
     const routineBlock=view=>{const entries=dailyViewOfGroup('routines')===view?routines:[];return `<section class="planner-block planner-routines"><h2><button type="button" class="planner-block-link" data-open-routine-day><span class="planner-heading-icon" aria-hidden="true">☑</span><span>Rotinas do dia</span></button></h2><div class="planner-block-body">${entries.length?entries.map(r=>{const total=(r.items||[]).length,done=(r.items||[]).filter(item=>item.done).length;return `<button type="button" class="planner-routine" data-planner-routine="${escapeHTML(r.routineId)}"><span>${escapeHTML(r.icon)}</span><strong>${escapeHTML(r.name)}</strong><small class="planner-routine-progress" aria-label="${done} de ${total} passos concluídos">${done}/${total}</small>${r.scheduledTime?`<time class="planner-routine-time">${escapeHTML(r.scheduledTime)}</time>`:''}</button>`;}).join(''):'<p class="planner-empty">Nenhuma rotina nesta visão.</p>'}</div></section>`;};
+    const overdueBlock=view=>{
+      const entries=dailyViewOfGroup('overdue')===view?overdue:[];if(!entries.length)return'';
+      const groups=new Map();for(const item of entries){if(!groups.has(item.id))groups.set(item.id,{task:item.task,items:[]});groups.get(item.id).items.push(item);}
+      const frequencyOrder=Object.keys(TASK_FREQUENCY_LABELS),groupRank=task=>task.kind==='block'?1:0,frequencyRank=task=>{const index=frequencyOrder.indexOf(task.frequency);return index<0?frequencyOrder.length:index;};
+      const list=[...groups.values()].sort((a,b)=>groupRank(a.task)-groupRank(b.task)||frequencyRank(a.task)-frequencyRank(b.task)||a.task.name.localeCompare(b.task.name,'pt-BR'));
+      return `<section class="planner-block planner-overdue"><h2><span class="planner-heading-icon" aria-hidden="true">⏰</span><span>Tarefas vencidas</span><span class="planner-overdue-count" title="${list.length} ${list.length===1?'tarefa':'tarefas'} · ${entries.length} ${entries.length===1?'pendência':'pendências'}">${list.length}</span></h2><div class="planner-block-body">${list.map(({task,items})=>{const count=items.length,first=items[0],short=value=>fmtDate(value,{day:'2-digit',month:'2-digit'});const subtitle=count===1?`1 pendência em ${short(first.date)}`:`${count} pendências · desde ${short(first.date)}`;return `<details class="planner-overdue-item"><summary aria-label="${escapeHTML(task.name)} — ${count} ${count===1?'pendência':'pendências'}. Mostrar datas."><span class="planner-item-icon" aria-hidden="true">${escapeHTML(task.icon||'✓')}</span><span class="planner-overdue-copy"><strong>${escapeHTML(task.name)}</strong><small>${escapeHTML(subtitle)}</small></span><span class="planner-overdue-arrow" aria-hidden="true">⌄</span></summary><div class="planner-overdue-dates">${items.map(({date,id})=>`<button type="button" class="planner-overdue-date" data-open-task="${escapeHTML(id)}" data-task-overdue-date="${date}" title="${escapeHTML(fmtDate(date))}" aria-label="${escapeHTML(task.name)} — pendente em ${escapeHTML(fmtDate(date))}. Abrir tarefa.">${short(date)}</button>`).join('')}</div></details>`;}).join('')}</div></section>`;
+    };
+    const overdueActionBlock=view=>{
+      const entries=dailyViewOfGroup('actions-overdue')===view?overdueActionEntries:[];if(!entries.length)return'';
+      return `<section class="planner-block planner-block-actions planner-overdue-actions"><h2><button type="button" class="planner-block-link" data-open-action-week aria-label="Abrir Ações na visão semanal"><span class="planner-heading-icon" aria-hidden="true">⚑</span><span>Ações vencidas</span></button><span class="planner-overdue-count" title="${entries.length} ${entries.length===1?'ação vencida':'ações vencidas'}">${entries.length}</span></h2><div class="planner-block-body">${entries.map(action=>{const area=state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted),due=actionDueDate(action);return `<div class="planner-item planner-overdue-action${action.parentId?' is-subaction':''}"><span class="planner-item-icon" aria-hidden="true">${escapeHTML(action.icon||'✦')}</span><span class="planner-overdue-action-copy"><button type="button" class="planner-action-link" data-open-action="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button><span class="planner-overdue-action-meta"><small class="planner-action-due">${escapeHTML(fmtDate(due,{day:'2-digit',month:'2-digit'}))}</small>${area?`<span class="planner-action-area-tag" style="--tag-color:${escapeHTML(area.color||'#dcebe7')};--tag-ink:${plannerHeadingInk(area.color)}">${escapeHTML(area.name)}</span>`:''}</span></span></div>`;}).join('')}</div></section>`;
+    };
     const actions=state.actions.filter(action=>!action.deleted&&action.schedule==='date'&&action.scheduledDate===selectedDate&&!action.study&&!action.leisure).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const studies=state.actions.filter(action=>!action.deleted&&action.study&&action.schedule==='date'&&action.scheduledDate===selectedDate).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const leisure=state.actions.filter(action=>!action.deleted&&action.leisure&&action.schedule==='date'&&action.scheduledDate===selectedDate).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
@@ -734,7 +849,7 @@
     const leisureBlock=view=>{const entries=dailyViewOfGroup('leisure')===view?leisure:[];return entries.length?`<section class="planner-block planner-block-studies"><h2><span class="planner-heading-icon">♡</span><span>Lazer</span></h2><div class="planner-block-body">${entries.map(action=>`<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-leisure="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button></div>`).join('')}</div></section>`:'';};
     const occurrences=state.occurrences.filter(item=>occurrenceIsScheduled(item,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const occurrenceBlock=view=>{const entries=occurrences.filter(item=>dailyViewOfGroup(`occurrence-${item.type}`)===view);return entries.length?`<section class="planner-block planner-block-occurrences"><h2><span class="planner-heading-icon" aria-hidden="true">◉</span><span>Acontecimentos</span></h2><div class="planner-block-body">${entries.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder;return `<div class="planner-item planner-action-item"><span class="planner-item-icon" aria-hidden="true">${escapeHTML(item.icon||kind.icon)}</span><button type="button" class="planner-action-link" data-open-occurrence="${escapeHTML(item.id)}">${escapeHTML(item.title)}</button><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span></div>`;}).join('')}</div></section>`:'';};
-    const plannerExtras=view=>`${dailyViewOfGroup('routines')===view?routineBlock(view):''}${dailyViewOfGroup('tasks-weekly')===view?taskGroup(taskDay,'weekly',true,view,'tasks-weekly',false):''}${dailyViewOfGroup('tasks-biweekly')===view?taskGroup(taskDay,'biweekly',true,view,'tasks-biweekly',false):''}${dailyViewOfGroup('tasks-monthly')===view?monthlyTaskGroups(taskDay,true,view):''}${dailyViewOfGroup('consultations')===view?taskGroup(taskDay,null,true,view,'consultations',true):''}${dailyViewOfGroup('blocks')===view?blockGroup(taskDay,true,view):''}${actionBlock(view)}${studyBlock(view)}${leisureBlock(view)}${occurrenceBlock(view)}`;
+    const plannerExtras=view=>`${dailyViewOfGroup('routines')===view?routineBlock(view):''}${dailyViewOfGroup('overdue')===view?overdueBlock(view):''}${dailyViewOfGroup('actions-overdue')===view?overdueActionBlock(view):''}${dailyViewOfGroup('tasks-weekly')===view?taskGroup(taskDay,'weekly',true,view,'tasks-weekly',false):''}${dailyViewOfGroup('tasks-biweekly')===view?taskGroup(taskDay,'biweekly',true,view,'tasks-biweekly',false):''}${dailyViewOfGroup('tasks-monthly')===view?monthlyTaskGroups(taskDay,true,view):''}${dailyViewOfGroup('consultations')===view?taskGroup(taskDay,null,true,view,'consultations',true):''}${dailyViewOfGroup('blocks')===view?blockGroup(taskDay,true,view):''}${actionBlock(view)}${studyBlock(view)}${leisureBlock(view)}${occurrenceBlock(view)}`;
     $('#planner-grid').innerHTML=`${primaryBlocks.theme}<div class="planner-areas">${primaryBlocks.other||'<p class="planner-empty">Nenhum tipo de âncora na visão principal.</p>'}</div>${plannerExtras('primary')}`;
     $('#planner-secondary-grid').innerHTML=`${secondaryBlocks.theme}${secondaryBlocks.other}${plannerExtras('secondary')}`;
     if($('#timeline-workspace').classList.contains('active-workspace'))renderTimeline();
@@ -1362,7 +1477,7 @@
     const allAnchors=state.anchors.filter(anchor=>!anchor.deleted&&(!selectedAnchorArea||anchor.areaId===selectedAnchorArea)&&(!selectedAnchorSchedule||(selectedAnchorSchedule==='none'?!anchorHasSchedule(anchor):anchor.scheduleType===selectedAnchorSchedule))).sort((a,b)=>(areaById.get(a.areaId)?.order??999)-(areaById.get(b.areaId)?.order??999)||a.title.localeCompare(b.title,'pt-BR'));
     $('#anchor-list').innerHTML=allAnchors.length?allAnchors.map(anchor=>`<article class="anchor-card"><span class="anchor-icon">${escapeHTML(anchor.icon||'✦')}</span><div class="anchor-info"><strong>${escapeHTML(anchor.title)}</strong><small>${escapeHTML(areaById.get(anchor.areaId)?.name||'Tipo indisponível')}</small>${anchor.description?`<p>${escapeHTML(anchor.description)}</p>`:''}</div><div class="anchor-schedule-column"><strong>${escapeHTML(scheduleLabel(anchor))}</strong><small>${escapeHTML(scheduleDetail(anchor))}</small></div><button type="button" class="small-edit" data-edit-anchor="${escapeHTML(anchor.id)}">Editar</button></article>`).join(''):'<div class="empty-state"><h3>Nenhuma âncora encontrada</h3><p>Altere os filtros ou crie uma nova âncora.</p></div>';
     $('#area-list').innerHTML=areas.map((area,index)=>`<article class="area-card"><span class="area-swatch" style="background:${escapeHTML(area.color)}"></span><strong>${escapeHTML(area.name)}</strong><div class="area-card-actions"><button type="button" data-move-area="up" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para cima" ${index===0?'disabled':''}>↑</button><button type="button" data-move-area="down" data-area-id="${escapeHTML(area.id)}" aria-label="Mover ${escapeHTML(area.name)} para baixo" ${index===areas.length-1?'disabled':''}>↓</button><button type="button" class="small-edit" data-edit-area="${escapeHTML(area.id)}">Editar</button></div></article>`).join('');
-    $('#daily-view-groups').innerHTML=DAILY_VIEW_GROUPS.map(([key,label])=>`<div class="daily-view-group-row"><strong>${escapeHTML(label)}</strong><label class="daily-view-select"><span>Visão diária</span><select class="text-input" id="daily-view-${key}" data-daily-view-group="${key}"><option value="primary" ${dailyViewOfGroup(key)==='primary'?'selected':''}>Principal</option><option value="secondary" ${dailyViewOfGroup(key)==='secondary'?'selected':''}>Secundária</option></select></label><label class="daily-weekly-toggle"><input type="checkbox" data-daily-weekly-group="${key}" ${groupInWeekly(key)?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Visão semanal</span></label><label class="daily-weekly-toggle"><input type="checkbox" data-daily-timeline-group="${key}" ${groupInTimeline(key)?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Cronograma</span></label></div>`).join('');
+    $('#daily-view-groups').innerHTML=DAILY_VIEW_GROUPS.map(([key,label,,weekly,timeline])=>`<div class="daily-view-group-row"><strong>${escapeHTML(label)}</strong><label class="daily-view-select"><span>Visão diária</span><select class="text-input" id="daily-view-${key}" data-daily-view-group="${key}"><option value="primary" ${dailyViewOfGroup(key)==='primary'?'selected':''}>Principal</option><option value="secondary" ${dailyViewOfGroup(key)==='secondary'?'selected':''}>Secundária</option></select></label>${weekly?`<label class="daily-weekly-toggle"><input type="checkbox" data-daily-weekly-group="${key}" ${groupInWeekly(key)?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Visão semanal</span></label>`:'<span></span>'}${timeline?`<label class="daily-weekly-toggle"><input type="checkbox" data-daily-timeline-group="${key}" ${groupInTimeline(key)?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Cronograma</span></label>`:'<span></span>'}</div>`).join('');
     $('#anchor-view-groups').innerHTML=areas.map(area=>`<div class="daily-view-group-row"><strong>${escapeHTML(area.name)}</strong><label class="daily-view-select"><span>Visão diária</span><select class="text-input" data-anchor-daily-view="${escapeHTML(area.id)}"><option value="primary" ${area.dailyView==='primary'?'selected':''}>Principal</option><option value="secondary" ${area.dailyView==='secondary'?'selected':''}>Secundária</option></select></label><label class="daily-weekly-toggle"><input type="checkbox" data-anchor-weekly-view="${escapeHTML(area.id)}" ${area.weeklyView!==false?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Visão semanal</span></label><label class="daily-weekly-toggle"><input type="checkbox" data-anchor-timeline-view="${escapeHTML(area.id)}" ${area.timelineView!==false?'checked':''}><span class="settings-check" aria-hidden="true"></span><span class="settings-toggle-label">Cronograma</span></label></div>`).join('');
   }
   function moveAnchorMonthWeek(id,fromWeek,toWeek){
@@ -1370,7 +1485,7 @@
     const weeks=Array.isArray(anchor.monthWeeks)?anchor.monthWeeks.slice():[];const from=Number(fromWeek),to=Number(toWeek);if(!weeks.includes(from)||!Number.isInteger(to)||to<1||to>6)return;
     anchor.monthWeeks=weeks.filter(week=>Number(week)!==from);if(!anchor.monthWeeks.includes(to))anchor.monthWeeks.push(to);anchor.monthWeeks.sort((a,b)=>a-b);anchor.updatedAt=stamp();saveLocal();renderAnchors();toast(`Âncora movida para ${monthWeekLabel(to).toLowerCase()}.`);
   }
-  function saveDailyViewGroups(event){event.preventDefault();const now=stamp();for(const input of $$('#daily-view-groups [data-daily-view-group]')){const key=input.dataset.dailyViewGroup;state.dailyViews[key]={view:input.value==='primary'?'primary':'secondary',weekly:$(`[data-daily-weekly-group="${key}"]`).checked,timeline:$(`[data-daily-timeline-group="${key}"]`).checked};}for(const input of $$('#anchor-view-groups [data-anchor-daily-view]')){const area=state.areas.find(item=>item.id===input.dataset.anchorDailyView&&!item.deleted);if(!area)continue;area.dailyView=input.value==='secondary'?'secondary':'primary';area.weeklyView=$(`[data-anchor-weekly-view="${area.id}"]`).checked;area.timelineView=$(`[data-anchor-timeline-view="${area.id}"]`).checked;area.updatedAt=now;}state.dailyViewsUpdatedAt=now;saveLocal();renderPlanner();renderTimeline();renderWeekly();renderMonthly();renderAnchors();renderTaskWeekly();renderActions();toast('Configurações salvas.');}
+  function saveDailyViewGroups(event){event.preventDefault();const now=stamp();for(const input of $$('#daily-view-groups [data-daily-view-group]')){const key=input.dataset.dailyViewGroup;state.dailyViews[key]={view:input.value==='primary'?'primary':'secondary',weekly:Boolean($(`[data-daily-weekly-group="${key}"]`)?.checked),timeline:Boolean($(`[data-daily-timeline-group="${key}"]`)?.checked)};}for(const input of $$('#anchor-view-groups [data-anchor-daily-view]')){const area=state.areas.find(item=>item.id===input.dataset.anchorDailyView&&!item.deleted);if(!area)continue;area.dailyView=input.value==='secondary'?'secondary':'primary';area.weeklyView=$(`[data-anchor-weekly-view="${area.id}"]`).checked;area.timelineView=$(`[data-anchor-timeline-view="${area.id}"]`).checked;area.updatedAt=now;}state.dailyViewsUpdatedAt=now;saveLocal();renderPlanner();renderTimeline();renderWeekly();renderMonthly();renderAnchors();renderTaskWeekly();renderActions();toast('Configurações salvas.');}
   let projectView='progress',selectedProjectHistoryId='',projectHistoryEditMode=false,selectedProjectCalendarMonth=isoToday().slice(0,7);
   const openProjects=new Set(['project-2004']);
   const PROJECT_EXCLUDED_STATUSES=new Set(['Remodelada','Descartada']);
@@ -1469,6 +1584,10 @@
     if(section==='occurrences')renderOccurrences();
     if(section==='timeline')renderTimeline();
     document.body.classList.remove('sidebar-open');updateSidebarToggle();
+  }
+  function openActionsWeek(date=selectedDate){
+    selectedActionWeekDate=date;actionView='week';setSection('actions');
+    window.scrollTo({top:0,behavior:'smooth'});
   }
   function updateSidebarToggle(){
     const mobile=window.matchMedia('(max-width:700px)').matches;
@@ -1672,12 +1791,12 @@
     if(activeRoutineId===routineId){activeRoutineId=null;$('#routine-focus-dialog').close();}
     saveLocal();render();toast('Rotina removida apenas deste dia.');
   }
-  function removeTaskFromDay(taskId){
-    const day=ensureTaskDay(selectedDate),task=day.tasks[taskId];if(!task)return;
-    if(!confirm(`Remover “${task.name}” de ${fmtDate(selectedDate)}? O registro e seus passos serão excluídos somente deste dia. A programação da tarefa continua igual.`))return;
+  function removeTaskFromDay(taskId,date=selectedDate){
+    const day=ensureTaskDay(date),task=day.tasks[taskId];if(!task)return;
+    if(!confirm(`Remover “${task.name}” de ${fmtDate(date)}? O registro e seus passos serão excluídos somente deste dia. A programação da tarefa continua igual.`))return;
     day.excludedTasks={...day.excludedTasks,[taskId]:stamp()};
     delete day.tasks[taskId];day.updatedAt=stamp();
-    if(activeTaskId===taskId&&activeTaskDate===selectedDate)$('#task-focus-dialog').close();
+    if(activeTaskId===taskId&&(activeTaskDate||selectedDate)===date)$('#task-focus-dialog').close();
     saveLocal();render();toast('Tarefa removida apenas deste dia.');
   }
   function finishRoutineDay() {
@@ -1726,10 +1845,10 @@
     const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=`ancora-historico-${isoToday()}.csv`;a.click();URL.revokeObjectURL(url);toast('Histórico exportado em CSV.');
   }
   function exportTaskCSV(){
-    const rows=[['Data','Frequência','Tipo','Tarefa','Ícone','Tarefa concluída','Resultado do bloco','Passo','Passo realizado','Descrição da tarefa','Descrição do passo','Horário sugerido','Duração (minutos)']];
+    const rows=[['Data','Frequência','Tipo','Tarefa','Ícone','Tarefa concluída','Resultado do bloco','Adiada para','Histórico de adiamentos','Passo','Passo realizado','Descrição da tarefa','Descrição do passo','Horário sugerido','Duração (minutos)']];
     for(const date of Object.keys(state.taskHistory).sort())for(const task of Object.values(state.taskHistory[date].tasks||{})){
-      const consultation=taskIsConsultation(task);
-      const base=[date,taskFrequencyLabel(task.frequency),consultation?'Consulta':task.kind==='block'?'Bloco':'Regular',task.name,task.icon,consultation&&!task.done?'Não se aplica':task.done?'Sim':'Não',task.kind==='block'?blockStatusLabel(blockStatusOf(task)):''];
+      const consultation=taskIsConsultation(task),postponedTo=task.reviewStatus==='postponed'?(task.postponedTo||''):'',postponeHistory=taskPostponementHistory(task,date).map(entry=>`${entry.from} → ${entry.to}`).join(' | ');
+      const base=[date,taskFrequencyLabel(task.frequency),consultation?'Consulta':task.kind==='block'?'Bloco':'Regular',task.name,task.icon,consultation&&!task.done?'Não se aplica':task.done?'Sim':'Não',task.kind==='block'?blockStatusLabel(blockStatusOf(task)):'',postponedTo,postponeHistory];
       if(!task.items?.length)rows.push([...base,'','',task.description||'','',task.scheduledTime||'',task.durationMinutes||45]);
       else for(const item of task.items)rows.push([...base,item.label,consultation&&!item.done?'Não se aplica':item.done?'Sim':'Não',task.description||'',item.description||'',task.scheduledTime||'',task.durationMinutes||45]);
     }
@@ -2318,18 +2437,20 @@
     const date=event.target.closest('[data-add-action-date]');if(date){openActionDialog();$('#action-schedule').value='date';$('#action-scheduled-date').value=date.dataset.addActionDate;updateActionSchedule();}
   });
   $('#planner-grid').addEventListener('click',event=>{
+    if(event.target.closest('[data-open-action-week]')){openActionsWeek();return;}
     if(event.target.closest('[data-open-routine-day]')){setSection('routines');setView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
     if(event.target.closest('[data-open-task-day]')){setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
-    const routine=event.target.closest('[data-planner-routine]'),task=event.target.closest('[data-open-task]'),action=event.target.closest('[data-open-action]'),study=event.target.closest('[data-open-study]'),leisure=event.target.closest('[data-open-leisure]'),occurrence=event.target.closest('[data-open-occurrence]');if(routine)openFocusRoutine(routine.dataset.plannerRoutine);else if(task)openTaskFocus(task.dataset.openTask);else if(action)openActionDialog(action.dataset.openAction);else if(study)openActionDialog(study.dataset.openStudy,'',true);else if(leisure)openActionDialog(leisure.dataset.openLeisure,'',false,true);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);
+    const routine=event.target.closest('[data-planner-routine]'),task=event.target.closest('[data-open-task]'),action=event.target.closest('[data-open-action]'),study=event.target.closest('[data-open-study]'),leisure=event.target.closest('[data-open-leisure]'),occurrence=event.target.closest('[data-open-occurrence]');if(routine)openFocusRoutine(routine.dataset.plannerRoutine);else if(task)openTaskFocus(task.dataset.openTask,task.dataset.taskOverdueDate||selectedDate);else if(action)openActionDialog(action.dataset.openAction);else if(study)openActionDialog(study.dataset.openStudy,'',true);else if(leisure)openActionDialog(leisure.dataset.openLeisure,'',false,true);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);
   });
   $('#planner-timeline').addEventListener('click',event=>{const routine=event.target.closest('[data-timeline-routine]'),task=event.target.closest('[data-timeline-task]'),action=event.target.closest('[data-timeline-action]'),study=event.target.closest('[data-timeline-study]'),leisure=event.target.closest('[data-timeline-leisure]');if(routine)openFocusRoutine(routine.dataset.timelineRoutine);else if(task)openTaskFocus(task.dataset.timelineTask);else if(action)openActionDialog(action.dataset.timelineAction);else if(study)openActionDialog(study.dataset.timelineStudy,'',true);else if(leisure)openActionDialog(leisure.dataset.timelineLeisure,'',false,true);});
   for(const selector of ['#planner-secondary-grid','#task-day-list'])$(selector).addEventListener('click',event=>{
+    if(event.target.closest('[data-open-action-week]')){openActionsWeek();return;}
     if(event.target.closest('[data-open-task-day]')){setSection('tasks');setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});return;}
     const openAction=event.target.closest('[data-open-action]');if(openAction){openActionDialog(openAction.dataset.openAction);return;}
     const openOccurrence=event.target.closest('[data-open-occurrence]');if(openOccurrence){openOccurrenceDialog(openOccurrence.dataset.openOccurrence);return;}
     const action=event.target.closest('[data-toggle-action]');if(action){toggleAction(action.dataset.toggleAction);return;}
     const remove=event.target.closest('[data-remove-task-day]');if(remove){removeTaskFromDay(remove.dataset.removeTaskDay);return;}
-    const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask);
+    const button=event.target.closest('[data-open-task]');if(button)openTaskFocus(button.dataset.openTask,button.dataset.taskOverdueDate||selectedDate);
   });
   $('#task-week-grid').addEventListener('click',event=>{const day=event.target.closest('[data-task-week-open-date]'),button=event.target.closest('[data-task-week-date][data-open-task]');if(day){setSelectedDate(day.dataset.taskWeekOpenDate);setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});}else if(button)openTaskFocus(button.dataset.openTask,button.dataset.taskWeekDate,true);});
   for(const selector of ['#task-month-grid','#task-annual-grid'])$(selector).addEventListener('click',event=>{const month=event.target.closest('[data-open-task-month]');if(month){selectedTaskMonth=month.dataset.openTaskMonth;setTaskView('month');return;}const button=event.target.closest('[data-edit-task]');if(button)openTaskDialog(button.dataset.editTask);});
@@ -2337,6 +2458,19 @@
   $('#task-calendar-grid').addEventListener('click',event=>{const task=event.target.closest('[data-task-calendar-task-date][data-open-task]');if(task){openTaskFocus(task.dataset.openTask,task.dataset.taskCalendarTaskDate,true);return;}const day=event.target.closest('[data-task-calendar-date]');if(day){setSelectedDate(day.dataset.taskCalendarDate);setTaskView('day');window.scrollTo({top:0,behavior:'smooth'});}});
   $('#weekly-grid').addEventListener('click',event=>{const day=event.target.closest('[data-weekly-open-date]'),routine=event.target.closest('[data-weekly-routine]'),task=event.target.closest('[data-task-week-date][data-open-task]'),action=event.target.closest('[data-open-action]'),study=event.target.closest('[data-open-study]'),leisure=event.target.closest('[data-open-leisure]'),occurrence=event.target.closest('[data-open-occurrence]');if(day){setSelectedDate(day.dataset.weeklyOpenDate);setSection('planner');window.scrollTo({top:0,behavior:'smooth'});}else if(routine)openFocusRoutine(routine.dataset.weeklyRoutine,routine.dataset.weeklyRoutineDate);else if(task)openTaskFocus(task.dataset.openTask,task.dataset.taskWeekDate,true);else if(action)openActionDialog(action.dataset.openAction);else if(study)openActionDialog(study.dataset.openStudy,'',true);else if(leisure)openActionDialog(leisure.dataset.openLeisure,'',false,true);else if(occurrence)openOccurrenceDialog(occurrence.dataset.openOccurrence);});
   $('#task-focus-complete').onchange=event=>mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task&&task.kind!=='block'&&!taskIsConsultation(task)){task.done=event.target.checked;task.doneTouched=true;task.doneChangedAt=stamp();}});
+  $('#task-focus-remove-day').onclick=()=>{if(activeTaskId)removeTaskFromDay(activeTaskId,activeTaskDate||selectedDate);};
+  $('#task-focus-postpone').onclick=()=>{
+    const date=activeTaskDate||selectedDate,id=activeTaskId;if(!id)return;
+    if(!postponeTaskOccurrence(date,id))return;
+    $('#task-focus-dialog').close();
+    renderTasks();renderTaskReview();renderPlanner();renderWeekly();renderTaskWeekly();renderTaskCalendar();renderSummary();toast('Ocorrência adiada.');
+  };
+  $('#task-focus-undo-postpone').onclick=()=>{
+    const date=activeTaskDate||selectedDate,id=activeTaskId;if(!id)return;
+    if(!undoPostponement(date,id))return;
+    $('#task-focus-dialog').close();
+    renderTasks();renderTaskReview();renderPlanner();renderWeekly();renderTaskWeekly();renderTaskCalendar();renderSummary();toast('Adiamento desfeito.');
+  };
   $('#task-focus-block-result').addEventListener('change',event=>{
     const input=event.target.closest('input[name="block-result"]');if(!input)return;
     mutateTaskDay(day=>{const task=day.tasks[activeTaskId];if(task?.kind!=='block'||taskIsConsultation(task))return;task.blockStatus=input.value;task.done=true;task.doneTouched=true;task.doneChangedAt=stamp();});

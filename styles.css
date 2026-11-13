@@ -33,7 +33,10 @@
 .focus-step input:focus-visible+.focus-check{outline:3px solid #be8790;outline-offset:2px}
 .focus-step input:checked+.focus-check{background:var(--routine-color);border-color:var(--routine-color)}.focus-step input:checked+.focus-check:after{content:'✓';font-size:14px;font-weight:700;color:#fff}
 .focus-step.is-done>span:last-child{color:#a8a199;text-decoration:line-through}.focus-step input:disabled+.focus-check{opacity:.65}
-.focus-actions{display:flex;align-items:center;justify-content:flex-end;gap:15px;margin-top:14px}.focus-actions .primary-button,.focus-actions .secondary-button{font-size:11px;padding:10px 14px}.focus-actions .secondary-button{background:var(--accent-dark);color:white;box-shadow:0 4px 12px #285b611f}.focus-actions .secondary-button:hover{background:#1d4c52;transform:translateY(-1px)}
+.focus-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:15px;margin-top:14px}.focus-actions .primary-button,.focus-actions .secondary-button{font-size:11px;padding:10px 14px}.focus-actions .secondary-button{background:var(--accent-dark);color:white;box-shadow:0 4px 12px #285b611f}.focus-actions .secondary-button:hover{background:#1d4c52;transform:translateY(-1px)}
+.focus-actions .focus-remove-day{margin-right:auto;padding:10px 0;color:#986f68;font-size:11px;font-weight:600}.focus-actions .focus-remove-day:hover{color:#74483f;text-decoration:underline}
+.focus-actions .focus-postpone{padding:10px 0;color:#756d64;font-size:11px;font-weight:600}.focus-actions .focus-postpone:hover{color:#524b44;text-decoration:underline}
+.focus-actions .focus-undo-postpone{padding:10px 0;color:#8a6424;font-size:11px;font-weight:600}.focus-actions .focus-undo-postpone:hover{color:#6b4c16;text-decoration:underline}
 @media(max-width:650px){.focus-shell{padding:0 18px 16px}.focus-topbar{height:52px}.focus-content{padding-top:15px}.focus-icon{width:47px;height:47px;font-size:21px;border-radius:13px}.focus-title-row{gap:11px;margin:9px 0 12px}.focus-title-row h2{font-size:24px}.focus-title-row p{font-size:10px}.focus-progress{margin-bottom:15px}.focus-step{min-height:42px;font-size:12px;gap:10px}.focus-actions{margin-top:12px}}
 
 /* Painel de sincronização no padrão dos demais aplicativos. */
@@ -132,6 +135,10 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .item-editor-main .item-name-input{min-width:0;flex:1}
 .item-description-input{min-height:43px;margin-left:65px;width:calc(100% - 65px);font-size:11px}
 .focus-routine-description{margin:-4px 0 15px;color:var(--muted);font-size:12px;line-height:1.45;white-space:pre-wrap}
+.focus-postpone-info{display:grid;gap:7px;margin:-2px 0 15px;padding:10px 12px;border:1px dashed #d9c39a;border-radius:10px;background:#fbf4e6;color:#6f5a34;font-size:11px;line-height:1.4}
+.focus-postpone-history{display:flex;flex-wrap:wrap;gap:5px;margin:0;padding:0;list-style:none}
+.focus-postpone-history li{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;background:#f3e5c8;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums}
+.focus-postpone-history i{font-style:normal;color:#a98d55}
 .focus-step-copy{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
 .focus-step-copy small{display:block;color:var(--muted);font-size:10px;line-height:1.3;white-space:pre-wrap}
 .focus-step.is-done>.focus-step-copy{text-decoration:none}
@@ -199,12 +206,39 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-routine strong{min-width:0;font-size:11px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
 .planner-routine-progress{flex:none;margin-left:2px;color:#6b8082;font-size:10px;font-weight:700;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
 .planner-routine-time{flex:none;margin-left:auto;padding-left:7px;color:#5c7376;font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.planner-overdue{--area-color:#f6e2da}
+.planner-overdue h2{--heading-ink:#6d3427}
+.planner-overdue-count{flex:none;margin-left:auto;padding:2px 7px;border-radius:999px;background:#b8563f;color:#fff;font:800 10px/1.4 Manrope,sans-serif;letter-spacing:0;transform:none}
+.planner-overdue .planner-block-body{padding-top:6px;padding-bottom:9px}
+.planner-overdue-item{display:block;border-radius:5px}
+.planner-overdue-item>summary{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:5px;cursor:pointer;list-style:none}
+.planner-overdue-item>summary::-webkit-details-marker{display:none}
+.planner-overdue-item>summary:hover{background:#ffffffa8}
+.planner-overdue-item>summary:focus-visible{outline:2px solid #6d3427;outline-offset:1px}
+.planner-overdue-item[open]>summary{background:#ffffffc9}
+.planner-overdue-dates{display:flex;flex-wrap:wrap;gap:4px;padding:2px 6px 8px 33px}
+.planner-overdue-copy{display:flex;flex:1;flex-direction:column;gap:1px;min-width:0}
+.planner-overdue-copy strong{font-size:11px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.planner-overdue-copy small{color:#7a5a50;font-size:10px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.planner-overdue-date{min-width:44px;padding:2px 6px;border:1px solid #d8a99c;border-radius:999px;background:#fff8f5;color:#7a4234;font:700 10px/1.35 Manrope,sans-serif;font-variant-numeric:tabular-nums;text-align:center;cursor:pointer}
+.planner-overdue-date:hover{background:#f7ded5;border-color:#b8563f}
+.planner-overdue-date:focus-visible{outline:2px solid #6d3427;outline-offset:1px}
+.planner-overdue-arrow{flex:none;margin-left:auto;padding-left:6px;color:#a0604c;font-size:12px;transition:transform .15s ease}
+.planner-overdue-item[open] .planner-overdue-arrow{transform:rotate(180deg)}
 .planner-task-block{--area-color:#e2eee6}
 .planner-task-biweekly{--area-color:#e9e3f0}
 .planner-block-tasks{--area-color:#d9e7f0}
 .planner-block-actions{--area-color:#f3e6d7}
 .planner-block-occurrences{--area-color:#e8e6f2}
 .planner-action-item{gap:7px;padding:3px 0;flex-wrap:wrap}.planner-action-link{padding:0;border:0;background:transparent;color:inherit;text-align:left;font:600 11px/1.2 Manrope,sans-serif;cursor:pointer;overflow-wrap:anywhere}.planner-action-link:hover{text-decoration:underline}.planner-action-area-tag{max-width:100%;padding:2px 6px;border-radius:5px;background:var(--tag-color);color:var(--tag-ink);font-size:10px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.planner-overdue-actions{--area-color:#f7e7cf}
+.planner-overdue-actions h2{--heading-ink:#7a4a1e}
+.planner-overdue-actions .planner-block-link{flex:1}
+.planner-overdue-actions .planner-overdue-count{background:#b0702e}
+.planner-overdue-action{align-items:flex-start;flex-wrap:nowrap;padding:5px 0;gap:6px}
+.planner-overdue-action-copy{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.planner-overdue-action-meta{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.planner-action-due{flex:none;color:#9a6a35;font-size:10px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 .action-complete-toggle{flex:none;display:grid;place-items:center;width:21px;height:21px;padding:0;border:1px solid #a8bcb6;border-radius:6px;background:#fffefa;color:#fff;font-size:13px;line-height:1}.action-complete-toggle[aria-pressed="true"]{background:#568b7c;border-color:#568b7c}
 .action-form-completion{margin-top:15px}
 .color-palette{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-width:245px}
@@ -281,6 +315,10 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .block-result-badge.is-realized,.weekly-block-result.is-realized{background:#dceee0;color:#3b7656}
 .block-result-badge.is-partial,.weekly-block-result.is-partial{background:#fff0cf;color:#916923}
 .block-result-badge.is-not-realized,.weekly-block-result.is-not-realized{background:#f8e0dc;color:#a3544c}
+.task-postponed-badge{flex:none;padding:2px 5px;border-radius:5px;font-size:9px;font-weight:700;white-space:nowrap}
+.task-postponed-badge.is-out{background:#f7e9cd;color:#8a6424}
+.task-postponed-badge.is-in{background:#e2ebf6;color:#3e6288}
+.task-review-postponements{color:#8a6424!important}
 .consultation-step{padding:8px 0;color:var(--ink);font-size:12px;line-height:1.4}
 .consultation-step+.consultation-step{border-top:1px solid #eae6e0}
 .consultation-step small{display:block;margin-top:2px;color:var(--muted);font-size:10px;white-space:pre-wrap}
