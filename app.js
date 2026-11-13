@@ -510,7 +510,7 @@
     const tasks=taskSnapshots(day,frequency,selectedDate,'regular',view,group,consultation),label=consultation?'Consultas':TASK_FREQUENCY_PLURAL[frequency]||'Semanais',icon=frequency==='biweekly'?'◫':MONTHLY_TASK_FREQUENCIES.includes(frequency)?'▦':'☑';
     const complete=planner&&!consultation&&tasks.length>0&&Boolean(day.finalized);
     if(planner)return `<section class="planner-block planner-task-block${frequency==='biweekly'?' planner-task-biweekly':''}"><h2><button type="button" class="planner-block-link" data-open-task-day><span class="planner-heading-icon" aria-hidden="true">${icon}</span><span>Tarefas ${label.toLowerCase()}</span></button>${plannerDoneMark(complete)}</h2><div class="planner-block-body">${tasks.length?tasks.map(task=>taskRow(task,false)).join(''):'<p class="planner-empty">Nenhuma tarefa neste dia.</p>'}</div></section>`;
-    return `<section class="task-group"><h3>${label}</h3>${tasks.length?tasks.map(task=>taskRow(task)).join(''):'<p class="planner-empty">Nenhuma tarefa neste dia.</p>'}</section>`;
+    return `<section class="task-group"><h3>${label}</h3>${tasks.length?tasks.map(task=>taskRow(task,!day.finalized)).join(''):'<p class="planner-empty">Nenhuma tarefa neste dia.</p>'}</section>`;
   }
   function monthlyTaskGroups(day,planner=false,view=''){
     const consultation=planner?false:null;
@@ -519,7 +519,7 @@
   function blockGroup(day,planner=false,view=''){
     const tasks=taskSnapshots(day,null,selectedDate,'block',view,'blocks'),complete=planner&&tasks.length>0&&Boolean(day.finalized);
     if(planner)return `<section class="planner-block planner-task-block planner-block-tasks"><h2><button type="button" class="planner-block-link" data-open-task-day><span class="planner-heading-icon" aria-hidden="true">▣</span><span>Blocos</span></button>${plannerDoneMark(complete)}</h2><div class="planner-block-body">${tasks.length?tasks.map(task=>taskRow(task,false)).join(''):'<p class="planner-empty">Nenhum bloco neste dia.</p>'}</div></section>`;
-    return `<section class="task-group task-block-group"><h3>Blocos</h3>${tasks.length?tasks.map(task=>taskRow(task)).join(''):'<p class="planner-empty">Nenhum bloco neste dia.</p>'}</section>`;
+    return `<section class="task-group task-block-group"><h3>Blocos</h3>${tasks.length?tasks.map(task=>taskRow(task,!day.finalized)).join(''):'<p class="planner-empty">Nenhum bloco neste dia.</p>'}</section>`;
   }
   function renderTasks(){
     postponedOriginsCache={date:'',map:null};
@@ -604,7 +604,7 @@
     const openCount=all.filter(item=>item.status==='open').length,closedCount=all.length-openCount;$('#task-review-summary').innerHTML=`<article><span>ABERTAS</span><strong>${openCount}</strong></article><article><span>FECHADAS</span><strong>${closedCount}</strong></article><article><span>OCORRÊNCIAS</span><strong>${all.length}</strong></article>`;
     const labels={open:'Aberta',completed:'Concluída','not-realized':'Não realizada',postponed:'Adiada',canceled:'Cancelada'},groups=new Map();
     for(const item of visible){const key=item.id;if(!groups.has(key))groups.set(key,{task:item.task,items:[]});groups.get(key).items.push(item);}
-    const occurrenceCard=({date,id,task,status})=>`<article class="task-review-occurrence is-${status}" data-review-date="${date}" data-review-task="${escapeHTML(id)}"><div class="task-review-occurrence-date"><strong>${escapeHTML(fmtDate(date,{weekday:'short',day:'numeric',month:'short',year:'numeric'}))}</strong>${task.reviewStatus==='postponed'&&task.postponedTo?`<small>Adiada para ${escapeHTML(fmtDate(task.postponedTo,{day:'numeric',month:'short',year:'numeric'}))}</small>`:''}${taskPostponementHistory(task,date).length?`<small class="task-review-postponements">${taskPostponementHistory(task,date).map(entry=>`${escapeHTML(fmtDate(entry.from,{day:'2-digit',month:'2-digit'}))} → ${escapeHTML(fmtDate(entry.to,{day:'2-digit',month:'2-digit'}))}`).join(' · ')}</small>`:''}</div><span class="task-review-status">${labels[status]}</span><div class="task-review-actions">${status==='open'?'<button type="button" data-review-action="complete">Concluir</button><button type="button" data-review-action="not-realized">Não realizada</button><button type="button" data-review-action="postpone">Adiar</button><button type="button" data-review-action="cancel">Cancelar</button>':'<button type="button" data-review-action="reopen">Reabrir</button>'}</div></article>`;
+    const occurrenceCard=({date,id,task,status})=>{const locked=Boolean(state.taskHistory[date]?.finalized);return `<article class="task-review-occurrence is-${status}" data-review-date="${date}" data-review-task="${escapeHTML(id)}"><div class="task-review-occurrence-date"><strong>${escapeHTML(fmtDate(date,{weekday:'short',day:'numeric',month:'short',year:'numeric'}))}</strong>${task.reviewStatus==='postponed'&&task.postponedTo?`<small>Adiada para ${escapeHTML(fmtDate(task.postponedTo,{day:'numeric',month:'short',year:'numeric'}))}</small>`:''}${taskPostponementHistory(task,date).length?`<small class="task-review-postponements">${taskPostponementHistory(task,date).map(entry=>`${escapeHTML(fmtDate(entry.from,{day:'2-digit',month:'2-digit'}))} → ${escapeHTML(fmtDate(entry.to,{day:'2-digit',month:'2-digit'}))}`).join(' · ')}</small>`:''}</div><span class="task-review-status">${labels[status]}</span><div class="task-review-actions">${locked?'<span class="task-review-locked">Dia concluído</span>':status==='open'?'<button type="button" data-review-action="complete">Concluir</button><button type="button" data-review-action="not-realized">Não realizada</button><button type="button" data-review-action="postpone">Adiar</button><button type="button" data-review-action="cancel">Cancelar</button>':'<button type="button" data-review-action="reopen">Reabrir</button>'}</div></article>`;};
     $('#task-review-list').innerHTML=groups.size?[...groups.values()].sort((a,b)=>a.task.name.localeCompare(b.task.name,'pt-BR')).map(({task,items})=>{const open=items.filter(item=>item.status==='open').length,done=items.length-open;return `<details class="task-review-task-group" open><summary><span class="task-review-icon">${escapeHTML(task.icon||'✓')}</span><span class="task-review-task-title"><strong>${escapeHTML(task.name)}</strong><small>${TASK_FREQUENCY_LABELS[task.frequency]||taskFrequencyLabel(task.frequency)} · ${items.length} ${items.length===1?'ocorrência':'ocorrências'}</small></span><span class="task-review-task-counts"><b class="is-open">${open} abertas</b><b class="is-closed">${done} fechadas</b></span></summary><div class="task-review-occurrences">${items.sort((a,b)=>b.date.localeCompare(a.date)).map(occurrenceCard).join('')}</div></details>`}).join(''):'<div class="empty-state"><span>✓</span><h3>Nenhuma ocorrência encontrada</h3><p>Altere os filtros ou o período da revisão.</p></div>';
   }
   function postponedOriginsFor(date){
@@ -622,22 +622,27 @@
   }
   function postponeTaskOccurrence(date,id){
     const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return false;
+    if(day.finalized){toast('Este dia já foi concluído e não pode mais ser alterado.');return false;}
     const suggested=new Date(safeDate(date));suggested.setDate(suggested.getDate()+7);
     const keyOf=value=>`${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
     while(keyOf(suggested)<isoToday())suggested.setDate(suggested.getDate()+7);
     const target=prompt('Para qual data deseja adiar?',keyOf(suggested));
     if(!target||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(target))return false;
+    const targetDay=ensureTaskDay(target);
+    if(targetDay.finalized){toast('A data escolhida já foi concluída e não pode receber tarefas.');return false;}
     const now=stamp(),history=[...(task.postponements||[]),{from:date,to:target,at:now}];
     task.done=false;task.doneTouched=true;task.reviewStatus='postponed';task.postponedTo=target;task.postponements=history;task.doneChangedAt=now;task.reviewChangedAt=now;day.updatedAt=now;
-    const targetDay=ensureTaskDay(target),existing=targetDay.tasks[id];
+    const existing=targetDay.tasks[id];
     if(!existing)targetDay.tasks[id]={...structuredClone(task),done:false,doneTouched:false,reviewStatus:'',postponedTo:'',postponements:history,manualOccurrence:true,originalDate:date,items:(task.items||[]).map(item=>({...item,done:false,touched:false}))};
     else existing.postponements=history;
     targetDay.updatedAt=now;saveLocal();return true;
   }
   function undoPostponement(date,id){
     const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return false;
+    if(day.finalized){toast('Este dia já foi concluído e não pode mais ser alterado.');return false;}
     if(task.postponedTo){
       const target=task.postponedTo,targetDay=state.taskHistory[target],targetTask=targetDay?.tasks?.[id];
+      if(targetDay?.finalized){toast('A data de destino já foi concluída e não pode mais ser alterada.');return false;}
       if(targetTask?.postponedTo){toast('Desfaça primeiro o adiamento mais recente desta ocorrência.');return false;}
       const registered=targetTask&&taskIsRegistered(targetTask);
       const message=registered?`A ocorrência de ${fmtDate(target)} já tem registro. Cancelar o adiamento vai removê-la e reabrir ${fmtDate(date)}. Continuar?`:`Cancelar o adiamento? ${fmtDate(date)} voltará a ficar pendente e a ocorrência de ${fmtDate(target)} será removida.`;
@@ -652,6 +657,7 @@
     if(!last||last.to!==date){toast('Esta ocorrência não foi adiada.');return false;}
     const originDay=ensureTaskDay(last.from),originTask=originDay.tasks[id];
     if(!originTask){toast('A ocorrência original não foi encontrada.');return false;}
+    if(originDay.finalized){toast('A data de origem já foi concluída e não pode mais ser alterada.');return false;}
     if(originTask.postponedTo!==date){toast('A ocorrência original já foi alterada. Abra a data de origem para desfazer.');return false;}
     if(!confirm(`Voltar esta ocorrência para ${fmtDate(last.from)}? A ocorrência em ${fmtDate(date)} será removida.`))return false;
     delete day.tasks[id];day.updatedAt=stamp();
@@ -661,7 +667,9 @@
     originDay.updatedAt=stamp();saveLocal();return true;
   }
   function reviewTaskOccurrence(date,id,action){
-    const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return;const now=stamp();
+    const day=ensureTaskDay(date),task=day.tasks[id];if(!task)return;
+    if(day.finalized){toast('Este dia já foi concluído e não pode mais ser alterado.');return;}
+    const now=stamp();
     if(action==='complete'){task.done=true;task.doneTouched=true;task.reviewStatus='completed';if(task.kind==='block')task.blockStatus='realized';for(const item of task.items||[]){item.done=true;item.touched=true;item.changedAt=now;}}
     if(action==='not-realized'){task.done=false;task.doneTouched=true;task.reviewStatus='not-realized';if(task.kind==='block')task.blockStatus='not-realized';}
     if(action==='cancel'){task.done=false;task.doneTouched=true;task.reviewStatus='canceled';}
@@ -684,7 +692,9 @@
     $('#task-focus-description').textContent=task.description||'';
     $('#task-focus-description').classList.toggle('hidden',!task.description);
     const postponeHistory=taskPostponementHistory(task,date),postponedTo=task.reviewStatus==='postponed'&&task.postponedTo?task.postponedTo:'',lastPostpone=postponeHistory[postponeHistory.length-1],postponedFrom=lastPostpone&&lastPostpone.to===date?lastPostpone.from:'';
-    const undoPostpone=$('#task-focus-undo-postpone');undoPostpone.classList.toggle('hidden',!(postponedTo||postponedFrom));undoPostpone.textContent=postponedTo?'Cancelar adiamento':'Voltar à data original';
+    const undoPostpone=$('#task-focus-undo-postpone');undoPostpone.classList.toggle('hidden',locked||!(postponedTo||postponedFrom));undoPostpone.textContent=postponedTo?'Cancelar adiamento':'Voltar à data original';
+    $('#task-focus-postpone').classList.toggle('hidden',locked);
+    $('#task-focus-remove-day').classList.toggle('hidden',locked);
     const postponeInfo=$('#task-focus-postpone-info');postponeInfo.classList.toggle('hidden',!postponedTo&&!postponedFrom);
     postponeInfo.innerHTML=`${postponedTo?`<strong>Adiada para ${escapeHTML(fmtDate(postponedTo))}</strong>`:postponedFrom?`<strong>Adiada de ${escapeHTML(fmtDate(postponedFrom))}</strong>`:''}${postponeHistory.length?`<ol class="focus-postpone-history">${postponeHistory.map(entry=>`<li><span>${escapeHTML(fmtDate(entry.from,{day:'2-digit',month:'2-digit'}))}</span><i aria-hidden="true">→</i><span>${escapeHTML(fmtDate(entry.to,{day:'2-digit',month:'2-digit'}))}</span></li>`).join('')}</ol>`:''}`;
     $('#task-focus-complete').checked=Boolean(task.done);
@@ -1795,6 +1805,7 @@
   }
   function removeTaskFromDay(taskId,date=selectedDate){
     const day=ensureTaskDay(date),task=day.tasks[taskId];if(!task)return;
+    if(day.finalized){toast('Este dia já foi concluído e não pode mais ser alterado.');return;}
     if(!confirm(`Remover “${task.name}” de ${fmtDate(date)}? O registro e seus passos serão excluídos somente deste dia. A programação da tarefa continua igual.`))return;
     day.excludedTasks={...day.excludedTasks,[taskId]:stamp()};
     delete day.tasks[taskId];day.updatedAt=stamp();

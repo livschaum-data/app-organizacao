@@ -542,3 +542,4 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .project-calendar-navigation [data-project-calendar-today]{display:inline-flex;align-items:center;justify-content:center;margin-left:2px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fffdfa;color:var(--ink);font-size:10px;font-weight:700}
 .project-calendar-navigation [data-project-calendar-today]:hover{border-color:#9ab9b1;background:#f4f8f6}
 @media(max-width:700px){.project-calendar-navigation{gap:10px}.project-calendar-navigation h3{min-width:150px;font-size:14px}.project-calendar-navigation button[data-project-calendar-shift]{width:42px;height:42px}}
+.task-review-actions .task-review-locked{border-radius:999px;padding:4px 8px;background:#f1ece6;color:#6b645c;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
