@@ -187,6 +187,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .planner-block-link{display:inline-flex;align-items:center;gap:8px;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}.planner-block-link:hover span:last-child{text-decoration:underline}.planner-block-link:focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:2px}
 .planner-block h2::after{content:'✧';margin-left:auto;color:inherit;opacity:.75;font:400 17px/1 'Segoe Print',cursive;transform:rotate(-12deg)}
 .planner-heading-icon{flex:none;display:grid;place-items:center;width:19px;height:19px;color:inherit;font:700 20px/1 'Segoe Print','DM Sans',sans-serif;letter-spacing:0;transform:rotate(-8deg)}
+.planner-title-done{flex:none;display:inline-grid;place-items:center;width:16px;height:16px;margin-left:2px;border-radius:50%;background:#4f8a6e;color:#fff;font:800 10px/1 Manrope,sans-serif;letter-spacing:0;text-transform:none}
 .planner-block-body{padding:7px 12px 11px}
 .planner-theme{grid-column:1/-1;display:flex;align-items:stretch}
 .planner-theme h2{min-width:185px;border-bottom:0;border-right:1px dashed #48636a48}

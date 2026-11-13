@@ -6,7 +6,7 @@ O menu lateral reúne as visões diárias, semanais e mensais, além de Âncoras
 
 Além das áreas das âncoras, a seção **Grupos nas visões diárias** permite definir uma única vez se rotinas, tarefas vencidas, ações vencidas, tarefas semanais ou quinzenais, blocos, consultas, ações e cada tipo de acontecimento aparecem na **Visão principal** ou **Visão secundária**. A escolha vale para todos os cartões daquele grupo. O cartão **Tarefas vencidas** reúne as ocorrências ainda abertas do mesmo dia da semana em semanas anteriores; cada tarefa mostra quantas pendências acumulou e, ao expandir, as datas para abrir o registro correspondente. O cartão **Ações vencidas** lista as ações não concluídas cuja data de vencimento já passou, com a data e a área de cada uma.
 
-No computador, o botão no cabeçalho recolhe ou expande o menu lateral e lembra a escolha neste navegador. Na Visão diária, as áreas ficam à esquerda e as rotinas ocupam uma coluna inteira à direita; no celular, os blocos ficam em sequência.
+No computador, o botão no cabeçalho recolhe ou expande o menu lateral e lembra a escolha neste navegador. Na Visão diária, as áreas ficam à esquerda e as rotinas ocupam uma coluna inteira à direita; no celular, os blocos ficam em sequência. Quando o dia é concluído pelos botões **Concluir rotinas** ou **Concluir tarefas e blocos**, um ✓ aparece ao lado do título dos cartões correspondentes.
 
 ## Configurar sincronização
 
