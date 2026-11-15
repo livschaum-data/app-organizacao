@@ -7,12 +7,12 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261113-day-finalized-marks-v15">
+  <link rel="stylesheet" href="styles.css?v=20261115-record-step-v26">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261113-day-finalized-marks-v15"></script>
+  <script defer src="app.js?v=20261115-record-step-v26"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -26,6 +26,7 @@
         <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
         <button type="button" class="sidebar-link" data-section="monthly"><span>▦</span> Visão mensal</button>
         <button type="button" class="sidebar-link" data-section="summary"><span>◷</span> Resumo</button>
+        <button type="button" class="sidebar-link" data-section="registries"><span>✍</span> Registros</button>
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
         <button type="button" class="sidebar-link" data-section="anchors"><span>⚓</span> Âncoras</button>
         <button type="button" class="sidebar-link" data-section="tasks"><span>✓</span> Tarefas</button>
@@ -74,23 +75,45 @@
       </section>
 
       <section id="weekly-workspace" class="workspace-view">
-        <div class="planner-hero"><div class="eyebrow">VISÃO SEMANAL</div><h1>Sua semana, de relance.</h1><p id="weekly-range-label" class="planner-date-label"></p><p>As âncoras de cada tipo distribuídas pelos dias da semana.</p>
-          <div class="date-navigator"><button type="button" id="weekly-prev" class="round-button" aria-label="Semana anterior">←</button><input id="weekly-date" type="date" aria-label="Escolher semana"><button type="button" id="weekly-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="weekly-today" class="today-button">Esta semana</button></div>
+        <div class="planner-hero"><div class="eyebrow">VISÃO SEMANAL</div><h1 id="weekly-heading">Sua semana, de relance.</h1><p id="weekly-range-label" class="planner-date-label"></p><p id="weekly-subtitle">As âncoras de cada tipo distribuídas pelos dias da semana.</p>
+          <div class="date-navigator"><button type="button" id="weekly-prev" class="round-button" aria-label="Semana anterior">←</button><input id="weekly-date" type="date" aria-label="Escolher semana"><button type="button" id="weekly-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="weekly-today" class="today-button">Esta semana</button><span id="weekly-month-week" class="weekly-month-week" aria-live="polite"></span></div>
         </div>
+        <div class="tabs weekly-view-tabs" role="tablist" aria-label="Formato da visão semanal"><button type="button" class="tab weekly-tab active" role="tab" aria-selected="true" data-weekly-view="days">Dias</button><button type="button" class="tab weekly-tab" role="tab" aria-selected="false" data-weekly-view="groups">Semana</button></div>
         <div id="weekly-grid" class="weekly-scroll"></div>
+        <div id="weekly-groups" class="weekly-groups-grid hidden"></div>
+        <div class="planner-notes-row period-notes-row">
+          <section class="planner-notes planner-block" style="--area-color:#efe6dc;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✎</span><span>Anotações da semana</span></h2><div class="planner-block-body"><label class="sr-only" for="weekly-notes-input">Anotações da semana de <span id="weekly-notes-range"></span></label><textarea id="weekly-notes-input" maxlength="10000" placeholder="Ideias, lembretes ou planos para esta semana…"></textarea><small>Salvas automaticamente e sincronizadas com a sua conta.</small></div></section>
+          <section class="planner-notes planner-block" style="--area-color:#e3eee9;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✍</span><span>Registro da semana</span></h2><div class="planner-block-body"><label class="sr-only" for="weekly-registry-input">Registro da semana de <span id="weekly-registry-range"></span></label><textarea id="weekly-registry-input" maxlength="20000" placeholder="O que aconteceu nesta semana? Registre os principais acontecimentos…"></textarea><small>Salvo automaticamente e sincronizado com a sua conta.</small></div></section>
+        </div>
       </section>
 
       <section id="monthly-workspace" class="workspace-view">
-        <div class="planner-hero"><div class="eyebrow">VISÃO MENSAL</div><h1>Suas semanas do mês.</h1><p id="monthly-range-label" class="planner-date-label"></p><p>Âncoras programadas para semanas específicas, organizadas por tipo.</p>
+        <div class="planner-hero"><div class="eyebrow">VISÃO MENSAL</div><h1 id="monthly-heading">Suas semanas do mês.</h1><p id="monthly-range-label" class="planner-date-label"></p><p id="monthly-subtitle">Âncoras programadas para semanas específicas, organizadas por tipo.</p>
           <div class="date-navigator"><button type="button" id="monthly-prev" class="round-button" aria-label="Mês anterior">←</button><input id="monthly-date" type="month" aria-label="Escolher mês da visão mensal"><button type="button" id="monthly-next" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="monthly-today" class="today-button">Este mês</button></div>
         </div>
+        <div class="tabs monthly-view-tabs" role="tablist" aria-label="Formato da visão mensal"><button type="button" class="tab monthly-tab active" role="tab" aria-selected="true" data-monthly-view="weeks">Semanas</button><button type="button" class="tab monthly-tab" role="tab" aria-selected="false" data-monthly-view="groups">Mês</button></div>
         <div id="monthly-grid" class="weekly-scroll"></div>
+        <div id="monthly-groups" class="monthly-groups-grid hidden"></div>
+        <div class="planner-notes-row period-notes-row">
+          <section class="planner-notes planner-block" style="--area-color:#efe6dc;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✎</span><span>Anotações do mês</span></h2><div class="planner-block-body"><label class="sr-only" for="monthly-notes-input">Anotações de <span id="monthly-notes-range"></span></label><textarea id="monthly-notes-input" maxlength="10000" placeholder="Ideias, lembretes ou planos para este mês…"></textarea><small>Salvas automaticamente e sincronizadas com a sua conta.</small></div></section>
+          <section class="planner-notes planner-block" style="--area-color:#e3eee9;--heading-ink:#25474c"><h2><span class="planner-heading-icon" aria-hidden="true">✍</span><span>Registro do mês</span></h2><div class="planner-block-body"><label class="sr-only" for="monthly-registry-input">Registro de <span id="monthly-registry-range"></span></label><textarea id="monthly-registry-input" maxlength="20000" placeholder="Resuma o que aconteceu neste mês…"></textarea><small>Salvo automaticamente e sincronizado com a sua conta.</small></div></section>
+        </div>
       </section>
 
       <section id="summary-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">ACOMPANHAMENTO</div><h1>Resumo dos seus dias.</h1><p>Veja quantos dias ainda têm rotinas ou tarefas pendentes.</p><div class="date-navigator"><button type="button" id="summary-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="summary-date" type="month" aria-label="Escolher mês do resumo"><button type="button" id="summary-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="summary-today" class="today-button">Mês atual</button></div></div>
         <div class="summary-actions"><p class="summary-explainer">Rotinas e tarefas têm conclusões separadas. Ao concluir, itens abertos ficam registrados como não realizados. Dias futuros não entram no resumo.</p><button type="button" id="summary-open-task-review" class="secondary-button">Revisar tarefas pendentes →</button></div>
         <div id="summary-content" class="summary-content"></div>
+      </section>
+
+      <section id="registries-workspace" class="workspace-view">
+        <div class="planner-hero"><div class="eyebrow">SEU DIÁRIO</div><h1 id="registries-heading">Registros do mês e da semana.</h1><p id="registries-subtitle">Abra um mês para ver os registros de cada semana.</p></div>
+        <div class="tabs registries-view-tabs" role="tablist" aria-label="Formato dos registros"><button type="button" class="tab registries-tab active" role="tab" aria-selected="true" data-registries-view="diary">Diário</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="trackers">Acompanhamento</button></div>
+        <div id="registries-diary"><div id="registries-list" class="registries-list"></div></div>
+        <div id="registries-trackers" class="hidden">
+          <div class="section-heading record-type-heading"><div><div class="eyebrow">ACOMPANHAMENTO</div><h2>Tipos de registro</h2><p class="record-type-intro">Crie registros ligados a tarefas ou rotinas e acompanhe as ocorrências passadas.</p></div><button type="button" id="add-record-type" class="primary-button">＋ Novo tipo</button></div>
+          <div id="record-type-list" class="record-type-grid"></div>
+        </div>
       </section>
 
       <section id="anchors-workspace" class="workspace-view">
@@ -428,6 +451,22 @@
       <div id="recovery-fields" class="sync-account-fields hidden"><p class="sync-intro">Você abriu um link de recuperação. Escolha uma nova senha para voltar a sincronizar seus dados.</p><label class="field-label" for="recovery-password">Nova senha</label><input class="text-input" id="recovery-password" type="password" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"><label class="field-label" for="recovery-password-confirm">Confirme a nova senha</label><input class="text-input" id="recovery-password-confirm" type="password" autocomplete="new-password" placeholder="Repita a nova senha"><div class="sync-actions account-actions"><button type="button" class="primary-button" id="save-password">Salvar nova senha</button><button type="button" class="secondary-button" id="cancel-recovery">Agora não</button></div></div>
       <div id="connected-actions" class="sync-actions hidden"><button type="button" class="primary-button" id="sync-now">Sincronizar agora</button><button type="button" class="secondary-button" id="sync-download">Baixar da nuvem</button><button type="button" class="secondary-button" id="sync-upload">Enviar para nuvem</button><button type="button" class="secondary-button" id="sign-out">Sair</button></div>
       <p id="account-status" class="sync-status" role="status" aria-live="polite">Verificando conexão com a nuvem...</p>
+    </form>
+  </dialog>
+  <dialog id="record-type-dialog" class="dialog small-dialog" aria-labelledby="record-type-dialog-title">
+    <form id="record-type-form">
+      <div class="dialog-head"><div><div class="eyebrow">TIPOS DE REGISTRO</div><h2 id="record-type-dialog-title">Novo tipo de registro</h2></div><button type="button" class="close-button" id="close-record-type" aria-label="Fechar">×</button></div>
+      <input type="hidden" id="record-type-id">
+      <label class="field-label" for="record-type-name">Nome</label>
+      <input id="record-type-name" class="text-input" maxlength="120" placeholder="Ex.: Alimentação, hábitos, medidas" required>
+      <label class="field-label" for="record-type-frequency">Frequência</label>
+      <select id="record-type-frequency" class="text-input"><option value="daily">Diária</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option><option value="bimonthly">Bimestral</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option></select>
+      <label class="field-label" for="record-type-kind">Registrar a partir de</label>
+      <select id="record-type-kind" class="text-input"><option value="task">Tarefa</option><option value="routine">Passo de rotina</option></select>
+      <label class="field-label" for="record-type-target" id="record-type-target-label">Tarefa vinculada</label>
+      <select id="record-type-target" class="text-input"></select>
+      <p class="record-type-hint">As ocorrências passadas da tarefa ou do passo escolhido aparecem no cartão com o status de realização.</p>
+      <div class="dialog-actions"><button type="button" id="delete-record-type" class="text-button hidden">Excluir</button><span></span><button type="button" id="cancel-record-type" class="secondary-button">Cancelar</button><button type="submit" class="primary-button">Salvar</button></div>
     </form>
   </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
