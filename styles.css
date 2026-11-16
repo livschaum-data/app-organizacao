@@ -292,11 +292,14 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .occurrence-status.is-neutral{background:#f0efeb;color:#8a8780}
 .occurrence-list-link{padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .occurrence-list-link:hover strong{text-decoration:underline}
+.occurrence-list-description{display:-webkit-box;margin-top:2px;color:#7b8782;font-size:10px;font-weight:500;line-height:1.3;white-space:normal;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .occurrence-focus-details{display:grid;gap:8px;margin:0 0 16px;padding:13px 15px;border:1px solid #e6e2da;border-radius:12px;background:#fbf9f5}
 .occurrence-focus-details>div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;align-items:start;font-size:12px}
 .occurrence-focus-details dt{color:#8d867e;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
 .occurrence-focus-details dd{margin:0;color:#454f4d;font-weight:600;overflow-wrap:anywhere}
 .occurrence-focus-section{margin:16px 0 0}
+.occurrence-focus-text{margin:0;color:var(--muted);font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+#occurrence-focus-description-section{margin:0 0 16px}
 .occurrence-focus-notes{margin:0;color:#5f5a53;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .occurrence-card.is-complete .action-card-title strong{text-decoration:line-through;color:#87928e}
 .occurrence-calendar-item{gap:4px}
