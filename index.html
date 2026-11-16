@@ -7,12 +7,12 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261115-record-step-v26">
+  <link rel="stylesheet" href="styles.css?v=20261115-record-table-edit-v31">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261115-record-step-v26"></script>
+  <script defer src="app.js?v=20261115-record-table-edit-v31"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -112,7 +112,9 @@
         <div id="registries-diary"><div id="registries-list" class="registries-list"></div></div>
         <div id="registries-trackers" class="hidden">
           <div class="section-heading record-type-heading"><div><div class="eyebrow">ACOMPANHAMENTO</div><h2>Tipos de registro</h2><p class="record-type-intro">Crie registros ligados a tarefas ou rotinas e acompanhe as ocorrências passadas.</p></div><button type="button" id="add-record-type" class="primary-button">＋ Novo tipo</button></div>
+          <div class="record-type-toolbar"><div id="record-type-filters" class="record-type-filters" role="group" aria-label="Filtrar tipos de registro"></div><div class="record-type-view-toggle" role="group" aria-label="Formato da lista"><button type="button" class="record-type-view-button is-active" data-record-type-view="cards">Cartões</button><button type="button" class="record-type-view-button" data-record-type-view="table">Tabela</button></div></div>
           <div id="record-type-list" class="record-type-grid"></div>
+          <div id="record-type-table" class="record-type-table-wrap hidden"></div>
         </div>
       </section>
 
@@ -457,8 +459,9 @@
     <form id="record-type-form">
       <div class="dialog-head"><div><div class="eyebrow">TIPOS DE REGISTRO</div><h2 id="record-type-dialog-title">Novo tipo de registro</h2></div><button type="button" class="close-button" id="close-record-type" aria-label="Fechar">×</button></div>
       <input type="hidden" id="record-type-id">
-      <label class="field-label" for="record-type-name">Nome</label>
-      <input id="record-type-name" class="text-input" maxlength="120" placeholder="Ex.: Alimentação, hábitos, medidas" required>
+      <div class="form-row"><div class="field"><label class="field-label" for="record-type-name">Nome</label><input id="record-type-name" class="text-input" maxlength="120" placeholder="Ex.: Alimentação, hábitos, medidas" required></div><div class="field record-type-icon-field"><label class="field-label" for="record-type-icon">Ícone</label><input id="record-type-icon" class="text-input icon-input" maxlength="8" placeholder="✍" title="Deixe em branco para usar o ícone do item vinculado"></div></div>
+      <label class="field-label" for="record-type-category">Categoria</label>
+      <select id="record-type-category" class="text-input"><option value="record">Registro</option><option value="review">Revisão</option><option value="planning">Planejamento</option></select>
       <label class="field-label" for="record-type-frequency">Frequência</label>
       <select id="record-type-frequency" class="text-input"><option value="daily">Diária</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option><option value="bimonthly">Bimestral</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option></select>
       <label class="field-label" for="record-type-kind">Registrar a partir de</label>

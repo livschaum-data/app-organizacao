@@ -490,6 +490,30 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .registries-view-tabs{margin:0 0 20px}
 .record-type-heading{align-items:flex-start}
 .record-type-intro{margin:6px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+.record-type-filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.record-type-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+.record-type-toolbar .record-type-filters{margin:0}
+.record-type-view-toggle{display:flex;gap:3px;padding:3px;border:1px solid #dcd7cf;border-radius:999px;background:#f3efe9}
+.record-type-view-button{border:0;border-radius:999px;padding:5px 11px;background:transparent;color:#6d675f;font:700 10px Manrope,sans-serif;cursor:pointer}
+.record-type-view-button.is-active{background:#fffdfa;color:#25474c;box-shadow:0 1px 3px #2b252014}
+.record-type-view-button:focus-visible{outline:2px solid #25474c;outline-offset:1px}
+.record-type-table-wrap{overflow-x:auto;padding:0 0 48px}
+.record-type-table{width:100%;min-width:860px;border-collapse:separate;border-spacing:0;font-size:11px}
+.record-type-table th{padding:9px 10px;border-bottom:1px solid #e2ddd5;background:#f6f2ec;color:#6b756f;font:800 9px Manrope,sans-serif;letter-spacing:.06em;text-transform:uppercase;text-align:left;white-space:nowrap}
+.record-type-table th:first-child{border-radius:8px 0 0 0}
+.record-type-table th:last-child{border-radius:0 8px 0 0}
+.record-type-table td{padding:9px 10px;border-bottom:1px solid #eeeae4;vertical-align:middle;color:#5b5852}
+.record-type-table tr:hover td{background:#fbf8f3}
+.record-type-table-name{display:inline-flex;align-items:center;gap:7px;min-width:0}
+.record-type-table-name .record-type-icon{width:26px;height:26px;border-radius:8px;font-size:14px}
+.record-type-table-name strong{font-size:11px;overflow-wrap:anywhere}
+.record-type-table td .record-type-status{display:inline-flex}
+.record-type-table .small-edit{white-space:nowrap}
+.record-type-table-row.is-missing td{color:#9a8d82}
+.record-type-filter{border:1px solid #dcd7cf;border-radius:999px;padding:6px 11px;background:#fffdfa;color:#6d675f;font:700 10px Manrope,sans-serif;cursor:pointer;transition:.15s}
+.record-type-filter small{margin-left:4px;color:inherit;opacity:.65;font-size:9px}
+.record-type-filter:hover{border-color:#8fb2aa;background:#f2f8f5}
+.record-type-filter.is-active{background:#25474c;border-color:#25474c;color:#fff}
 .record-type-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start;padding:0 0 48px}
 .record-type-card{border:1px solid #e3ded6;border-radius:13px;background:#fffdfa;padding:14px;box-shadow:0 3px 10px #2b252010}
 .record-type-card header{display:flex;align-items:flex-start;gap:9px}
@@ -519,6 +543,7 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .record-type-actions{display:flex;justify-content:flex-end;margin-top:8px}
 .record-type-card.is-missing{--record-color:#cbb7a8}
 .record-type-hint{margin:10px 0 0;color:var(--muted);font-size:10px;line-height:1.5}
+.record-type-icon-field{flex:0 0 90px}
 @media(max-width:900px){.record-type-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:620px){.record-type-grid{grid-template-columns:1fr}}
 .planner-timeline{margin:0 0 18px;padding:13px;border:1px solid var(--line);border-radius:10px;background:#fffdfa}
