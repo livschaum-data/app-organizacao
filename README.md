@@ -37,6 +37,8 @@ Uma tarefa pode ter o tipo **Consulta** no cadastro. Ela aparece normalmente nos
 
 No cadastro de tarefas, o tipo **Bloco** mantém frequência, agendamento, passos e conclusão das tarefas comuns. Os blocos aparecem em cartões próprios na visão secundária e em Tarefas do dia, além de uma linha separada na visão semanal de tarefas. Sua conclusão entra no histórico, no resumo e na exportação CSV.
 
+Na aba **Minhas tarefas**, a lista pode ser alternada entre **cartões** e **tabela**. A tabela mostra tarefa, frequência, tipo, dias, passos e início, e pode ser ordenada clicando no título da coluna.
+
 Ao abrir um bloco, o resultado pode ser **Realizado**, **Realizado parcialmente** ou **Não realizado**. Qualquer uma dessas respostas registra o bloco para o dia; sem resposta, ele continua pendente. Os passos podem ser marcados separadamente, mas não escolhem o resultado automaticamente. O resultado é sincronizado e exportado com o histórico.
 
 Tarefas e blocos podem ser **adiados** pelo diálogo da tarefa ou pela Revisão de pendências. A ocorrência de origem recebe o selo “Adiada para” e a de destino o selo “Adiada de”, com o histórico de cada adiamento visível no diálogo e na Revisão. O mesmo diálogo permite desfazer o adiamento (“Cancelar adiamento” ou “Voltar à data original”). O histórico de adiamentos também entra na exportação CSV de tarefas. Depois de **Concluir tarefas e blocos**, o dia fica travado: adiar, cancelar adiamento, remover do dia e as ações da Revisão (Concluir, Não realizada, Cancelar e Reabrir) ficam indisponíveis, assim como adiar para uma data já concluída. As ocorrências adiadas continuam no dia de origem como “Adiada”, sem virar “Não realizada”.
