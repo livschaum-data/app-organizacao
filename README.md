@@ -37,7 +37,7 @@ Uma tarefa pode ter o tipo **Consulta** no cadastro. Ela aparece normalmente nos
 
 No cadastro de tarefas, o tipo **Bloco** mantém frequência, agendamento, passos e conclusão das tarefas comuns. Os blocos aparecem em cartões próprios na visão secundária e em Tarefas do dia, além de uma linha separada na visão semanal de tarefas. Sua conclusão entra no histórico, no resumo e na exportação CSV.
 
-Na aba **Minhas tarefas**, a lista pode ser alternada entre **cartões** e **tabela**. A tabela mostra tarefa, frequência, tipo, dias, passos e início, e pode ser ordenada clicando no título da coluna.
+Na aba **Minhas tarefas**, a lista pode ser alternada entre **cartões** e **tabela**. A tabela mostra tarefa, frequência, tipo, área, dias, passos e início, e pode ser ordenada clicando no título da coluna. Tarefas e blocos podem receber uma **Área**, escolhida entre as mesmas áreas cadastradas em Ações; a lista também pode ser filtrada por área.
 
 Ao abrir um bloco, o resultado pode ser **Realizado**, **Realizado parcialmente** ou **Não realizado**. Qualquer uma dessas respostas registra o bloco para o dia; sem resposta, ele continua pendente. Os passos podem ser marcados separadamente, mas não escolhem o resultado automaticamente. O resultado é sincronizado e exportado com o histórico.
 
@@ -53,7 +53,7 @@ A **Visão mensal** organiza as âncoras com semanas específicas nas colunas Se
 
 ## Ações
 
-A seção **Ações** oferece um quadro com os meses do ano lado a lado e um calendário mensal. Cada ação pode ser agendada para um mês inteiro, para uma semana específica do mês ou para uma data, com nome, ícone, cor, área, descrição e notas opcionais. As **Áreas** são cadastradas e editadas separadamente dos tipos de âncora. A data de criação é registrada automaticamente. As ações do mês aparecem nos dias correspondentes na Visão secundária; as ações com data aparecem apenas na data escolhida. É possível concluir ou reabrir uma ação nas visões e na edição. Ações não entram na contagem de dias incompletos, mesmo quando não são concluídas. Os cadastros e a conclusão são salvos junto com os demais dados e sincronizados entre dispositivos conectados à mesma conta.
+A seção **Ações** oferece um quadro com os meses do ano lado a lado e um calendário mensal. Cada ação pode ser agendada para um mês inteiro, para uma semana específica do mês ou para uma data, com nome, ícone, cor, área, descrição e notas opcionais. As **Áreas** são compartilhadas por ações, estudos, lazer e tarefas; os tipos de âncora continuam sendo um cadastro estrutural separado. A data de criação é registrada automaticamente. As ações do mês aparecem nos dias correspondentes na Visão secundária; as ações com data aparecem apenas na data escolhida. É possível concluir ou reabrir uma ação nas visões e na edição. Ações não entram na contagem de dias incompletos, mesmo quando não são concluídas. Os cadastros e a conclusão são salvos junto com os demais dados e sincronizados entre dispositivos conectados à mesma conta.
 
 Os seletores de cor oferecem como atalhos as 11 cores da paleta enviada, além do seletor nativo para escolher qualquer outra cor. A paleta aparece nos cadastros de rotinas, tarefas, ações, áreas e tipos de âncora.
 
