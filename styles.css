@@ -502,6 +502,11 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .record-type-table th{padding:9px 10px;border-bottom:1px solid #e2ddd5;background:#f6f2ec;color:#6b756f;font:800 9px Manrope,sans-serif;letter-spacing:.06em;text-transform:uppercase;text-align:left;white-space:nowrap}
 .record-type-table th:first-child{border-radius:8px 0 0 0}
 .record-type-table th:last-child{border-radius:0 8px 0 0}
+.record-sort-button{display:inline-flex;align-items:center;gap:5px;padding:0;border:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+.record-sort-button:hover{color:#25474c}
+.record-sort-mark{font-size:10px;line-height:1;opacity:.4}
+.record-sort-button.is-sorted{color:#25474c}
+.record-sort-button.is-sorted .record-sort-mark{opacity:1}
 .record-type-table td{padding:9px 10px;border-bottom:1px solid #eeeae4;vertical-align:middle;color:#5b5852}
 .record-type-table tr:hover td{background:#fbf8f3}
 .record-type-table-name{display:inline-flex;align-items:center;gap:7px;min-width:0}

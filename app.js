@@ -139,6 +139,7 @@
   let selectedRegistriesView = 'diary';
   let selectedRecordTypeCategory = '';
   let selectedRecordTypeView = 'cards';
+  let recordTypeSort = { key: 'name', dir: 'asc' };
   let selectedTaskWeekDate = isoToday();
   let selectedTaskMonth = isoToday().slice(0,7);
   let selectedTaskYear = Number(isoToday().slice(0,4));
@@ -1203,8 +1204,32 @@
       return `<article class="record-type-card${linked?'':' is-missing'}" style="--record-color:${escapeHTML(color)}"><header><span class="record-type-icon" aria-hidden="true">${escapeHTML(icon)}</span><div class="record-type-title"><strong>${escapeHTML(type.name)}</strong><small>${escapeHTML(frequency)} · ${escapeHTML(meta)}</small></div><span class="record-type-status is-${statusKey}">${escapeHTML(statusLabel)}</span></header><div class="record-type-summary"><span>${doneCount} de ${occurrences.length} realizadas</span><span>${rate}%</span></div><ul class="record-type-occurrences">${rows||'<li class="record-occurrence-empty">Nenhuma ocorrência registrada.</li>'}</ul><div class="record-type-actions"><button type="button" class="small-edit" data-edit-record-type="${escapeHTML(type.id)}">Editar</button></div></article>`;
     }).join('');
   }
+  function recordTypeSortValue(info,key){
+    if(key==='name')return info.type.name;
+    if(key==='category')return info.category;
+    if(key==='frequency')return Object.keys(RECORD_FREQUENCY_LABELS).indexOf(info.type.frequency);
+    if(key==='link')return info.linkLabel;
+    if(key==='status')return ({ok:0,pending:1,late:2,empty:3}[info.linked?info.status.key:'empty']);
+    if(key==='done')return info.doneCount*1000+info.rate;
+    if(key==='last')return info.occurrences[0]?.date||'';
+    return '';
+  }
+  function sortRecordTypeInfos(infos,key,dir){
+    const multiplier=dir==='desc'?-1:1;
+    return [...infos].sort((a,b)=>{
+      const left=recordTypeSortValue(a,key),right=recordTypeSortValue(b,key);
+      const result=typeof left==='number'&&typeof right==='number'?left-right:String(left).localeCompare(String(right),'pt-BR');
+      return result*multiplier||a.type.name.localeCompare(b.type.name,'pt-BR');
+    });
+  }
   function recordTypeTableHtml(infos){
-    return `<div class="record-type-table-scroll"><table class="record-type-table"><thead><tr><th>Registro</th><th>Categoria</th><th>Frequência</th><th>Vínculo</th><th>Status</th><th>Realizadas</th><th>Última</th><th></th></tr></thead><tbody>${infos.map(info=>{
+    const columns=[['name','Registro'],['category','Categoria'],['frequency','Frequência'],['link','Vínculo'],['status','Status'],['done','Realizadas'],['last','Última']];
+    const sorted=sortRecordTypeInfos(infos,recordTypeSort.key,recordTypeSort.dir);
+    const headers=columns.map(([key,label])=>{
+      const active=recordTypeSort.key===key,mark=active?(recordTypeSort.dir==='asc'?'↑':'↓'):'↕';
+      return `<th scope="col" aria-sort="${active?(recordTypeSort.dir==='asc'?'ascending':'descending'):'none'}"><button type="button" class="record-sort-button${active?' is-sorted':''}" data-sort-record="${key}">${label}<span class="record-sort-mark" aria-hidden="true">${mark}</span></button></th>`;
+    }).join('');
+    return `<div class="record-type-table-scroll"><table class="record-type-table"><thead><tr>${headers}<th scope="col" aria-label="Ações"></th></tr></thead><tbody>${sorted.map(info=>{
       const {type,occurrences,linked,status,doneCount,rate,frequency,category,linkLabel,icon,color}=info;
       const statusKey=linked?status.key:'empty',statusLabel=linked?status.label:'Sem vínculo',latest=occurrences[0];
       return `<tr class="record-type-table-row${linked?'':' is-missing'}"><td><span class="record-type-table-name"><span class="record-type-icon" style="--record-color:${escapeHTML(color)}" aria-hidden="true">${escapeHTML(icon)}</span><strong>${escapeHTML(type.name)}</strong></span></td><td>${escapeHTML(category)}</td><td>${escapeHTML(frequency)}</td><td>${escapeHTML(linkLabel)}</td><td><span class="record-type-status is-${statusKey}">${escapeHTML(statusLabel)}</span></td><td>${occurrences.length?`${doneCount}/${occurrences.length} · ${rate}%`:'—'}</td><td>${latest?`${escapeHTML(fmtDate(latest.date,{day:'2-digit',month:'2-digit'}))} · ${escapeHTML(recordOccurrenceLabel(latest))}`:'—'}</td><td><button type="button" class="small-edit" data-edit-record-type="${escapeHTML(type.id)}">Editar</button></td></tr>`;
@@ -2600,6 +2625,7 @@
   $('#close-record-type').onclick=$('#cancel-record-type').onclick=()=>$('#record-type-dialog').close();
   $('#delete-record-type').onclick=deleteRecordType;
   for(const selector of ['#record-type-list','#record-type-table'])$(selector).addEventListener('click',event=>{
+    const sort=event.target.closest('[data-sort-record]');if(sort){const key=sort.dataset.sortRecord;recordTypeSort=recordTypeSort.key===key?{key,dir:recordTypeSort.dir==='asc'?'desc':'asc'}:{key,dir:['done','last'].includes(key)?'desc':'asc'};renderRecordTypes();return;}
     const edit=event.target.closest('[data-edit-record-type]');if(edit){openRecordTypeDialog(edit.dataset.editRecordType);return;}
     const task=event.target.closest('[data-record-task]');if(task){openTaskFocus(task.dataset.recordTask,task.dataset.recordDate);return;}
     const routine=event.target.closest('[data-record-routine]');if(routine){openFocusRoutine(routine.dataset.recordRoutine,routine.dataset.recordDate);if(!$('#routine-focus-dialog').open)toast('Não há registro desta rotina nesse dia.');return;}
