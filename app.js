@@ -1831,6 +1831,11 @@
     const next=new Date(`${date}T12:00:00`);next.setDate(next.getDate()+duration);
     item.scheduledDate=date;item.scheduledEndDate=duration?`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`:'';item.updatedAt=stamp();selectedOccurrenceMonth=date.slice(0,7);saveLocal();renderOccurrences();renderPlanner();toast('Acontecimento movido para a nova data.');
   }
+  function occurrenceFrequencyKind(item){
+    if(item.type==='birthday')return 'annual';
+    if(item.schedule!=='recurrence')return 'none';
+    return item.recurrenceMode||'every-week';
+  }
   function renderOccurrences(){
     $('#occurrence-month').value=selectedOccurrenceMonth;
     $('#occurrence-current-month').classList.toggle('hidden',selectedOccurrenceMonth===isoToday().slice(0,7));
@@ -1839,7 +1844,7 @@
     $('#occurrence-list-filters').classList.toggle('hidden',occurrenceView!=='list');
     $('#occurrence-calendar-filters').classList.toggle('hidden',occurrenceView!=='date');
     $$('.occurrence-tab').forEach(button=>{const active=button.dataset.occurrenceView===occurrenceView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
-    const calendarType=$('#occurrence-calendar-filter-type')?.value||'',items=state.occurrences.filter(item=>!item.deleted&&(!calendarType||item.type===calendarType)),[year,month]=selectedOccurrenceMonth.split('-').map(Number);
+    const calendarView=occurrenceView==='date',calendarType=calendarView?($('#occurrence-calendar-filter-type')?.value||''):'',calendarFrequency=calendarView?($('#occurrence-calendar-filter-frequency')?.value||''):'',items=state.occurrences.filter(item=>!item.deleted&&(!calendarType||item.type===calendarType)&&(!calendarFrequency||occurrenceFrequencyKind(item)===calendarFrequency)),[year,month]=selectedOccurrenceMonth.split('-').map(Number);
     if(occurrenceView==='annual'){
       const months=Array.from({length:12},(_,index)=>`${year}-${String(index+1).padStart(2,'0')}`),headers=months.map((key,index)=>`<th scope="col" data-open-occurrence-month="${key}"><button type="button" class="annual-month-link" data-open-occurrence-month="${key}"><span class="annual-month-label annual-month-${index+1}">${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span></button></th>`).join(''),typeRows=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>{const cells=months.map(key=>{const entries=items.filter(item=>item.type===type&&(item.schedule==='month'?occurrenceMonth(item,year)===key:occurrenceDatesInMonth(item,key).length>0)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));return `<td>${entries.map(occurrenceCard).join('')}</td>`;}).join('');return `<tr style="--area-color:#e8eeee"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${escapeHTML(kind.icon)}</span><span>${escapeHTML(kind.label)}s</span></th>${cells}</tr>`;}).join('');
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="weekly-scroll"><table class="weekly-table task-annual-table occurrence-annual-table"><thead><tr><th scope="col" class="weekly-corner">Tipo</th>${headers}</tr></thead><tbody>${typeRows}</tbody></table></div>`;
@@ -2830,6 +2835,7 @@
   $('#add-occurrence').onclick=()=>openOccurrenceDialog();$('#occurrence-form').addEventListener('submit',saveOccurrence);$('#delete-occurrence').onclick=deleteOccurrence;
   $('#occurrence-type').onchange=updateOccurrenceForm;$('#occurrence-schedule').onchange=updateOccurrenceForm;$('#occurrence-repeat-mode').onchange=updateOccurrenceForm;
   $('#occurrence-calendar-filter-type').onchange=()=>renderOccurrences();
+  $('#occurrence-calendar-filter-frequency').onchange=()=>renderOccurrences();
   if(!$('#occurrence-repeat-mode option[value="annual"]'))$('#occurrence-repeat-mode').insertAdjacentHTML('beforeend','<option value="annual">Anual</option><option value="after-date">Dias após a data agendada</option>');
   $('#occurrence-repeat-mode').addEventListener('change',event=>{if(['annual','after-date'].includes(event.target.value)){$('#occurrence-weekday-options').querySelectorAll('input').forEach(input=>input.checked=false);$('#occurrence-weekdays-field').classList.add('hidden');}if(event.target.value==='after-date'){$('#occurrence-after-completion-field').classList.remove('hidden');$('#occurrence-after-completion-field .field-label').textContent='Repetir quantos dias após a data agendada?';}});
   $('#occurrences-content').addEventListener('click',event=>{const annualMonth=event.target.closest('[data-open-occurrence-month]');if(annualMonth){selectedOccurrenceMonth=annualMonth.dataset.openOccurrenceMonth;occurrenceView='monthly';renderOccurrences();return;}const edit=event.target.closest('[data-edit-occurrence]');if(edit){openOccurrenceDialog(edit.dataset.editOccurrence);return;}const month=event.target.closest('[data-add-occurrence-month]');if(month){openOccurrenceDialog();$('#occurrence-schedule').value='month';$('#occurrence-scheduled-month').value=month.dataset.addOccurrenceMonth;updateOccurrenceForm();return;}const date=event.target.closest('[data-add-occurrence-date]');if(date){openOccurrenceDialog();$('#occurrence-schedule').value='date';$('#occurrence-scheduled-date').value=date.dataset.addOccurrenceDate;updateOccurrenceForm();}});
