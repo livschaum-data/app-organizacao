@@ -284,6 +284,30 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .action-list-scroll{overflow-x:auto;border:1px solid #e2e5df;border-radius:10px;background:#fffdfa}.action-list-table{width:100%;min-width:880px;border-collapse:collapse;font-size:11px}.action-list-table th{padding:10px 8px;background:#deebe6;color:#25474c;text-align:left;white-space:nowrap;font-size:10px}.action-list-table td{padding:9px 8px;border-top:1px solid #ebeae4;vertical-align:middle;white-space:nowrap}.action-list-table td:first-child{min-width:180px;white-space:normal}.action-list-table tbody tr:hover{background:#f6f8f4}.action-list-title{display:flex;align-items:center;gap:8px}.action-list-title strong{font-weight:700}.action-list-table .is-complete strong{text-decoration:line-through;color:#87928e}.action-list-empty{text-align:center;color:#817b72;padding:28px!important}.action-status{display:inline-block;padding:4px 7px;border-radius:6px;font-size:10px;font-weight:700}.action-status.is-done{background:#def0e3;color:#427054}.action-status.is-late{background:#fce5e2;color:#a64e47}.action-status.is-open{background:#e5eeee;color:#486d70}
 .occurrence-month-navigator,.occurrence-week-navigator{margin:14px 0 23px}.occurrence-card{cursor:pointer;display:block}.occurrence-card .action-card-main{display:block;width:100%;}.occurrence-card .action-card-title{min-width:0}.occurrence-card .action-card-title strong{overflow-wrap:anywhere}.occurrence-complete-button{display:block;width:max-content;max-width:100%;margin-top:7px;border:1px solid #a8c8bb;border-radius:7px;padding:5px 8px;background:#f1f8f4;color:#3c7160;font-size:9px;font-weight:800;line-height:1.2;cursor:pointer}.occurrence-complete-button:hover{background:#e1f1e9}.occurrence-calendar-item{border-top:0;border-right:0;border-bottom:0;cursor:pointer}.occurrence-calendar-item>span:last-child{min-width:0;text-align:left}.occurrence-type{display:inline-block;padding:4px 7px;border-radius:6px;background:#e8eeee;color:#41676a;font-size:10px;font-weight:700}.occurrence-type-event{background:#e7e6f2;color:#62567b}.occurrence-type-holiday{background:#fbe6dc;color:#914f39}.occurrence-type-birthday{background:#f6e2ed;color:#914f70}.occurrence-type-cycle{background:#e8e1f4;color:#70568f}.occurrence-list-table{min-width:720px}
 .occurrence-calendar-day{position:relative;overflow:visible}.occurrence-calendar-items{position:relative;display:grid;grid-auto-rows:42px;gap:3px}.occurrence-calendar-range{position:relative;z-index:4;height:42px;align-items:center;white-space:nowrap;overflow:hidden}.occurrence-calendar-range>span:last-child{overflow:hidden;text-overflow:ellipsis}.occurrence-calendar-range small{margin-top:2px}.occurrence-calendar-slot{display:block;height:42px;pointer-events:none}
+.task-completion.task-completion.occurrence-consultative-field{margin:10px 0 16px;padding:11px 13px;font-size:12px}
+.occurrence-status{display:inline-block;padding:2px 6px;border-radius:999px;font-size:9px;font-weight:800;line-height:1.4;vertical-align:middle}
+.occurrence-status.is-pending{background:#f7e8d8;color:#8a5a2b}
+.occurrence-status.is-done{background:#def0e3;color:#427054}
+.occurrence-status.is-consultative{background:#e8eef0;color:#4f6a72}
+.occurrence-status.is-neutral{background:#f0efeb;color:#8a8780}
+.occurrence-list-link{padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.occurrence-list-link:hover strong{text-decoration:underline}
+.occurrence-focus-details{display:grid;gap:8px;margin:0 0 16px;padding:13px 15px;border:1px solid #e6e2da;border-radius:12px;background:#fbf9f5}
+.occurrence-focus-details>div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;align-items:start;font-size:12px}
+.occurrence-focus-details dt{color:#8d867e;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.occurrence-focus-details dd{margin:0;color:#454f4d;font-weight:600;overflow-wrap:anywhere}
+.occurrence-focus-section{margin:16px 0 0}
+.occurrence-focus-notes{margin:0;color:#5f5a53;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.occurrence-card.is-complete .action-card-title strong{text-decoration:line-through;color:#87928e}
+.occurrence-calendar-item{gap:4px}
+.occurrence-calendar-main{display:flex;align-items:flex-start;flex:1;min-width:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.occurrence-calendar-main>span:first-child{flex:none;margin-right:4px;font-size:12px}
+.occurrence-calendar-main>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.occurrence-calendar-main small{display:block;margin-top:2px;color:#536864;font-size:9px}
+.occurrence-calendar-item.is-complete .occurrence-calendar-main>span:last-child{text-decoration:line-through;opacity:.72}
+.planner-overdue-occurrences{--area-color:#e5e9f4}
+.planner-overdue-occurrences h2{--heading-ink:#3f4c72}
+.planner-overdue-occurrences .planner-overdue-count{background:#5b6b9d}
 @media(max-width:850px){.action-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:560px){.action-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.action-list-sort select{min-width:0;flex:1}.action-list-sort .text-button{margin-left:0}}
 .task-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}

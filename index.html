@@ -7,12 +7,12 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261116-settings-tabs-v39">
+  <link rel="stylesheet" href="styles.css?v=20261116-occurrence-focus-v41">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261116-settings-tabs-v39"></script>
+  <script defer src="app.js?v=20261116-occurrence-focus-v41"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -287,6 +287,22 @@
     </div>
   </dialog>
 
+  <dialog id="occurrence-focus-dialog" class="focus-dialog" aria-labelledby="occurrence-focus-name">
+    <div class="focus-shell">
+      <div class="focus-topbar"><span class="focus-brand">âncora<span>·</span></span><button type="button" class="focus-close" id="close-occurrence-focus" aria-label="Fechar acontecimento">×</button></div>
+      <div class="focus-content">
+        <div class="eyebrow" id="occurrence-focus-date"></div>
+        <div class="focus-title-row"><span id="occurrence-focus-icon" class="focus-icon"></span><div><h2 id="occurrence-focus-name"></h2><p id="occurrence-focus-count"></p></div></div>
+        <p id="occurrence-focus-description" class="focus-routine-description hidden"></p>
+        <dl id="occurrence-focus-details" class="occurrence-focus-details"></dl>
+        <label class="task-completion" id="occurrence-focus-completion"><input type="checkbox" id="occurrence-focus-complete"><span>Marcar acontecimento como concluído</span></label>
+        <p id="occurrence-focus-hint" class="schedule-hint hidden"></p>
+        <div id="occurrence-focus-notes-section" class="occurrence-focus-section hidden"><div class="focus-section-label">NOTAS</div><div id="occurrence-focus-notes" class="occurrence-focus-notes"></div></div>
+        <div class="focus-actions"><button type="button" class="secondary-button" data-close="occurrence-focus-dialog">Fechar</button><button type="button" id="occurrence-focus-edit" class="primary-button">Editar acontecimento</button></div>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="action-dialog" class="dialog" aria-labelledby="action-dialog-title">
     <form id="action-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">PERSONALIZAR</div><h2 id="action-dialog-title">Nova ação</h2></div><button type="button" class="close-button" data-close="action-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="action-id"><input type="hidden" id="action-study" value="false"><input type="hidden" id="action-leisure" value="false"><label class="field-label" for="action-title">Nome da ação</label><input class="text-input" id="action-title" maxlength="120" required placeholder="Ex.: Preparar viagem">
@@ -361,6 +377,7 @@
     <form id="occurrence-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">ACONTECIMENTOS</div><h2 id="occurrence-dialog-title">Novo acontecimento</h2></div><button type="button" class="close-button" data-close="occurrence-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="occurrence-id"><label class="field-label" for="occurrence-title">Nome</label><input class="text-input" id="occurrence-title" maxlength="120" required placeholder="Ex.: Consulta, aniversário ou feriado">
       <label class="field-label" for="occurrence-type">Tipo</label><select class="text-input" id="occurrence-type"><option value="reminder">Lembrete</option><option value="event">Evento</option><option value="holiday">Feriado</option><option value="birthday">Aniversário</option><option value="cycle">Ciclo</option></select>
+      <label class="task-completion action-form-completion occurrence-consultative-field"><input type="checkbox" id="occurrence-consultative"><span>Consultivo — sem marcação de conclusão</span></label>
       <label class="field-label" for="occurrence-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="occurrence-description" maxlength="2000" rows="3"></textarea>
       <div class="form-row"><div class="field"><label class="field-label" for="occurrence-icon">Ícone <span class="optional">(opcional)</span></label><input class="text-input icon-input" id="occurrence-icon" maxlength="8"></div><div class="field"><label class="field-label" for="occurrence-color">Cor</label><input class="color-input" id="occurrence-color" type="color" value="#5DFF5D"></div></div>
       <label class="field-label" for="occurrence-schedule">Agendar por</label><select class="text-input" id="occurrence-schedule"><option value="month">Mês inteiro</option><option value="date">Data específica</option><option value="recurrence">Recorrência</option></select>
