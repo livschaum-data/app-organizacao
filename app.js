@@ -205,7 +205,7 @@
     for(const task of data.tasks){if(MONTHLY_TASK_FREQUENCIES.includes(task.frequency)&&(!Number.isInteger(Number(task.monthWeek))||Number(task.monthWeek)<1||Number(task.monthWeek)>6))task.monthWeek=1;if(!task.createdAt)task.createdAt=task.startDate||task.updatedAt||SEED_TIMESTAMP;if(typeof task.areaId!=='string')task.areaId='';}
     if(!Array.isArray(data.actions))data.actions=[];
     if(!Array.isArray(data.occurrences))data.occurrences=[];
-    for(const item of data.occurrences){if(!Array.isArray(item.completionHistory))item.completionHistory=[];if(!Array.isArray(item.dateExceptions))item.dateExceptions=[];if(!Array.isArray(item.completedDates))item.completedDates=[];if(typeof item.consultative!=='boolean')item.consultative=false;if(item.repeatMode==='after-completion'&&!item.recurrenceMode)item.recurrenceMode='after-completion';if(!Number.isFinite(Number(item.intervalDays))&&['after-completion','after-date'].includes(item.recurrenceMode))item.intervalDays=1;if(item.schedule==='recurrence'&&!item.scheduledDate)item.scheduledDate=item.startDate||(item.createdAt||'').slice(0,10);}
+    for(const item of data.occurrences){if(!Array.isArray(item.completionHistory))item.completionHistory=[];if(!Array.isArray(item.dateExceptions))item.dateExceptions=[];if(!Array.isArray(item.completedDates))item.completedDates=[];if(typeof item.consultative!=='boolean')item.consultative=false;item.leadDays=Math.max(0,Math.min(365,Number(item.leadDays)||0));if(item.repeatMode==='after-completion'&&!item.recurrenceMode)item.recurrenceMode='after-completion';if(!Number.isFinite(Number(item.intervalDays))&&['after-completion','after-date'].includes(item.recurrenceMode))item.intervalDays=1;if(item.schedule==='recurrence'&&!item.scheduledDate)item.scheduledDate=item.startDate||(item.createdAt||'').slice(0,10);}
     if(!Array.isArray(data.actionAreas))data.actionAreas=[];
     data.actionAreas.forEach((area,index)=>{if(!Number.isFinite(Number(area.order)))area.order=index;if(typeof area.deleted!=='boolean')area.deleted=false;});
     if(!Array.isArray(data.projects))data.projects=[];
@@ -974,7 +974,7 @@
     const actionBlock=view=>{const entries=dailyViewOfGroup('actions')===view?actions:[];return entries.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${entries.map(action=>{const area=state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted);return `<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-action="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button>${area?`<span class="planner-action-area-tag" style="--tag-color:${escapeHTML(area.color||'#dcebe7')};--tag-ink:${plannerHeadingInk(area.color)}">${escapeHTML(area.name)}</span>`:''}</div>`;}).join('')}</div></section>`:'';};
     const studyBlock=view=>{const entries=dailyViewOfGroup('studies')===view?studies:[];return entries.length?`<section class="planner-block planner-block-studies"><h2><span class="planner-heading-icon">✎</span><span>Estudos</span></h2><div class="planner-block-body">${entries.map(action=>`<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-study="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button></div>`).join('')}</div></section>`:'';};
     const leisureBlock=view=>{const entries=dailyViewOfGroup('leisure')===view?leisure:[];return entries.length?`<section class="planner-block planner-block-studies"><h2><span class="planner-heading-icon">♡</span><span>Lazer</span></h2><div class="planner-block-body">${entries.map(action=>`<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-leisure="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button></div>`).join('')}</div></section>`:'';};
-    const occurrences=state.occurrences.filter(item=>occurrenceIsScheduled(item,selectedDate)&&occurrenceVisibleOnDate(item,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    const occurrences=state.occurrences.filter(item=>occurrenceAppearsOn(item,selectedDate)&&occurrenceVisibleOnDate(item,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const occurrenceBlock=view=>{const entries=occurrences.filter(item=>dailyViewOfGroup(`occurrence-${item.type}`)===view);return entries.length?`<section class="planner-block planner-block-occurrences"><h2><span class="planner-heading-icon" aria-hidden="true">◉</span><span>Acontecimentos</span></h2><div class="planner-block-body">${entries.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder;return `<div class="planner-item planner-action-item occurrence-planner-row"><span class="planner-item-icon" aria-hidden="true">${escapeHTML(item.icon||kind.icon)}</span><button type="button" class="planner-action-link" data-open-occurrence="${escapeHTML(item.id)}" data-occurrence-date="${escapeHTML(selectedDate)}">${escapeHTML(item.title)}</button><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span>${item.consultative?'<span class="occurrence-status is-consultative">Consultivo</span>':''}</div>`;}).join('')}</div></section>`:'';};
     const plannerExtras=view=>`${dailyViewOfGroup('routines')===view?routineBlock(view):''}${dailyViewOfGroup('overdue')===view?overdueBlock(view):''}${dailyViewOfGroup('actions-overdue')===view?overdueActionBlock(view):''}${dailyViewOfGroup('occurrences-overdue')===view?overdueOccurrenceBlock(view):''}${dailyViewOfGroup('tasks-weekly')===view?taskGroup(taskDay,'weekly',true,view,'tasks-weekly',false):''}${dailyViewOfGroup('tasks-biweekly')===view?taskGroup(taskDay,'biweekly',true,view,'tasks-biweekly',false):''}${dailyViewOfGroup('tasks-monthly')===view?monthlyTaskGroups(taskDay,true,view):''}${dailyViewOfGroup('consultations')===view?taskGroup(taskDay,null,true,view,'consultations',true):''}${dailyViewOfGroup('blocks')===view?blockGroup(taskDay,true,view):''}${actionBlock(view)}${studyBlock(view)}${leisureBlock(view)}${occurrenceBlock(view)}`;
     $('#planner-grid').innerHTML=`${primaryBlocks.theme}<div class="planner-areas">${primaryBlocks.other||'<p class="planner-empty">Nenhum tipo de âncora na visão principal.</p>'}</div>${plannerExtras('primary')}`;
@@ -1048,7 +1048,7 @@
       ['actions','Ações','#f3e6d7','✦',(date)=>state.actions.filter(item=>!item.deleted&&!item.study&&!item.leisure&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon,actionDisplayTitle(item),`data-open-action="${escapeHTML(item.id)}"`))],
       ['studies','Estudos','#e8e7f3','✎',(date)=>state.actions.filter(item=>!item.deleted&&item.study&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon||'✎',actionDisplayTitle(item),`data-open-study="${escapeHTML(item.id)}"`))],
       ['leisure','Lazer','#f4e1e9','♡',(date)=>state.actions.filter(item=>!item.deleted&&item.leisure&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon||'♡',actionDisplayTitle(item),`data-open-leisure="${escapeHTML(item.id)}"`))],
-      ...Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>[`occurrence-${type}`,`${kind.label}${type==='holiday'?'s':'s'}`,'#e8eeee',kind.icon,(date)=>state.occurrences.filter(item=>!item.deleted&&item.type===type&&occurrenceIsScheduled(item,date)&&occurrenceVisibleOnDate(item,date)).map(item=>card(item.icon||kind.icon,item.title,`data-open-occurrence="${escapeHTML(item.id)}"`))])
+      ...Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>[`occurrence-${type}`,`${kind.label}${type==='holiday'?'s':'s'}`,'#e8eeee',kind.icon,(date)=>state.occurrences.filter(item=>!item.deleted&&item.type===type&&occurrenceAppearsOn(item,date)&&occurrenceVisibleOnDate(item,date)).map(item=>card(item.icon||kind.icon,item.title,`data-open-occurrence="${escapeHTML(item.id)}" data-occurrence-date="${date}"`))])
     ];
     const groupRows=groupDefinitions.filter(([key])=>groupInWeekly(key)).map(([,label,color,icon,entriesFor])=>{
       const cells=dates.map((date,index)=>`<td>${entriesFor(date,index).join('')}</td>`).join('');
@@ -1089,8 +1089,8 @@
     const taskItem=({id,date,source})=>{const completed=taskOccurrenceStatus(source)==='completed';return `<button type="button" class="monthly-group-item${completed?' is-done':''}" data-open-task="${escapeHTML(id)}" data-task-date="${date}"><span class="monthly-group-date">${dateLabel(date)}</span><span class="monthly-group-copy"><strong>${escapeHTML(source.name)}</strong></span>${completed?'<span class="monthly-group-done" aria-hidden="true">✓</span>':''}</button>`;};
     const taskCards=MONTHLY_TASK_FREQUENCIES.map(frequency=>card(`Tarefas ${TASK_FREQUENCY_PLURAL[frequency].toLowerCase()}`,'▦','#e6e9f3',collectTasks(task=>!task.consultation&&task.kind!=='block'&&task.frequency===frequency).map(taskItem)));
     const occurrenceCards=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>{
-      const items=state.occurrences.filter(item=>!item.deleted&&item.type===type).map(item=>({item,dates:dates.filter(date=>occurrenceIsScheduled(item,date)&&occurrenceVisibleOnDate(item,date))})).filter(entry=>entry.dates.length).sort((a,b)=>a.dates[0].localeCompare(b.dates[0])||a.item.title.localeCompare(b.item.title,'pt-BR'));
-      return card(`${kind.label}s`,kind.icon,'#e8e6f2',items.map(({item,dates:occurrenceDates})=>`<button type="button" class="monthly-group-item" data-open-occurrence="${escapeHTML(item.id)}"><span class="monthly-group-date">${dateLabel(occurrenceDates[0])}</span><span class="monthly-group-copy"><strong>${escapeHTML(item.title)}</strong>${occurrenceDates.length>1?`<small>até ${dateLabel(occurrenceDates[occurrenceDates.length-1])}</small>`:''}</span></button>`));
+      const items=state.occurrences.filter(item=>!item.deleted&&item.type===type).map(item=>({item,dates:dates.filter(date=>occurrenceAppearsOn(item,date)&&occurrenceVisibleOnDate(item,date))})).filter(entry=>entry.dates.length).sort((a,b)=>a.dates[0].localeCompare(b.dates[0])||a.item.title.localeCompare(b.item.title,'pt-BR'));
+      return card(`${kind.label}s`,kind.icon,'#e8e6f2',items.map(({item,dates:occurrenceDates})=>`<button type="button" class="monthly-group-item" data-open-occurrence="${escapeHTML(item.id)}" data-occurrence-date="${occurrenceDates[0]}"><span class="monthly-group-date">${dateLabel(occurrenceDates[0])}</span><span class="monthly-group-copy"><strong>${escapeHTML(item.title)}</strong>${occurrenceDates.length>1?`<small>até ${dateLabel(occurrenceDates[occurrenceDates.length-1])}</small>`:''}</span></button>`));
     });
     const cards=[actionCard('action','Ações','✦','#f3e6d7'),actionCard('study','Estudos','✎','#e8e7f3'),actionCard('leisure','Lazer','♡','#f4e1e9'),...taskCards,...occurrenceCards].filter(Boolean);
     $('#weekly-groups').innerHTML=cards.length?cards.join(''):'<div class="empty-state"><span>▦</span><h3>Nenhum item nesta semana</h3><p>Ações, tarefas e acontecimentos da semana aparecem aqui.</p></div>';
@@ -1162,8 +1162,8 @@
     const taskItem=({id,date,source})=>{const completed=taskOccurrenceStatus(source)==='completed';return `<button type="button" class="monthly-group-item${completed?' is-done':''}" data-open-task="${escapeHTML(id)}" data-task-date="${date}"><span class="monthly-group-date">${dateLabel(date)}</span><span class="monthly-group-copy"><strong>${escapeHTML(source.name)}</strong></span>${completed?'<span class="monthly-group-done" aria-hidden="true">✓</span>':''}</button>`;};
     const monthlyCards=MONTHLY_TASK_FREQUENCIES.map(frequency=>card(`Tarefas ${TASK_FREQUENCY_PLURAL[frequency].toLowerCase()}`,'▦','#e6e9f3',collectTasks(task=>!task.consultation&&task.kind!=='block'&&task.frequency===frequency).map(taskItem)));
     const occurrenceCards=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>{
-      const items=state.occurrences.filter(item=>!item.deleted&&item.type===type).map(item=>({item,dates:occurrenceDatesInMonth(item,monthKey).filter(date=>occurrenceVisibleOnDate(item,date))})).filter(entry=>entry.dates.length).sort((a,b)=>a.dates[0].localeCompare(b.dates[0])||a.item.title.localeCompare(b.item.title,'pt-BR'));
-      return card(`${kind.label}s`,kind.icon,'#e8e6f2',items.map(({item,dates})=>`<button type="button" class="monthly-group-item" data-open-occurrence="${escapeHTML(item.id)}"><span class="monthly-group-date">${dateLabel(dates[0])}</span><span class="monthly-group-copy"><strong>${escapeHTML(item.title)}</strong>${dates.length>1?`<small>até ${dateLabel(dates[dates.length-1])}</small>`:''}</span></button>`));
+      const items=state.occurrences.filter(item=>!item.deleted&&item.type===type).map(item=>({item,dates:occurrenceViewDatesInMonth(item,monthKey).filter(date=>occurrenceVisibleOnDate(item,date))})).filter(entry=>entry.dates.length).sort((a,b)=>a.dates[0].localeCompare(b.dates[0])||a.item.title.localeCompare(b.item.title,'pt-BR'));
+      return card(`${kind.label}s`,kind.icon,'#e8e6f2',items.map(({item,dates})=>`<button type="button" class="monthly-group-item" data-open-occurrence="${escapeHTML(item.id)}" data-occurrence-date="${dates[0]}"><span class="monthly-group-date">${dateLabel(dates[0])}</span><span class="monthly-group-copy"><strong>${escapeHTML(item.title)}</strong>${dates.length>1?`<small>até ${dateLabel(dates[dates.length-1])}</small>`:''}</span></button>`));
     });
     const cards=[actionCard('action','Ações','✦','#f3e6d7'),actionCard('study','Estudos','✎','#e8e7f3'),actionCard('leisure','Lazer','♡','#f4e1e9'),...monthlyCards,...occurrenceCards].filter(Boolean);
     $('#monthly-groups').innerHTML=cards.length?cards.join(''):'<div class="empty-state"><span>▦</span><h3>Nenhum item neste mês</h3><p>Ações, tarefas e acontecimentos do mês aparecem aqui.</p></div>';
@@ -1759,11 +1759,32 @@
     if(item.endDate&&date>item.endDate)return false;
     return true;
   }
+  function occurrenceLeadDays(item){return item.type==='birthday'?Math.max(0,Math.min(365,Number(item.leadDays)||0)):0;}
+  function dateKeyOffset(date,days){const d=safeDate(date);d.setDate(d.getDate()+days);return isoDateKey(d);}
+  function occurrenceBirthdayForDate(item,date=''){
+    if(item.type!=='birthday'||!item.scheduledDate)return '';
+    const ref=date||isoToday(),year=Number(ref.slice(0,4)),mmdd=item.scheduledDate.slice(5),lead=occurrenceLeadDays(item);
+    for(const birthday of [`${year}-${mmdd}`,`${year+1}-${mmdd}`]){
+      const start=dateKeyOffset(birthday,-lead);
+      if(date>=start&&date<=birthday&&occurrenceAnnualDateAllowed(item,birthday))return birthday;
+    }
+    return '';
+  }
+  function occurrenceAppearsOn(item,date){
+    if(item.deleted)return false;
+    if(item.type==='birthday')return Boolean(occurrenceBirthdayForDate(item,date));
+    return occurrenceIsScheduled(item,date);
+  }
+  function occurrenceViewDatesInMonth(item,monthKey){
+    const [year,month]=monthKey.split('-').map(Number),length=new Date(year,month,0).getDate(),dates=[];
+    for(let day=1;day<=length;day++){const date=`${monthKey}-${String(day).padStart(2,'0')}`;if(occurrenceAppearsOn(item,date))dates.push(date);}
+    return dates;
+  }
   function occurrenceVisibleOnDate(item,date){return date>=isoToday()||!item.consultative;}
   function occurrenceVisibleInMonth(item,monthKey){
     if(!item.consultative)return true;
     if(item.schedule==='month'&&!item.week)return monthKey>=isoToday().slice(0,7);
-    return occurrenceDatesInMonth(item,monthKey).some(date=>occurrenceVisibleOnDate(item,date));
+    return occurrenceViewDatesInMonth(item,monthKey).some(date=>occurrenceVisibleOnDate(item,date));
   }
   function occurrenceCycleStart(item,date){
     if(item.type!=='cycle'||!date)return date;
@@ -1776,7 +1797,7 @@
   }
   function occurrenceInstanceKey(item,date=''){
     if(item.type==='birthday'){
-      const key=date||`${isoToday().slice(0,4)}-${(item.scheduledDate||'').slice(5)}`;
+      const key=date?occurrenceBirthdayForDate(item,date):`${isoToday().slice(0,4)}-${(item.scheduledDate||'').slice(5)}`;
       return key&&occurrenceAnnualDateAllowed(item,key)?key:'';
     }
     if(item.schedule==='date')return item.scheduledDate||'';
@@ -1818,10 +1839,19 @@
     }
     return '';
   }
+  function occurrenceKeyIsFuture(key){
+    if(!key)return false;
+    if(/^\d{4}-\d{2}-\d{2}$/.test(key))return key>isoToday();
+    if(/^\d{4}-\d{2}(-W\d)?$/.test(key))return key.slice(0,7)>isoToday().slice(0,7);
+    return false;
+  }
   function occurrenceStatusKind(item){
     if(item.consultative)return 'consultative';
     const key=occurrenceListKey(item);
-    return key?(occurrenceInstanceCompleted(item,key)?'completed':'pending'):'neutral';
+    if(!key)return 'neutral';
+    if(occurrenceInstanceCompleted(item,key))return 'completed';
+    if(occurrenceKeyIsFuture(key))return 'neutral';
+    return 'pending';
   }
   function occurrenceFrequencyLabel(item){
     if(item.type==='birthday')return 'Anual';
@@ -1884,11 +1914,8 @@
     const consider=date=>{if(date&&date<today&&(!oldest||date<oldest))oldest=date;};
     if(item.type==='birthday'){
       if(!item.scheduledDate)return '';
-      const year=Number(today.slice(0,4));
-      for(let y=year-1;y<=year;y++){
-        const date=`${y}-${item.scheduledDate.slice(5)}`;
-        if(occurrenceAnnualDateAllowed(item,date)&&!completed(date))consider(date);
-      }
+      const date=`${Number(today.slice(0,4))}-${item.scheduledDate.slice(5)}`;
+      if(occurrenceAnnualDateAllowed(item,date)&&!completed(date))consider(date);
       return oldest;
     }
     if(item.schedule==='date'){
@@ -2026,9 +2053,10 @@
     const item=state.occurrences.find(entry=>entry.id===activeOccurrenceId&&!entry.deleted);
     if(!item){$('#occurrence-focus-dialog').close();return;}
     const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder,key=activeOccurrenceKey||occurrenceFocusKey(item,activeOccurrenceDate||''),completed=Boolean(key)&&occurrenceInstanceCompleted(item,key),markable=!item.consultative&&Boolean(key),monthLabel=occurrenceFocusMonthLabel(item,key);
-    const displayDate=activeOccurrenceDate&&/^\d{4}-\d{2}-\d{2}$/.test(activeOccurrenceDate)?activeOccurrenceDate:(/^\d{4}-\d{2}-\d{2}$/.test(key)?key:'');
+    const birthdayDate=item.type==='birthday'?(activeOccurrenceDate?occurrenceBirthdayForDate(item,activeOccurrenceDate):key):'';
+    const displayDate=birthdayDate||(activeOccurrenceDate&&/^\d{4}-\d{2}-\d{2}$/.test(activeOccurrenceDate)?activeOccurrenceDate:(/^\d{4}-\d{2}-\d{2}$/.test(key)?key:''));
     const eyebrow=displayDate?fmtDate(displayDate).toLocaleUpperCase('pt-BR'):monthLabel?monthLabel.toLocaleUpperCase('pt-BR'):kind.label.toLocaleUpperCase('pt-BR');
-    const statusClass=item.consultative?'consultative':markable?(completed?'done':'pending'):'neutral',statusLabel=item.consultative?'Consultivo':markable?(completed?'Concluído':'Pendente'):'—',scheduleLabel=occurrenceFocusScheduleLabel(item);
+    const statusClass=item.consultative?'consultative':completed?'done':markable?(occurrenceKeyIsFuture(key)?'neutral':'pending'):'neutral',statusLabel=item.consultative?'Consultivo':completed?'Concluído':markable?(occurrenceKeyIsFuture(key)?'—':'Pendente'):'—',scheduleLabel=occurrenceFocusScheduleLabel(item);
     $('#occurrence-focus-dialog').style.setProperty('--routine-color',item.color||'#5DFF5D');
     $('#occurrence-focus-date').textContent=eyebrow;
     $('#occurrence-focus-icon').textContent=item.icon||kind.icon;
@@ -2178,7 +2206,7 @@
     return item.schedule==='month'?item.scheduledMonth||'':'';
   }
   function occurrenceScheduleLabel(item){
-    if(item.type==='birthday'&&item.scheduledDate)return `Todo ano em ${fmtDate(item.scheduledDate,{day:'numeric',month:'long'})}`;
+    if(item.type==='birthday'&&item.scheduledDate)return `Todo ano em ${fmtDate(item.scheduledDate,{day:'numeric',month:'long'})}${occurrenceLeadDays(item)?` · ${occurrenceLeadDays(item)} dias antes`:''}`;
     if(item.schedule==='date'&&item.scheduledDate){const start=fmtDate(item.scheduledDate,{day:'numeric',month:'short',year:'numeric'});return item.scheduledEndDate&&item.scheduledEndDate!==item.scheduledDate?`${start} a ${fmtDate(item.scheduledEndDate,{day:'numeric',month:'short',year:'numeric'})}`:start;}
     if(item.schedule==='month')return `${item.week?`${monthWeekLabel(item.week)} · `:''}${fmtDate(`${item.scheduledMonth}-01`,{month:'long',year:'numeric'})}`;
     if(item.recurrenceMode==='annual')return `Anual · ${item.scheduledDate?fmtDate(item.scheduledDate,{day:'numeric',month:'long'}):'sem data agendada'}`;
@@ -2187,11 +2215,11 @@
     const days=(item.weekdays||[]).map(day=>WEEKDAYS[day]).join(', '),weeks=item.monthWeeks?.length?` · ${item.monthWeeks.map(week=>monthWeekLabel(week).toLowerCase()).join(', ')}`:'';
     return `${days||'Sem dias'}${weeks}`;
   }
-  function occurrenceCard(item){
+  function occurrenceCard(item,referenceDate=''){
     const type=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder,key=occurrenceCardKey(item),completed=Boolean(key)&&occurrenceInstanceCompleted(item,key);
-    const status=item.consultative?'<span class="occurrence-status is-consultative">Consultivo</span>':key?`<span class="occurrence-status ${completed?'is-done':'is-pending'}">${completed?'Concluído':'Pendente'}</span>`:'';
+    const status=item.consultative?'<span class="occurrence-status is-consultative">Consultivo</span>':completed?'<span class="occurrence-status is-done">Concluído</span>':key&&!occurrenceKeyIsFuture(key)?'<span class="occurrence-status is-pending">Pendente</span>':'';
     const detail=`${item.schedule==='recurrence'?escapeHTML(occurrenceScheduleLabel(item)):''}${status?`${item.schedule==='recurrence'?' · ':''}${status}`:''}`;
-    return `<div class="action-card occurrence-card${completed?' is-complete':''}" style="--action-color:${escapeHTML(item.color||'#5DFF5D')}"><button type="button" class="action-card-main" data-open-occurrence="${escapeHTML(item.id)}"${key?` data-occurrence-key="${escapeHTML(key)}"`:''}><span class="action-card-title"><span class="action-card-mark">${escapeHTML(item.icon||type.icon)}</span><strong>${escapeHTML(item.title)}</strong></span>${detail?`<small>${detail}</small>`:''}</button></div>`;
+    return `<div class="action-card occurrence-card${completed?' is-complete':''}" style="--action-color:${escapeHTML(item.color||'#5DFF5D')}"><button type="button" class="action-card-main" data-open-occurrence="${escapeHTML(item.id)}"${referenceDate?` data-occurrence-date="${escapeHTML(referenceDate)}"`:''}${key?` data-occurrence-key="${escapeHTML(key)}"`:''}><span class="action-card-title"><span class="action-card-mark">${escapeHTML(item.icon||type.icon)}</span><strong>${escapeHTML(item.title)}</strong></span>${detail?`<small>${detail}</small>`:''}</button></div>`;
   }
   function renderOccurrenceList(items){
     const search=$('#occurrence-filter-search').value.trim().toLocaleLowerCase('pt-BR'),types=multiSelectValues('#occurrence-filter-type'),schedules=multiSelectValues('#occurrence-filter-schedule'),statuses=multiSelectValues('#occurrence-filter-status'),month=$('#occurrence-filter-month').value;
@@ -2200,7 +2228,7 @@
       if(types.length&&!types.includes(item.type))return false;
       if(schedules.length&&!schedules.includes(item.type==='birthday'?'recurrence':item.schedule))return false;
       if(statuses.length&&!statuses.includes(occurrenceStatusKind(item)))return false;
-      if(month&&!(item.schedule==='month'?occurrenceMonth(item,Number(month.slice(0,4)))===month:occurrenceDatesInMonth(item,month).length>0))return false;
+      if(month&&!(item.schedule==='month'?occurrenceMonth(item,Number(month.slice(0,4)))===month:occurrenceViewDatesInMonth(item,month).some(date=>occurrenceVisibleOnDate(item,date))))return false;
       return true;
     });
     const meta=new Map();
@@ -2209,7 +2237,7 @@
     const multiplier=occurrenceListSort.dir==='desc'?-1:1,missing=value=>value==='9999-12-31';
     filtered.sort((a,b)=>{const left=sortValue(a,occurrenceListSort.key),right=sortValue(b,occurrenceListSort.key);if(missing(left)!==missing(right))return missing(left)?1:-1;const result=typeof left==='number'&&typeof right==='number'?left-right:String(left).localeCompare(String(right),'pt-BR',{numeric:true});return result*multiplier||a.title.localeCompare(b.title,'pt-BR');});
     const columns=[['title','Acontecimento'],['type','Tipo'],['frequency','Frequência'],['schedule','Agendamento'],['next','Próxima ocorrência'],['overdue','Vencida desde'],['status','Situação'],['created','Criação']],headers=columns.map(([key,label])=>{const active=occurrenceListSort.key===key,mark=active?(occurrenceListSort.dir==='asc'?'↑':'↓'):'↕';return `<th scope="col" aria-sort="${active?(occurrenceListSort.dir==='asc'?'ascending':'descending'):'none'}"><button type="button" class="record-sort-button${active?' is-sorted':''}" data-sort-occurrence="${key}">${label}<span class="record-sort-mark" aria-hidden="true">${mark}</span></button></th>`;}).join('');
-    const rows=filtered.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder,info=meta.get(item.id),key=info.key,completed=info.completed,status=item.consultative?'<span class="occurrence-status is-consultative">Consultivo</span>':key?`<span class="occurrence-status ${completed?'is-done':'is-pending'}">${completed?'Concluído':'Pendente'}</span>`:'<span class="occurrence-status is-neutral">—</span>',nextLabel=info.next?(item.schedule==='month'&&!item.week?fmtDate(info.next,{month:'short',year:'numeric'}):fmtDate(info.next,{day:'2-digit',month:'2-digit',year:'numeric'})):'—',overdueLabel=info.oldest?fmtDate(info.oldest,{day:'2-digit',month:'2-digit',year:'numeric'}):'—';return `<tr class="${completed?'is-complete':''}"><td><div class="action-list-title"><span>${escapeHTML(item.icon||kind.icon)}</span><button type="button" class="occurrence-list-link" data-open-occurrence="${escapeHTML(item.id)}"${key?` data-occurrence-key="${escapeHTML(key)}"`:''}><strong>${escapeHTML(item.title)}</strong>${item.description?`<small class="occurrence-list-description">${escapeHTML(item.description)}</small>`:''}</button></div></td><td><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span></td><td>${escapeHTML(info.frequency)}</td><td>${escapeHTML(occurrenceScheduleLabel(item))}</td><td>${escapeHTML(nextLabel)}</td><td>${info.oldest?`<span class="occurrence-late-date">${escapeHTML(overdueLabel)}</span>`:'—'}</td><td>${status}</td><td>${item.createdAt?escapeHTML(fmtDate(item.createdAt.slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'})):'—'}</td><td><button type="button" class="small-edit" data-edit-occurrence="${escapeHTML(item.id)}">Editar</button></td></tr>`;}).join('');
+    const rows=filtered.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder,info=meta.get(item.id),key=info.key,completed=info.status==='completed',status=info.status==='consultative'?'<span class="occurrence-status is-consultative">Consultivo</span>':info.status==='completed'?'<span class="occurrence-status is-done">Concluído</span>':info.status==='pending'?'<span class="occurrence-status is-pending">Pendente</span>':'<span class="occurrence-status is-neutral">—</span>',nextLabel=info.next?(item.schedule==='month'&&!item.week?fmtDate(info.next,{month:'short',year:'numeric'}):fmtDate(info.next,{day:'2-digit',month:'2-digit',year:'numeric'})):'—',overdueLabel=info.oldest?fmtDate(info.oldest,{day:'2-digit',month:'2-digit',year:'numeric'}):'—';return `<tr class="${completed?'is-complete':''}"><td><div class="action-list-title"><span>${escapeHTML(item.icon||kind.icon)}</span><button type="button" class="occurrence-list-link" data-open-occurrence="${escapeHTML(item.id)}"${key?` data-occurrence-key="${escapeHTML(key)}"`:''}><strong>${escapeHTML(item.title)}</strong>${item.description?`<small class="occurrence-list-description">${escapeHTML(item.description)}</small>`:''}</button></div></td><td><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span></td><td>${escapeHTML(info.frequency)}</td><td>${escapeHTML(occurrenceScheduleLabel(item))}</td><td>${escapeHTML(nextLabel)}</td><td>${info.oldest?`<span class="occurrence-late-date">${escapeHTML(overdueLabel)}</span>`:'—'}</td><td>${status}</td><td>${item.createdAt?escapeHTML(fmtDate(item.createdAt.slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'})):'—'}</td><td><button type="button" class="small-edit" data-edit-occurrence="${escapeHTML(item.id)}">Editar</button></td></tr>`;}).join('');
     $('#occurrences-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'acontecimento encontrado':'acontecimentos encontrados'}</p><div class="action-list-scroll occurrence-list-scroll"><table class="action-list-table occurrence-list-table"><thead><tr>${headers}<th scope="col" aria-label="Ações"></th></tr></thead><tbody>${rows||'<tr><td colspan="9" class="action-list-empty">Nenhum acontecimento corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
   }
   function renderOccurrenceCalendarCells(items,start,weeks,visibleMonth){
@@ -2220,10 +2248,25 @@
       const segments=[];
       for(const item of items){
         if(item.schedule==='month')continue;
+        if(item.type==='birthday'){
+          if(!item.scheduledDate)continue;
+          const lead=occurrenceLeadDays(item),weekStart=days[0].key,weekEnd=days[6].key,baseYear=Number(weekStart.slice(0,4));
+          for(const birthday of [`${baseYear}-${item.scheduledDate.slice(5)}`,`${baseYear+1}-${item.scheduledDate.slice(5)}`]){
+            if(!occurrenceAnnualDateAllowed(item,birthday))continue;
+            const windowStart=dateKeyOffset(birthday,-lead);
+            if(birthday<weekStart||windowStart>weekEnd)continue;
+            let startKey=windowStart>weekStart?windowStart:weekStart,endKey=birthday<weekEnd?birthday:weekEnd;
+            if(item.consultative&&startKey<isoToday())startKey=isoToday();
+            if(startKey>endKey)continue;
+            const first=days.findIndex(day=>day.key===startKey),last=days.findIndex(day=>day.key===endKey);
+            if(first>=0&&last>=first)segments.push({item,start:first,end:last});
+          }
+          continue;
+        }
         if(item.schedule==='date'&&item.scheduledDate&&item.scheduledEndDate&&item.scheduledEndDate>item.scheduledDate){
           const minKey=item.consultative?isoToday():'',first=days.findIndex(day=>day.key>=item.scheduledDate&&day.key<=item.scheduledEndDate&&(!minKey||day.key>=minKey)),last=days.findLastIndex(day=>day.key>=item.scheduledDate&&day.key<=item.scheduledEndDate);
           if(first>=0)segments.push({item,start:first,end:last});
-        }else days.forEach((day,index)=>{if(occurrenceIsScheduled(item,day.key)&&occurrenceVisibleOnDate(item,day.key))segments.push({item,start:index,end:index});});
+        }else days.forEach((day,index)=>{if(occurrenceAppearsOn(item,day.key)&&occurrenceVisibleOnDate(item,day.key))segments.push({item,start:index,end:index});});
       }
       segments.sort((a,b)=>a.start-b.start||(b.end-b.start)-(a.end-a.start)||a.item.title.localeCompare(b.item.title,'pt-BR'));
       const lanes=[];
@@ -2265,20 +2308,20 @@
     $$('.occurrence-tab').forEach(button=>{const active=button.dataset.occurrenceView===occurrenceView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const calendarView=occurrenceView==='date',calendarTypes=calendarView?multiSelectValues('#occurrence-calendar-filter-type'):[],calendarFrequencies=calendarView?multiSelectValues('#occurrence-calendar-filter-frequency'):[],calendarStatuses=calendarView?multiSelectValues('#occurrence-calendar-filter-status'):[],items=state.occurrences.filter(item=>!item.deleted&&(!calendarTypes.length||calendarTypes.includes(item.type))&&(!calendarFrequencies.length||calendarFrequencies.includes(occurrenceFrequencyKind(item)))&&(!calendarStatuses.length||calendarStatuses.includes(occurrenceStatusKind(item)))),[year,month]=selectedOccurrenceMonth.split('-').map(Number);
     if(occurrenceView==='annual'){
-      const months=Array.from({length:12},(_,index)=>`${year}-${String(index+1).padStart(2,'0')}`),headers=months.map((key,index)=>`<th scope="col" data-open-occurrence-month="${key}"><button type="button" class="annual-month-link" data-open-occurrence-month="${key}"><span class="annual-month-label annual-month-${index+1}">${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span></button></th>`).join(''),typeRows=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>{const cells=months.map(key=>{const entries=items.filter(item=>{if(item.type!==type)return false;if(item.schedule==='month')return occurrenceMonth(item,year)===key&&occurrenceVisibleInMonth(item,key);return occurrenceDatesInMonth(item,key).some(date=>occurrenceVisibleOnDate(item,date));}).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));return `<td>${entries.map(occurrenceCard).join('')}</td>`;}).join('');return `<tr style="--area-color:#e8eeee"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${escapeHTML(kind.icon)}</span><span>${escapeHTML(kind.label)}s</span></th>${cells}</tr>`;}).join('');
+      const months=Array.from({length:12},(_,index)=>`${year}-${String(index+1).padStart(2,'0')}`),headers=months.map((key,index)=>`<th scope="col" data-open-occurrence-month="${key}"><button type="button" class="annual-month-link" data-open-occurrence-month="${key}"><span class="annual-month-label annual-month-${index+1}">${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span></button></th>`).join(''),typeRows=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>{const cells=months.map(key=>{const entries=items.map(item=>{if(item.type!==type)return null;if(item.schedule==='month')return occurrenceMonth(item,year)===key&&occurrenceVisibleInMonth(item,key)?{item,date:`${key}-01`}:null;const dates=occurrenceViewDatesInMonth(item,key).filter(date=>occurrenceVisibleOnDate(item,date));return dates.length?{item,date:dates[0]}:null;}).filter(Boolean).sort((a,b)=>a.item.title.localeCompare(b.item.title,'pt-BR'));return `<td>${entries.map(({item,date})=>occurrenceCard(item,date)).join('')}</td>`;}).join('');return `<tr style="--area-color:#e8eeee"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${escapeHTML(kind.icon)}</span><span>${escapeHTML(kind.label)}s</span></th>${cells}</tr>`;}).join('');
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${year}</h3><div class="weekly-scroll"><table class="weekly-table task-annual-table occurrence-annual-table"><thead><tr><th scope="col" class="weekly-corner">Tipo</th>${headers}</tr></thead><tbody>${typeRows}</tbody></table></div>`;
     }else if(occurrenceView==='monthly'){
       const weeks=monthlyWeeksFor(selectedOccurrenceMonth), headers=weeks.map(week=>{const [start,end]=monthWeekRange(selectedOccurrenceMonth,week),key=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;return `<th scope="col" class="monthly-week monthly-week-${week}"><button type="button" class="monthly-week-link" data-open-occurrence-week="${key(start)}"><span class="monthly-week-pill">${monthWeekLabel(week).toLowerCase()}</span><small>${escapeHTML(fmtDate(key(start),{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(key(end),{day:'numeric',month:'short'}))}</small></button></th>`;}).join('');
-      const visibleDates=item=>occurrenceDatesInMonth(item,selectedOccurrenceMonth).filter(date=>occurrenceVisibleOnDate(item,date));
+      const visibleDates=item=>occurrenceViewDatesInMonth(item,selectedOccurrenceMonth).filter(date=>occurrenceVisibleOnDate(item,date));
       const entries=items.filter(item=>item.schedule==='month'?occurrenceMonth(item,year)===selectedOccurrenceMonth&&occurrenceVisibleInMonth(item,selectedOccurrenceMonth):visibleDates(item).length>0);
-      const typeRows=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>{const cells=weeks.map(week=>`<td>${entries.filter(item=>{if(item.type!==type)return false;if(item.schedule==='month'&&!item.week)return false;const dates=visibleDates(item);if(!dates.length)return false;return item.monthWeeks?.length?item.monthWeeks.includes(week):week!==6&&dates.some(date=>monthWeekNumber(date)===week);}).map(occurrenceCard).join('')}</td>`).join('');return `<tr><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${escapeHTML(kind.icon)}</span><span>${escapeHTML(kind.label)}s</span></th>${cells}</tr>`;}).join('');
-      const monthOnly=entries.filter(item=>item.schedule==='month'&&!item.week).map(occurrenceCard).join('');
+      const typeRows=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>{const cells=weeks.map(week=>{const cards=entries.flatMap(item=>{if(item.type!==type)return [];if(item.schedule==='month'&&!item.week)return [];if(item.monthWeeks?.length&&!item.monthWeeks.includes(week))return [];if(!item.monthWeeks?.length&&week===6)return [];const dates=visibleDates(item).filter(date=>monthWeekNumber(date)===week);return dates.length?[{item,date:dates[0]}]:[];}).sort((a,b)=>a.item.title.localeCompare(b.item.title,'pt-BR'));return `<td>${cards.map(({item,date})=>occurrenceCard(item,date)).join('')}</td>`;}).join('');return `<tr><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${escapeHTML(kind.icon)}</span><span>${escapeHTML(kind.label)}s</span></th>${cells}</tr>`;}).join('');
+      const monthOnly=entries.filter(item=>item.schedule==='month'&&!item.week).map(item=>occurrenceCard(item,`${selectedOccurrenceMonth}-01`)).join('');
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedOccurrenceMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table monthly-table"><thead><tr><th class="weekly-corner">Tipo</th>${headers}</tr></thead><tbody>${typeRows}</tbody></table></div>${monthOnly?`<section class="occurrence-month-undated"><h3>Sem data específica</h3><p>Agendados para algum momento deste mês.</p><div>${monthOnly}</div></section>`:''}`;
     }else if(occurrenceView==='week'){
-      const dates=weekDates(selectedOccurrenceWeekDate), entries=items.filter(item=>item.schedule!=='month'&&dates.some(date=>occurrenceIsScheduled(item,date)&&occurrenceVisibleOnDate(item,date)));
+      const dates=weekDates(selectedOccurrenceWeekDate), entries=items.filter(item=>item.schedule!=='month'&&dates.some(date=>occurrenceAppearsOn(item,date)&&occurrenceVisibleOnDate(item,date)));
       $('#occurrence-week-date').value=selectedOccurrenceWeekDate;
       $('#occurrence-week-today').classList.toggle('hidden',dates.includes(isoToday()));
-      const typeRows=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>`<tr><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${escapeHTML(kind.icon)}</span><span>${escapeHTML(kind.label)}s</span></th>${dates.map(date=>`<td>${entries.filter(item=>item.type===type&&occurrenceIsScheduled(item,date)&&occurrenceVisibleOnDate(item,date)).map(occurrenceCard).join('')}</td>`).join('')}</tr>`).join('');
+      const typeRows=Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>`<tr><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${escapeHTML(kind.icon)}</span><span>${escapeHTML(kind.label)}s</span></th>${dates.map(date=>`<td>${entries.filter(item=>item.type===type&&occurrenceAppearsOn(item,date)&&occurrenceVisibleOnDate(item,date)).map(item=>occurrenceCard(item,date)).join('')}</td>`).join('')}</tr>`).join('');
       $('#occurrences-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table"><thead><tr><th class="weekly-corner">Tipo</th>${weeklyHeaders(dates,'occurrences')}</tr></thead><tbody>${typeRows}</tbody></table></div>`;
     }else if(occurrenceView==='date'){
       const first=new Date(year,month-1,1),start=new Date(year,month-1,1-(first.getDay()+6)%7),last=new Date(year,month,0),weeks=Math.ceil(((first.getDay()+6)%7+last.getDate())/7),dateKey=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -2303,13 +2346,14 @@
     $('#occurrence-month-field').classList.toggle('hidden',mode!=='month');$('#occurrence-date-field').classList.toggle('hidden',mode!=='date');$('#occurrence-recurrence-field').classList.toggle('hidden',mode!=='recurrence');
     $('#occurrence-end-date-field').classList.toggle('hidden',mode!=='date'||!['event','holiday','cycle'].includes(type));
     $('#occurrence-annual-hint').classList.toggle('hidden',type!=='birthday');
+    $('#occurrence-lead-days-field').classList.toggle('hidden',type!=='birthday');
     const repeatMode=$('#occurrence-repeat-mode').value,dateBasedMode=['after-completion','annual','after-date'].includes(repeatMode);$('#occurrence-recurrence-date-field').classList.toggle('hidden',mode!=='recurrence');$('#occurrence-recurrence-end-date-field').classList.toggle('hidden',mode!=='recurrence'||type!=='cycle');$('#occurrence-month-weeks-field').classList.toggle('hidden',mode!=='recurrence'||repeatMode!=='month-weeks');$('#occurrence-after-completion-field').classList.toggle('hidden',mode!=='recurrence'||!['after-completion','after-date'].includes(repeatMode));$('#occurrence-weekdays-field').classList.toggle('hidden',mode!=='recurrence'||dateBasedMode);if(repeatMode==='after-date'){$('#occurrence-after-completion-field .field-label').textContent='Repetir quantos dias após a data agendada?';$('#occurrence-after-completion-field .schedule-hint').textContent='As próximas ocorrências são calculadas a partir da data agendada.';}else{$('#occurrence-after-completion-field .field-label').textContent='Repetir quantos dias após concluir?';$('#occurrence-after-completion-field .schedule-hint').textContent='A próxima ocorrência só aparece depois que a anterior for concluída.';}
   }
   function openOccurrenceDialog(id=null){
     const item=state.occurrences.find(entry=>entry.id===id&&!entry.deleted);
     $('#occurrence-form').reset();$('#occurrence-id').value=item?.id||'';$('#occurrence-dialog-title').textContent=item?'Editar acontecimento':'Novo acontecimento';
     $('#occurrence-title').value=item?.title||'';$('#occurrence-type').value=item?.type||'reminder';$('#occurrence-description').value=item?.description||'';$('#occurrence-icon').value=item?.icon||'';$('#occurrence-color').value=item?.color||'#5DFF5D';$('#occurrence-consultative').checked=Boolean(item?.consultative);
-    $('#occurrence-schedule').value=item?.schedule||'date';$('#occurrence-scheduled-month').value=item?.scheduledMonth||selectedOccurrenceMonth;$('#occurrence-scheduled-date').value=item?.scheduledDate||selectedDate;$('#occurrence-scheduled-end-date').value=item?.scheduledEndDate||'';$('#occurrence-week').value=item?.week||'';
+    $('#occurrence-schedule').value=item?.schedule||'date';$('#occurrence-scheduled-month').value=item?.scheduledMonth||selectedOccurrenceMonth;$('#occurrence-scheduled-date').value=item?.scheduledDate||selectedDate;$('#occurrence-scheduled-end-date').value=item?.scheduledEndDate||'';$('#occurrence-week').value=item?.week||'';$('#occurrence-lead-days').value=item?.leadDays||0;
     $('#occurrence-repeat-mode').value=item?.recurrenceMode|| (item?.monthWeeks?.length?'month-weeks':'every-week');$('#occurrence-recurrence-date').value=item?.scheduledDate||item?.startDate||selectedDate;$('#occurrence-recurrence-end-date').value=item?.schedule==='recurrence'?item?.scheduledEndDate||'':'';$('#occurrence-interval-days').value=item?.intervalDays||'';$('#occurrence-start').value=item?.startDate||'';$('#occurrence-end').value=item?.endDate||'';$('#occurrence-notes').value=item?.notes||'';
     buildOccurrenceOptions(item);$('#delete-occurrence').classList.toggle('hidden',!item);updateOccurrenceForm();refreshColorPalettes();$('#occurrence-dialog').showModal();
   }
@@ -2320,7 +2364,7 @@
     if(schedule==='recurrence'&&recurrenceStart&&recurrenceEnd&&recurrenceEnd<recurrenceStart){toast('O término da recorrência deve ser igual ou posterior ao início.');return;}
     const repeatMode=$('#occurrence-repeat-mode').value,dateBasedMode=['after-completion','annual','after-date'].includes(repeatMode),recurrenceScheduledDate=$('#occurrence-recurrence-date').value,weekdays=dateBasedMode?[]:$$('#occurrence-weekday-options input:checked').map(input=>Number(input.value)),monthWeeks=repeatMode==='month-weeks'?$$('#occurrence-month-week-options input:checked').map(input=>Number(input.value)):[],intervalDays=['after-completion','after-date'].includes(repeatMode)?Number($('#occurrence-interval-days').value)||0:null;
     if(schedule==='recurrence'&&!dateBasedMode&&!weekdays.length){toast('Escolha ao menos um dia da semana.');return;}if(schedule==='recurrence'&&repeatMode==='month-weeks'&&!monthWeeks.length){toast('Escolha ao menos uma semana do mês.');return;}if(schedule==='recurrence'&&['after-completion','after-date'].includes(repeatMode)&&intervalDays<1){toast('Informe um intervalo de dias válido.');return;}if(schedule==='recurrence'&&!recurrenceScheduledDate){toast('Informe a data agendada da primeira ocorrência.');return;}if(schedule==='recurrence'&&scheduledEndDate&&scheduledEndDate<recurrenceScheduledDate){toast('A data final da primeira ocorrência deve ser igual ou posterior à data agendada.');return;}if(schedule==='recurrence'&&recurrenceStart&&recurrenceScheduledDate&&recurrenceScheduledDate<recurrenceStart){toast('A primeira ocorrência não pode ser anterior ao início da recorrência.');return;}if(schedule==='recurrence'&&recurrenceEnd&&recurrenceScheduledDate&&recurrenceScheduledDate>recurrenceEnd){toast('A primeira ocorrência não pode ser posterior ao fim da recorrência.');return;}
-    const id=$('#occurrence-id').value||uid(),existing=state.occurrences.find(item=>item.id===id),next={id,title,type,description:$('#occurrence-description').value.trim(),notes:$('#occurrence-notes').value.trim(),icon:$('#occurrence-icon').value.trim(),color:$('#occurrence-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:schedule==='recurrence'?recurrenceScheduledDate:'',scheduledEndDate,week:schedule==='month'?Number($('#occurrence-week').value)||null:null,weekdays:schedule==='recurrence'?weekdays:[],monthWeeks:schedule==='recurrence'?monthWeeks:[],recurrenceMode:schedule==='recurrence'?repeatMode:'',intervalDays:schedule==='recurrence'?intervalDays:null,completionHistory:existing?.completionHistory||[],completedDates:existing?.completedDates||[],consultative:$('#occurrence-consultative').checked,dateExceptions:existing?.dateExceptions||[],startDate:schedule==='recurrence'?recurrenceStart:'',endDate:schedule==='recurrence'?recurrenceEnd:'',createdAt:existing?.createdAt||isoToday(),updatedAt:stamp(),deleted:false};
+    const id=$('#occurrence-id').value||uid(),existing=state.occurrences.find(item=>item.id===id),next={id,title,type,description:$('#occurrence-description').value.trim(),notes:$('#occurrence-notes').value.trim(),icon:$('#occurrence-icon').value.trim(),color:$('#occurrence-color').value,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:schedule==='recurrence'?recurrenceScheduledDate:'',scheduledEndDate,week:schedule==='month'?Number($('#occurrence-week').value)||null:null,weekdays:schedule==='recurrence'?weekdays:[],monthWeeks:schedule==='recurrence'?monthWeeks:[],recurrenceMode:schedule==='recurrence'?repeatMode:'',intervalDays:schedule==='recurrence'?intervalDays:null,completionHistory:existing?.completionHistory||[],completedDates:existing?.completedDates||[],consultative:$('#occurrence-consultative').checked,leadDays:type==='birthday'?Math.max(0,Math.min(365,Number($('#occurrence-lead-days').value)||0)):0,dateExceptions:existing?.dateExceptions||[],startDate:schedule==='recurrence'?recurrenceStart:'',endDate:schedule==='recurrence'?recurrenceEnd:'',createdAt:existing?.createdAt||isoToday(),updatedAt:stamp(),deleted:false};
     const index=state.occurrences.findIndex(item=>item.id===id);if(index<0)state.occurrences.push(next);else state.occurrences[index]=next;
     selectedOccurrenceMonth=(schedule==='date'?`${selectedOccurrenceMonth.slice(0,4)}-${scheduledDate.slice(5,7)}`:schedule==='month'?scheduledMonth:schedule==='recurrence'&&recurrenceScheduledDate?recurrenceScheduledDate.slice(0,7):selectedOccurrenceMonth);saveLocal();$('#occurrence-dialog').close();renderOccurrences();renderPlanner();toast('Acontecimento salvo.');
   }
