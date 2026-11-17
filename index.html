@@ -7,12 +7,12 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261117-action-filter-cleanup-v77">
+  <link rel="stylesheet" href="styles.css?v=20261117-action-multifilters-v87">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261117-action-filter-cleanup-v77"></script>
+  <script defer src="app.js?v=20261117-action-multifilters-v87"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -101,16 +101,16 @@
       </section>
 
       <section id="summary-workspace" class="workspace-view">
-        <div class="planner-hero"><div class="eyebrow">ACOMPANHAMENTO</div><h1>Resumo dos seus dias.</h1><p>Veja quantos dias ainda têm rotinas ou tarefas pendentes.</p><div class="date-navigator"><button type="button" id="summary-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="summary-date" type="month" aria-label="Escolher mês do resumo"><button type="button" id="summary-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="summary-today" class="today-button">Mês atual</button></div></div>
-        <div class="summary-actions"><p class="summary-explainer">Rotinas e tarefas têm conclusões separadas. Ao concluir, itens abertos ficam registrados como não realizados. Dias futuros não entram no resumo.</p><button type="button" id="summary-open-task-review" class="secondary-button">Revisar tarefas pendentes →</button></div>
-        <div id="summary-content" class="summary-content"></div>
+        <div class="planner-hero"><div class="eyebrow">ACOMPANHAMENTO</div><h1 id="summary-heading">Resumo dos seus dias.</h1><p id="summary-subtitle">Veja quantos dias ainda têm rotinas ou tarefas pendentes.</p><div class="date-navigator" id="summary-month-navigator"><button type="button" id="summary-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="summary-date" type="month" aria-label="Escolher mês do resumo"><button type="button" id="summary-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="summary-today" class="today-button">Mês atual</button></div></div>
+        <div class="tabs summary-view-tabs" role="tablist" aria-label="Seções do resumo"><button type="button" class="tab summary-tab active" role="tab" aria-selected="true" data-summary-view="summary">Resumo</button><button type="button" class="tab summary-tab" role="tab" aria-selected="false" data-summary-view="recordacoes">Recordações</button></div>
+        <div id="summary-panel"><div class="summary-actions"><p class="summary-explainer">Rotinas e tarefas têm conclusões separadas. Ao concluir, itens abertos ficam registrados como não realizados. Dias futuros não entram no resumo.</p><button type="button" id="summary-open-task-review" class="secondary-button">Revisar tarefas pendentes →</button></div><div id="summary-content" class="summary-content"></div></div>
+        <div id="summary-recordacoes" class="hidden"><div id="recordacoes-list" class="registries-list"></div></div>
       </section>
 
       <section id="registries-workspace" class="workspace-view">
-        <div class="planner-hero"><div class="eyebrow">SEU DIÁRIO</div><h1 id="registries-heading">Registros do mês e da semana.</h1><p id="registries-subtitle">Abra um mês para ver os registros de cada semana.</p></div>
-        <div class="tabs registries-view-tabs" role="tablist" aria-label="Seções de processos"><button type="button" class="tab registries-tab active" role="tab" aria-selected="true" data-registries-view="diary">Diário</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="trackers">Processos</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="items">Tópicos</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="linked">Rotinas e Tarefas</button></div>
-        <div id="registries-diary"><div id="registries-list" class="registries-list"></div></div>
-        <div id="registries-trackers" class="hidden">
+        <div class="planner-hero"><div class="eyebrow">SEUS PROCESSOS</div><h1 id="registries-heading">Acompanhamento de processos.</h1><p id="registries-subtitle">Veja se os processos ligados a tarefas e rotinas estão em dia.</p></div>
+        <div class="tabs registries-view-tabs" role="tablist" aria-label="Seções de processos"><button type="button" class="tab registries-tab active" role="tab" aria-selected="true" data-registries-view="trackers">Processos</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="items">Tópicos</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="linked">Rotinas e Tarefas</button></div>
+        <div id="registries-trackers">
           <div class="section-heading record-type-heading"><div><div class="eyebrow">ACOMPANHAMENTO</div><h2>Tipos de processos</h2><p class="record-type-intro">Crie processos ligados a tarefas ou rotinas e acompanhe as ocorrências passadas.</p></div><button type="button" id="add-record-type" class="primary-button">＋ Novo tipo</button></div>
           <div class="record-type-toolbar"><div id="record-type-filters" class="record-type-filters" role="group" aria-label="Filtrar tipos de processos"></div><div class="record-type-view-toggle" role="group" aria-label="Formato da lista"><button type="button" class="record-type-view-button is-active" data-record-type-view="cards">Cartões</button><button type="button" class="record-type-view-button" data-record-type-view="table">Tabela</button></div></div>
           <div id="record-type-list" class="record-type-grid"></div>
@@ -121,8 +121,10 @@
           <div id="record-directory-list" class="record-directory"></div>
         </div>
         <div id="registries-linked" class="hidden">
-          <div class="section-heading record-type-heading"><div><div class="eyebrow">REFERÊNCIA</div><h2>Rotinas e Tarefas</h2><p class="record-type-intro">Veja cada tarefa ou passo de rotina usado nos tópicos, os processos de cada tópico e o status das recorrências.</p></div></div>
+          <div class="section-heading record-type-heading"><div><div class="eyebrow">REFERÊNCIA</div><h2>Rotinas e Tarefas</h2><p class="record-type-intro">Veja cada tarefa ou passo de rotina usado nos tópicos, seus processos, o status e as ocorrências do item.</p></div></div>
+          <div class="record-type-toolbar"><span id="record-linked-summary" class="record-linked-summary"></span><div class="record-type-view-toggle" role="group" aria-label="Formato da lista"><button type="button" class="record-type-view-button record-linked-view-button is-active" data-record-linked-view="cards">Cartões</button><button type="button" class="record-type-view-button record-linked-view-button" data-record-linked-view="table">Tabela</button></div></div>
           <div id="record-linked-list" class="record-linked"></div>
+          <div id="record-linked-table" class="record-type-table-wrap hidden"></div>
         </div>
       </section>
 
@@ -205,14 +207,15 @@
         <nav class="tabs" aria-label="Visões de ações"><button type="button" class="tab action-tab active" data-action-view="annual">Visão anual</button><button type="button" class="tab action-tab" data-action-view="monthly">Visão mensal</button><button type="button" class="tab action-tab" data-action-view="week">Visão semanal</button><button type="button" class="tab action-tab" data-action-view="date">Calendário</button><button type="button" class="tab action-tab" data-action-view="list">Lista</button></nav>
         <div class="date-navigator action-month-navigator"><button type="button" id="action-prev-month" class="round-button" aria-label="Período anterior">←</button><input id="action-month" type="month" aria-label="Escolher mês ou ano das ações"><button type="button" id="action-next-month" class="round-button" aria-label="Próximo período">→</button><button type="button" id="action-current-month" class="today-button">Atual</button></div>
         <div class="date-navigator action-week-navigator hidden"><button type="button" id="action-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="action-week-date" type="date" aria-label="Escolher semana das ações"><button type="button" id="action-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="action-week-today" class="today-button">Esta semana</button></div>
+        <div class="action-view-options"><button type="button" class="action-completed-toggle" id="action-toggle-completed" aria-pressed="false"><span id="action-toggle-completed-label">Ocultar concluídas</span></button></div>
         <div id="action-list-filters" class="action-list-filters hidden">
           <div class="action-filter-grid">
             <label>Buscar<input id="action-filter-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label>
-            <label>Estado<select id="action-filter-status" class="text-input"><option value="">Todos</option><option value="open">Em aberto</option><option value="completed">Concluídas</option><option value="overdue">Vencidas</option></select></label>
-            <label>Área<select id="action-filter-area" class="text-input"><option value="">Todas</option></select></label>
-            <label>Agendamento<select id="action-filter-schedule" class="text-input"><option value="">Todos</option><option value="month">Por mês</option><option value="date">Por data</option></select></label>
+            <div class="filter-field"><span>Estado</span><div class="multi-select" id="action-filter-status" data-multi-select data-placeholder="Todos"><button type="button" class="multi-select-toggle" aria-expanded="false">Todos</button><div class="multi-select-menu hidden"><label class="multi-select-option"><input type="checkbox" value="open"><span>Em aberto</span></label><label class="multi-select-option"><input type="checkbox" value="completed"><span>Concluídas</span></label><label class="multi-select-option"><input type="checkbox" value="overdue"><span>Vencidas</span></label><button type="button" class="multi-select-clear">Limpar seleção</button></div></div></div>
+            <div class="filter-field"><span>Área</span><div class="multi-select" id="action-filter-area" data-multi-select data-placeholder="Todas"><button type="button" class="multi-select-toggle" aria-expanded="false">Todas</button><div class="multi-select-menu hidden"><button type="button" class="multi-select-clear">Limpar seleção</button></div></div></div>
+            <div class="filter-field"><span>Agendamento</span><div class="multi-select" id="action-filter-schedule" data-multi-select data-placeholder="Todos"><button type="button" class="multi-select-toggle" aria-expanded="false">Todos</button><div class="multi-select-menu hidden"><label class="multi-select-option"><input type="checkbox" value="month"><span>Por mês</span></label><label class="multi-select-option"><input type="checkbox" value="date"><span>Por data</span></label><button type="button" class="multi-select-clear">Limpar seleção</button></div></div></div>
             <label>Mês<input id="action-filter-month" class="text-input" type="month"></label>
-            <label>Semana<select id="action-filter-week" class="text-input"><option value="">Todas</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option><option value="6">Última semana</option></select></label>
+            <div class="filter-field"><span>Semana</span><div class="multi-select" id="action-filter-week" data-multi-select data-placeholder="Todas"><button type="button" class="multi-select-toggle" aria-expanded="false">Todas</button><div class="multi-select-menu hidden"><label class="multi-select-option"><input type="checkbox" value="1"><span>Semana 1</span></label><label class="multi-select-option"><input type="checkbox" value="2"><span>Semana 2</span></label><label class="multi-select-option"><input type="checkbox" value="3"><span>Semana 3</span></label><label class="multi-select-option"><input type="checkbox" value="4"><span>Semana 4</span></label><label class="multi-select-option"><input type="checkbox" value="5"><span>Semana 5</span></label><label class="multi-select-option"><input type="checkbox" value="6"><span>Última semana</span></label><button type="button" class="multi-select-clear">Limpar seleção</button></div></div></div>
             <label>Vencimento de<input id="action-filter-due-from" class="text-input" type="date"></label>
             <label>até<input id="action-filter-due-to" class="text-input" type="date"></label>
           </div>
