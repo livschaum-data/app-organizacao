@@ -7,12 +7,12 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261117-processes-linked-v75">
+  <link rel="stylesheet" href="styles.css?v=20261117-action-filter-cleanup-v77">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261117-processes-linked-v75"></script>
+  <script defer src="app.js?v=20261117-action-filter-cleanup-v77"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -213,10 +213,6 @@
             <label>Agendamento<select id="action-filter-schedule" class="text-input"><option value="">Todos</option><option value="month">Por mês</option><option value="date">Por data</option></select></label>
             <label>Mês<input id="action-filter-month" class="text-input" type="month"></label>
             <label>Semana<select id="action-filter-week" class="text-input"><option value="">Todas</option><option value="1">Semana 1</option><option value="2">Semana 2</option><option value="3">Semana 3</option><option value="4">Semana 4</option><option value="5">Semana 5</option><option value="6">Última semana</option></select></label>
-            <label>Criada de<input id="action-filter-created-from" class="text-input" type="date"></label>
-            <label>até<input id="action-filter-created-to" class="text-input" type="date"></label>
-            <label>Concluída de<input id="action-filter-completed-from" class="text-input" type="date"></label>
-            <label>até<input id="action-filter-completed-to" class="text-input" type="date"></label>
             <label>Vencimento de<input id="action-filter-due-from" class="text-input" type="date"></label>
             <label>até<input id="action-filter-due-to" class="text-input" type="date"></label>
           </div>

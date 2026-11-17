@@ -163,6 +163,7 @@
   let selectedOccurrenceWeekDate = isoToday();
   let occurrenceView = 'annual';
   let occurrenceListSort = { key: 'schedule', dir: 'asc' };
+  let actionListSort = { key: 'due', dir: 'asc' };
   let renderedCalendarDate = isoToday();
   let renderedNotesDate = '';
   let anchorView = 'day';
@@ -1564,45 +1565,23 @@
     areaSelect.value=selectedArea;
     const get=id=>$(id).value;
     const search=get('#action-filter-search').trim().toLocaleLowerCase('pt-BR'),status=get('#action-filter-status'),area=get('#action-filter-area'),schedule=get('#action-filter-schedule'),month=get('#action-filter-month'),week=get('#action-filter-week');
-    const createdFrom=get('#action-filter-created-from'),createdTo=get('#action-filter-created-to'),completedFrom=get('#action-filter-completed-from'),completedTo=get('#action-filter-completed-to'),dueFrom=get('#action-filter-due-from'),dueTo=get('#action-filter-due-to');
+    const dueFrom=get('#action-filter-due-from'),dueTo=get('#action-filter-due-to');
     const within=(date,from,to)=>(!from||date&&date>=from)&&(!to||date&&date<=to);
     const filtered=actions.filter(action=>{
-      const created=(action.createdAt||'').slice(0,10),completed=(action.completedAt||'').slice(0,10),due=actionDueDate(action);
+      const due=actionDueDate(action);
       const statusMatches=!status||(status==='open'&&!action.completed)||(status==='completed'&&action.completed)||(status==='overdue'&&actionStatus(action)==='Vencida');
       return (!search||[action.title,action.description,action.notes,actionAreaName(action),actionParent(action)?.title].some(value=>String(value||'').toLocaleLowerCase('pt-BR').includes(search)))
         &&statusMatches
         &&(!area||action.areaId===area)&&(!schedule||action.schedule===schedule)&&(!month||actionMonth(action)===month)&&(!week||(action.schedule==='date'&&action.scheduledDate?monthWeekMatches(week,action.scheduledDate):actionWeek(action)===Number(week)))
-        &&within(created,createdFrom,createdTo)&&within(completed,completedFrom,completedTo)&&within(due,dueFrom,dueTo);
+        &&within(due,dueFrom,dueTo);
     });
-    const sortBy=get('#action-sort-by'),direction=get('#action-sort-direction')==='desc'?-1:1;
-    const sortValue=action=>({due:actionDueDate(action),title:action.title,area:actionAreaName(action),created:(action.createdAt||'').slice(0,10),completed:(action.completedAt||'').slice(0,10),month:actionMonth(action),week:actionWeek(action)?String(actionWeek(action)).padStart(2,'0'):'',status:actionStatus(action)})[sortBy]||'';
-    filtered.sort((a,b)=>{const left=sortValue(a),right=sortValue(b);if(!left)return right?1:0;if(!right)return -1;return direction*left.localeCompare(right,'pt-BR',{numeric:true})||a.title.localeCompare(b.title,'pt-BR');});
+    const multiplier=actionListSort.dir==='desc'?-1:1,missing=value=>value===''||value===null||value===undefined;
+    const sortValue=action=>({title:action.title,parent:actionParent(action)?.title||'',area:actionAreaName(action),month:actionMonth(action),week:actionWeek(action)||'',due:actionDueDate(action),created:(action.createdAt||'').slice(0,10),completed:(action.completedAt||'').slice(0,10),status:{'Vencida':0,'Em aberto':1,'Concluída':2}[actionStatus(action)]??3})[actionListSort.key]??'';
+    filtered.sort((a,b)=>{const left=sortValue(a),right=sortValue(b);if(missing(left)!==missing(right))return missing(left)?1:-1;const result=typeof left==='number'&&typeof right==='number'?left-right:String(left).localeCompare(String(right),'pt-BR',{numeric:true});return result*multiplier||a.title.localeCompare(b.title,'pt-BR');});
+    const columns=[['title','Ação'],['parent','Ação mãe'],['area','Área'],['month','Mês'],['week','Semana'],['due','Vencimento'],['created','Criação'],['completed','Conclusão'],['status','Estado']],headers=columns.map(([key,label])=>{const active=actionListSort.key===key,mark=active?(actionListSort.dir==='asc'?'↑':'↓'):'↕';return `<th scope="col" aria-sort="${active?(actionListSort.dir==='asc'?'ascending':'descending'):'none'}"><button type="button" class="record-sort-button${active?' is-sorted':''}" data-sort-action="${key}">${label}<span class="record-sort-mark" aria-hidden="true">${mark}</span></button></th>`;}).join('');
     const dateLabel=value=>value?escapeHTML(fmtDate(value.slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'})):'—';
     const rows=filtered.map(action=>{const due=actionDueDate(action),stateLabel=actionStatus(action),parent=actionParent(action);return `<tr class="${action.completed?'is-complete':''}${parent?' is-subaction':''}"><td><div class="action-list-title"><button type="button" class="action-complete-toggle" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':''}</button><span>${parent?'<span class="action-tree-mark">↳</span> ':''}${action.icon?`${escapeHTML(action.icon)} `:''}<strong>${escapeHTML(action.title)}</strong></span></div></td><td>${parent?`<button type="button" class="action-parent-link" data-edit-action="${escapeHTML(parent.id)}">${escapeHTML(parent.title)}</button>`:'—'}</td><td>${escapeHTML(actionAreaName(action)||'—')}</td><td>${actionMonth(action)?escapeHTML(fmtDate(`${actionMonth(action)}-01`,{month:'short',year:'numeric'})):'—'}</td><td>${actionWeek(action)?monthWeekLabel(actionWeek(action)):'—'}</td><td>${dateLabel(due)}</td><td>${dateLabel(action.createdAt||'')}</td><td>${dateLabel(action.completedAt||'')}</td><td><span class="action-status is-${stateLabel==='Concluída'?'done':stateLabel==='Vencida'?'late':'open'}">${stateLabel}</span></td><td><button type="button" class="small-edit" data-edit-action="${escapeHTML(action.id)}">Editar</button></td></tr>`;}).join('');
-    $('#actions-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'ação encontrada':'ações encontradas'}</p><div class="action-list-scroll"><table class="action-list-table"><thead><tr><th>Ação</th><th>Ação mãe</th><th>Área</th><th>Mês</th><th>Semana</th><th>Vencimento</th><th>Criação</th><th>Conclusão</th><th>Estado</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="action-list-empty">Nenhuma ação corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
-  }
-  function renderActionListChronological(actions){
-    renderActionList(actions);
-    const body=$('#actions-content tbody');if(!body)return;
-    const scheduleInfo=action=>{
-      if(action.schedule==='date'){const date=action.scheduledDate||'';return {kind:'date',label:'Data definida',detail:date?fmtDate(date,{day:'numeric',month:'long',year:'numeric'}):'Sem data',sortDate:date,group:`date-${date}`,groupLabel:date?fmtDate(date,{day:'numeric',month:'long',year:'numeric'}):'Sem data'};}
-      const month=action.scheduledMonth||'',week=Number(action.week)||0,monthLabel=month?fmtDate(`${month}-01`,{month:'long',year:'numeric'}):'Sem mês';
-      if(week){const days=new Date(Number(month.slice(0,4)),Number(month.slice(5,7)),0).getDate(),first=Array.from({length:days},(_,index)=>`${month}-${String(index+1).padStart(2,'0')}`).find(date=>monthWeekMatches(week,date))||`${month}-01`;return {kind:'week',label:'Semana do mês',detail:`${monthWeekLabel(week)} · ${monthLabel}`,sortDate:first,group:`week-${month}-${week}`,groupLabel:`${monthWeekLabel(week)} · ${monthLabel}`};}
-      return {kind:'month',label:'Mês inteiro',detail:monthLabel,sortDate:month?`${month}-01`:'',group:`month-${month}`,groupLabel:monthLabel};
-    };
-    const records=[...body.querySelectorAll('tr')].map(row=>{const id=row.querySelector('[data-edit-action]')?.dataset.editAction;const action=state.actions.find(item=>item.id===id);return action?{row,action,schedule:scheduleInfo(action)}:null;}).filter(Boolean).sort((a,b)=>a.schedule.sortDate.localeCompare(b.schedule.sortDate)||a.action.title.localeCompare(b.action.title,'pt-BR'));
-    if(!records.length)return;
-    const fragment=document.createDocumentFragment();let previous='';
-    for(const {row,schedule} of records){
-      if(schedule.group!==previous){const heading=document.createElement('tr');heading.className='action-list-period';heading.innerHTML=`<th colspan="8">${escapeHTML(schedule.groupLabel)}</th>`;fragment.append(heading);previous=schedule.group;}
-      const cells=[...row.cells],completed=cells[7]?.textContent.trim();
-      row.innerHTML=`${cells[0]?.outerHTML||'<td></td>'}<td><span class="action-schedule-type is-${schedule.kind}">${escapeHTML(schedule.label)}</span><small class="action-schedule-detail">${escapeHTML(schedule.detail)}</small></td>${cells[1]?.outerHTML||'<td>-</td>'}${cells[2]?.outerHTML||'<td>-</td>'}${cells[5]?.outerHTML||'<td>-</td>'}<td>${completed&&completed!=='-'?`<span class="action-completed-date">✓ ${escapeHTML(completed)}</span>`:'<span class="action-not-completed">—</span>'}</td>${cells[8]?.outerHTML||'<td></td>'}${cells[9]?.outerHTML||'<td></td>'}`;
-      fragment.append(row);
-    }
-    body.replaceChildren(fragment);
-    const table=body.closest('table');if(table)table.classList.add('action-chronological-list');
-    const head=table?.querySelector('thead tr');if(head)head.innerHTML='<th>Ação</th><th>Agendamento</th><th>Ação mãe</th><th>Área</th><th>Vencimento</th><th>Concluída em</th><th>Estado</th><th></th>';
-    const count=$('#actions-content .action-list-count');if(count)count.textContent=`${records.length} ${records.length===1?'ação encontrada':'ações encontradas'} · organizadas por agendamento`;
+    $('#actions-content').innerHTML=`<p class="action-list-count">${filtered.length} ${filtered.length===1?'ação encontrada':'ações encontradas'}</p><div class="action-list-scroll action-list-list-scroll"><table class="action-list-table action-list-sortable-table"><thead><tr>${headers}<th scope="col" aria-label="Ações"></th></tr></thead><tbody>${rows||'<tr><td colspan="10" class="action-list-empty">Nenhuma ação corresponde aos filtros.</td></tr>'}</tbody></table></div>`;
   }
   function studyActions(){return state.actions.filter(action=>!action.deleted&&action.study);}
   function studyCard(action){return `<div class="weekly-action study-item${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#8e7cae')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-study="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${action.parentId?`<small>↳ ${escapeHTML(actionParent(action)?.title||'Matéria')}</small>`:''}${action.schedule==='month'&&action.week?`<small>${escapeHTML(monthWeekLabel(action.week))}</small>`:''}</button></div>`;}
@@ -1674,7 +1653,7 @@
       }).join('');
       $('#actions-content').innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedActionMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="action-calendar-scroll"><div class="action-calendar">${heads}${cells}</div></div>`;
     }else{
-      renderActionListChronological(actions);
+      renderActionList(actions);
     }
     state.actions=originalActions;
     renderActionAreas();
@@ -3581,6 +3560,7 @@
   actionsContent.addEventListener('touchcancel',finishTouchActionDrag);
   $('#actions-content').addEventListener('click',event=>{
     if(Date.now()<ignoreActionClickUntil){event.preventDefault();return;}
+    const sort=event.target.closest('[data-sort-action]');if(sort){const key=sort.dataset.sortAction;actionListSort=actionListSort.key===key?{key,dir:actionListSort.dir==='asc'?'desc':'asc'}:{key,dir:'asc'};renderActions();return;}
     const annualMonth=event.target.closest('[data-open-action-month]');if(annualMonth){selectedActionMonth=annualMonth.dataset.openActionMonth;actionView='monthly';renderActions();return;}
     const addChild=event.target.closest('[data-add-subaction]');if(addChild){openActionDialog(null,addChild.dataset.addSubaction);return;}
     const toggle=event.target.closest('[data-toggle-action]');if(toggle){toggleAction(toggle.dataset.toggleAction);return;}
