@@ -7,12 +7,12 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261117-occurrence-review-title-group-v68">
+  <link rel="stylesheet" href="styles.css?v=20261117-processes-linked-v75">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261117-occurrence-review-title-group-v68"></script>
+  <script defer src="app.js?v=20261117-processes-linked-v75"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -26,7 +26,7 @@
         <button type="button" class="sidebar-link" data-section="weekly"><span>▤</span> Visão semanal</button>
         <button type="button" class="sidebar-link" data-section="monthly"><span>▦</span> Visão mensal</button>
         <button type="button" class="sidebar-link" data-section="summary"><span>◷</span> Resumo</button>
-        <button type="button" class="sidebar-link" data-section="registries"><span>✍</span> Registros</button>
+        <button type="button" class="sidebar-link" data-section="registries"><span>✍</span> Processos</button>
         <button type="button" class="sidebar-link" data-section="routines"><span>☑</span> Rotinas</button>
         <button type="button" class="sidebar-link" data-section="anchors"><span>⚓</span> Âncoras</button>
         <button type="button" class="sidebar-link" data-section="tasks"><span>✓</span> Tarefas</button>
@@ -108,13 +108,21 @@
 
       <section id="registries-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">SEU DIÁRIO</div><h1 id="registries-heading">Registros do mês e da semana.</h1><p id="registries-subtitle">Abra um mês para ver os registros de cada semana.</p></div>
-        <div class="tabs registries-view-tabs" role="tablist" aria-label="Formato dos registros"><button type="button" class="tab registries-tab active" role="tab" aria-selected="true" data-registries-view="diary">Diário</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="trackers">Acompanhamento</button></div>
+        <div class="tabs registries-view-tabs" role="tablist" aria-label="Seções de processos"><button type="button" class="tab registries-tab active" role="tab" aria-selected="true" data-registries-view="diary">Diário</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="trackers">Processos</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="items">Tópicos</button><button type="button" class="tab registries-tab" role="tab" aria-selected="false" data-registries-view="linked">Rotinas e Tarefas</button></div>
         <div id="registries-diary"><div id="registries-list" class="registries-list"></div></div>
         <div id="registries-trackers" class="hidden">
-          <div class="section-heading record-type-heading"><div><div class="eyebrow">ACOMPANHAMENTO</div><h2>Tipos de registro</h2><p class="record-type-intro">Crie registros ligados a tarefas ou rotinas e acompanhe as ocorrências passadas.</p></div><button type="button" id="add-record-type" class="primary-button">＋ Novo tipo</button></div>
-          <div class="record-type-toolbar"><div id="record-type-filters" class="record-type-filters" role="group" aria-label="Filtrar tipos de registro"></div><div class="record-type-view-toggle" role="group" aria-label="Formato da lista"><button type="button" class="record-type-view-button is-active" data-record-type-view="cards">Cartões</button><button type="button" class="record-type-view-button" data-record-type-view="table">Tabela</button></div></div>
+          <div class="section-heading record-type-heading"><div><div class="eyebrow">ACOMPANHAMENTO</div><h2>Tipos de processos</h2><p class="record-type-intro">Crie processos ligados a tarefas ou rotinas e acompanhe as ocorrências passadas.</p></div><button type="button" id="add-record-type" class="primary-button">＋ Novo tipo</button></div>
+          <div class="record-type-toolbar"><div id="record-type-filters" class="record-type-filters" role="group" aria-label="Filtrar tipos de processos"></div><div class="record-type-view-toggle" role="group" aria-label="Formato da lista"><button type="button" class="record-type-view-button is-active" data-record-type-view="cards">Cartões</button><button type="button" class="record-type-view-button" data-record-type-view="table">Tabela</button></div></div>
           <div id="record-type-list" class="record-type-grid"></div>
           <div id="record-type-table" class="record-type-table-wrap hidden"></div>
+        </div>
+        <div id="registries-items" class="hidden">
+          <div class="section-heading record-type-heading"><div><div class="eyebrow">CADASTRO</div><h2>Lista de tópicos</h2><p class="record-type-intro">Veja cada tópico, os processos em que ele aparece, a frequência e a tarefa ou passo relacionado.</p></div></div>
+          <div id="record-directory-list" class="record-directory"></div>
+        </div>
+        <div id="registries-linked" class="hidden">
+          <div class="section-heading record-type-heading"><div><div class="eyebrow">REFERÊNCIA</div><h2>Rotinas e Tarefas</h2><p class="record-type-intro">Veja cada tarefa ou passo de rotina usado nos tópicos, os processos de cada tópico e o status das recorrências.</p></div></div>
+          <div id="record-linked-list" class="record-linked"></div>
         </div>
       </section>
 
@@ -479,11 +487,11 @@
   </dialog>
   <dialog id="record-type-dialog" class="dialog small-dialog" aria-labelledby="record-type-dialog-title">
     <form id="record-type-form">
-      <div class="dialog-head"><div><div class="eyebrow">TIPOS DE REGISTRO</div><h2 id="record-type-dialog-title">Novo tipo de registro</h2></div><button type="button" class="close-button" id="close-record-type" aria-label="Fechar">×</button></div>
+      <div class="dialog-head"><div><div class="eyebrow">TIPOS DE PROCESSOS</div><h2 id="record-type-dialog-title">Novo tipo de processo</h2></div><button type="button" class="close-button" id="close-record-type" aria-label="Fechar">×</button></div>
       <input type="hidden" id="record-type-id">
       <div class="form-row"><div class="field"><label class="field-label" for="record-type-name">Nome</label><input id="record-type-name" class="text-input" maxlength="120" placeholder="Ex.: Alimentação, hábitos, medidas" required></div><div class="field record-type-icon-field"><label class="field-label" for="record-type-icon">Ícone</label><input id="record-type-icon" class="text-input icon-input" maxlength="8" placeholder="✍" title="Deixe em branco para usar o ícone do item vinculado"></div></div>
       <label class="field-label" for="record-type-category">Categoria</label>
-      <select id="record-type-category" class="text-input"><option value="record">Registro</option><option value="review">Revisão</option><option value="planning">Planejamento</option></select>
+      <select id="record-type-category" class="text-input"><option value="record">Registro</option><option value="review">Revisão</option><option value="planning">Planejamento</option><option value="alignment">Alinhamento</option><option value="entries">Entradas</option></select>
       <label class="field-label" for="record-type-frequency">Frequência</label>
       <select id="record-type-frequency" class="text-input"><option value="daily">Diária</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option><option value="bimonthly">Bimestral</option><option value="quarterly">Trimestral</option><option value="semiannual">Semestral</option><option value="annual">Anual</option></select>
       <label class="field-label" for="record-type-kind">Registrar a partir de</label>

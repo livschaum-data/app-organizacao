@@ -11,7 +11,8 @@
   const MONTHLY_TASK_FREQUENCIES=['monthly','bimonthly','quarterly','semiannual','annual'];
   const TASK_FREQUENCY_LABELS={weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
   const RECORD_FREQUENCY_LABELS={daily:'Diária',weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
-  const RECORD_CATEGORY_LABELS={record:'Registro',review:'Revisão',planning:'Planejamento'};
+  const RECORD_CATEGORY_LABELS={record:'Registro',review:'Revisão',planning:'Planejamento',alignment:'Alinhamento',entries:'Entradas'};
+  const RECORD_CATEGORY_COLORS={record:'#8fb2aa',review:'#b189aa',planning:'#dba866',alignment:'#7484a8',entries:'#88a67a'};
   const TASK_FREQUENCY_PLURAL={weekly:'Semanais',biweekly:'Quinzenais',monthly:'Mensais',bimonthly:'Bimestrais',quarterly:'Trimestrais',semiannual:'Semestrais',annual:'Anuais'};
   const TASK_FREQUENCY_MONTHS={monthly:1,bimonthly:2,quarterly:3,semiannual:6,annual:12};
   const MONTH_WEEK_OPTIONS=[1,2,3,4,5,6];
@@ -786,7 +787,7 @@
     $('#task-focus-date').textContent=fmtDate(date).toLocaleUpperCase('pt-BR');
     $('#task-focus-icon').textContent=task.icon||'✓';
     $('#task-focus-name').textContent=task.name;
-    $('#task-focus-day').textContent=({planner:'Voltar à visão diária','planner-secondary':'Voltar à visão secundária',weekly:'Voltar à visão semanal',monthly:'Voltar à visão mensal',registries:'Voltar aos registros'}[taskFocusOriginSection]||'Voltar ao dia');
+    $('#task-focus-day').textContent=({planner:'Voltar à visão diária','planner-secondary':'Voltar à visão secundária',weekly:'Voltar à visão semanal',monthly:'Voltar à visão mensal',registries:'Voltar aos processos'}[taskFocusOriginSection]||'Voltar ao dia');
     const done=(task.items||[]).filter(item=>item.done).length,total=task.items?.length||0;
     $('#task-focus-count').textContent=(consultation?`Consulta ${taskFrequencyLabel(task.frequency).toLowerCase()} · sem conclusão necessária`:`${task.kind==='block'?'Bloco':'Tarefa'} ${taskFrequencyLabel(task.frequency).toLowerCase()}${total?` · ${done} de ${total} passos`:''}`)+(locked?' · dia concluído':'');
     $('#task-focus-description').textContent=task.description||'';
@@ -1196,7 +1197,7 @@
     const type=state.recordTypes.find(item=>item.id===id&&!item.deleted);
     $('#record-type-form').reset();
     $('#record-type-id').value=type?.id||'';
-    $('#record-type-dialog-title').textContent=type?'Editar tipo de registro':'Novo tipo de registro';
+    $('#record-type-dialog-title').textContent=type?'Editar tipo de processo':'Novo tipo de processo';
     $('#record-type-name').value=type?.name||'';
     $('#record-type-icon').value=type?.icon||'';
     $('#record-type-category').value=type?.category||'record';
@@ -1211,7 +1212,7 @@
   function saveRecordType(event){
     event.preventDefault();
     const id=$('#record-type-id').value||uid(),name=$('#record-type-name').value.trim(),icon=$('#record-type-icon').value.trim(),category=$('#record-type-category').value,frequency=$('#record-type-frequency').value,kind=$('#record-type-kind').value,targetValue=$('#record-type-target').value;
-    if(!name){toast('Dê um nome ao tipo de registro.');return;}
+    if(!name){toast('Dê um nome ao tipo de processo.');return;}
     if(!RECORD_CATEGORY_LABELS[category]){toast('Escolha uma categoria.');return;}
     let targetId=targetValue,stepId='';
     if(kind==='routine'){
@@ -1223,12 +1224,12 @@
     const next={id,name,icon,category,frequency,kind,targetId,stepId,createdAt:existing?.createdAt||now,updatedAt:now,deleted:false};
     if(existing)state.recordTypes=state.recordTypes.map(item=>item.id===id?next:item);else state.recordTypes.push(next);
     selectedRecordTypeCategory='';
-    saveLocal();$('#record-type-dialog').close();renderRegistries();toast('Tipo de registro salvo.');
+    saveLocal();$('#record-type-dialog').close();renderRegistries();toast('Tipo de processo salvo.');
   }
   function deleteRecordType(){
     const id=$('#record-type-id').value,type=state.recordTypes.find(item=>item.id===id&&!item.deleted);if(!type)return;
     if(!confirm(`Excluir “${type.name}”?`))return;
-    type.deleted=true;type.updatedAt=stamp();saveLocal();$('#record-type-dialog').close();renderRegistries();toast('Tipo de registro excluído.');
+    type.deleted=true;type.updatedAt=stamp();saveLocal();$('#record-type-dialog').close();renderRegistries();toast('Tipo de processo excluído.');
   }
   function recordTypeOccurrences(type,limit=8){
     const target=type.kind==='task'?state.tasks.find(task=>task.id===type.targetId&&!task.deleted):state.routines.find(routine=>routine.id===type.targetId&&!routine.deleted);
@@ -1326,7 +1327,7 @@
     $$('.record-type-view-button').forEach(button=>{const active=button.dataset.recordTypeView===selectedRecordTypeView;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));});
     $('#record-type-list').classList.toggle('hidden',table);
     $('#record-type-table').classList.toggle('hidden',!table);
-    const emptyAll='<div class="empty-state"><span>✍</span><h3>Nenhum tipo de registro ainda</h3><p>Crie um tipo e vincule a uma tarefa ou passo de rotina para acompanhar as ocorrências.</p></div>';
+    const emptyAll='<div class="empty-state"><span>✍</span><h3>Nenhum tipo de processo ainda</h3><p>Crie um tipo e vincule a uma tarefa ou passo de rotina para acompanhar as ocorrências.</p></div>';
     if(!all.length){
       $('#record-type-filters').innerHTML='';
       if(table){$('#record-type-list').innerHTML='';$('#record-type-table').innerHTML=emptyAll;}
@@ -1346,18 +1347,89 @@
     if(table){$('#record-type-list').innerHTML='';$('#record-type-table').innerHTML=recordTypeTableHtml(infos);}
     else{$('#record-type-table').innerHTML='';$('#record-type-list').innerHTML=recordTypeCardsHtml(infos);}
   }
+  function recordTypeTargetLabel(type){
+    if(type.kind==='task'){
+      const task=state.tasks.find(item=>item.id===type.targetId&&!item.deleted);
+      return task?.name||'Item não encontrado';
+    }
+    const routine=state.routines.find(item=>item.id===type.targetId&&!item.deleted),step=routine?.items?.find(item=>item.id===type.stepId);
+    if(!routine)return 'Item não encontrado';
+    return `${routine.name}${step?` · ${step.label}`:' · Passo não encontrado'}`;
+  }
+  function recordDirectoryCardHtml(group){
+    const first=group.types[0],color=RECORD_CATEGORY_COLORS[first.category]||'#8fb2aa';
+    const categoryOrder=Object.keys(RECORD_CATEGORY_LABELS),frequencyOrder=Object.keys(RECORD_FREQUENCY_LABELS),seen=new Set();
+    const entries=[...group.types].sort((a,b)=>categoryOrder.indexOf(a.category)-categoryOrder.indexOf(b.category)||frequencyOrder.indexOf(a.frequency)-frequencyOrder.indexOf(b.frequency)||a.name.localeCompare(b.name,'pt-BR')).filter(type=>{
+      const key=[type.category,type.frequency,type.kind,type.targetId,type.stepId].join('::');
+      if(seen.has(key))return false;seen.add(key);return true;
+    });
+    const count=entries.length;
+    const rows=entries.map(type=>{
+      const category=RECORD_CATEGORY_LABELS[type.category]||'Registro',frequency=RECORD_FREQUENCY_LABELS[type.frequency]||'Semanal';
+      return `<div class="record-directory-entry"><div class="record-directory-entry-head"><span class="record-directory-tag">${escapeHTML(category)}</span><span class="record-directory-frequency">${escapeHTML(frequency)}</span></div><small class="record-directory-link">${escapeHTML(recordTypeTargetLabel(type))}</small></div>`;
+    }).join('');
+    return `<article class="record-type-card record-directory-card" style="--record-color:${color}"><header><span class="record-type-icon" aria-hidden="true">${escapeHTML(first.icon||'✍')}</span><div class="record-type-title"><strong>${escapeHTML(group.name)}</strong><small>${count===1?'1 cadastro':`${count} cadastros`}</small></div></header><div class="record-directory-entries">${rows}</div></article>`;
+  }
+  function renderRecordDirectory(){
+    const list=$('#record-directory-list'),types=state.recordTypes.filter(item=>!item.deleted);
+    if(!types.length){list.innerHTML='<div class="empty-state"><span>✍</span><h3>Nenhum acompanhamento cadastrado ainda</h3><p>Crie um tipo na aba Acompanhamento para vê-lo listado aqui.</p></div>';return;}
+    const groups=new Map();
+    for(const type of types){
+      const name=String(type.name||'').trim(),key=name.toLocaleLowerCase('pt-BR');
+      if(!key)continue;
+      if(!groups.has(key))groups.set(key,{name,types:[]});
+      groups.get(key).types.push(type);
+    }
+    list.innerHTML=[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(recordDirectoryCardHtml).join('');
+  }
+  function recordLinkedEntries(){
+    const items=new Map();
+    const ensure=(key,base)=>{if(!items.has(key))items.set(key,{...base,topics:[]});return items.get(key);};
+    for(const type of state.recordTypes.filter(item=>!item.deleted)){
+      const info=recordTypeInfo(type);if(!info.linked)continue;
+      if(type.kind==='task'){
+        ensure(`task::${type.targetId}`,{kind:'task',name:info.target.name,context:'Tarefa',icon:info.target.icon||'✓',color:info.target.color||'#8fb2aa'}).topics.push({type,info});
+      }else{
+        ensure(`routine::${type.targetId}::${type.stepId}`,{kind:'routine',name:info.step.label,context:info.target.name,icon:info.target.icon||'✍',color:info.target.color||'#8fb2aa'}).topics.push({type,info});
+      }
+    }
+    return [...items.values()].sort((a,b)=>a.kind!==b.kind?(a.kind==='task'?-1:1):a.name.localeCompare(b.name,'pt-BR'));
+  }
+  function recordLinkedCardHtml(item){
+    const categoryOrder=Object.keys(RECORD_CATEGORY_LABELS),seen=new Set();
+    const topics=[...item.topics].sort((a,b)=>categoryOrder.indexOf(a.type.category)-categoryOrder.indexOf(b.type.category)||a.type.name.localeCompare(b.type.name,'pt-BR')).filter(({type})=>{
+      const key=[String(type.name||'').trim().toLocaleLowerCase('pt-BR'),type.category,type.frequency,type.kind,type.targetId,type.stepId].join('::');
+      if(seen.has(key))return false;seen.add(key);return true;
+    });
+    const count=topics.length;
+    const rows=topics.map(({type,info})=>{
+      const category=RECORD_CATEGORY_LABELS[type.category]||'Registro',frequency=RECORD_FREQUENCY_LABELS[type.frequency]||'Semanal',latest=info.occurrences[0];
+      const latestText=latest?`${fmtDate(latest.date,{day:'2-digit',month:'2-digit'})} · ${recordOccurrenceLabel(latest)}`:'';
+      return `<div class="record-linked-topic"><div class="record-linked-topic-head"><span class="record-linked-topic-name">${type.icon?`${escapeHTML(type.icon)} `:''}${escapeHTML(type.name)}</span><span class="record-type-status is-${info.status.key}">${escapeHTML(info.status.label)}</span></div><div class="record-linked-topic-meta"><span class="record-directory-tag">${escapeHTML(category)}</span><span class="record-directory-frequency">${escapeHTML(frequency)}</span>${latestText?`<small class="record-linked-latest">${escapeHTML(latestText)}</small>`:''}</div></div>`;
+    }).join('');
+    return `<article class="record-type-card record-linked-card" style="--record-color:${escapeHTML(item.color)}"><header><span class="record-type-icon" aria-hidden="true">${escapeHTML(item.icon)}</span><div class="record-type-title"><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.context)} · ${count} ${count===1?'tópico':'tópicos'}</small></div></header><div class="record-linked-topics">${rows}</div></article>`;
+  }
+  function renderRecordLinked(){
+    const list=$('#record-linked-list'),items=recordLinkedEntries();
+    if(!items.length){list.innerHTML='<div class="empty-state"><span>✍</span><h3>Nenhuma rotina ou tarefa vinculada ainda</h3><p>Vincule um tópico a uma tarefa ou passo de rotina na aba Processos.</p></div>';return;}
+    list.innerHTML=items.map(recordLinkedCardHtml).join('');
+  }
   function weekRegistryLabel(dateKey){
     const dates=weekDates(dateKey),start=safeDate(dates[0]),end=safeDate(dates[6]),pad=value=>String(value).padStart(2,'0');
     return start.getMonth()===end.getMonth()?`${pad(start.getDate())} a ${pad(end.getDate())}-${pad(end.getMonth()+1)}-${end.getFullYear()}`:`${pad(start.getDate())}-${pad(start.getMonth()+1)} a ${pad(end.getDate())}-${pad(end.getMonth()+1)}-${end.getFullYear()}`;
   }
   function renderRegistries(){
     $$('.registries-tab').forEach(button=>{const active=button.dataset.registriesView===selectedRegistriesView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
-    const trackersView=selectedRegistriesView==='trackers';
-    $('#registries-diary').classList.toggle('hidden',trackersView);
+    const trackersView=selectedRegistriesView==='trackers',itemsView=selectedRegistriesView==='items',linkedView=selectedRegistriesView==='linked';
+    $('#registries-diary').classList.toggle('hidden',trackersView||itemsView||linkedView);
     $('#registries-trackers').classList.toggle('hidden',!trackersView);
-    $('#registries-heading').textContent=trackersView?'Acompanhamento de registros.':'Registros do mês e da semana.';
-    $('#registries-subtitle').textContent=trackersView?'Veja se os registros ligados a tarefas e rotinas estão em dia.':'Abra um mês para ver os registros de cada semana.';
-    renderRecordTypes();
+    $('#registries-items').classList.toggle('hidden',!itemsView);
+    $('#registries-linked').classList.toggle('hidden',!linkedView);
+    $('#registries-heading').textContent=trackersView?'Acompanhamento de processos.':itemsView?'Tópicos cadastrados.':linkedView?'Rotinas e Tarefas.':'Registros do mês e da semana.';
+    $('#registries-subtitle').textContent=trackersView?'Veja se os processos ligados a tarefas e rotinas estão em dia.':itemsView?'Veja cada tópico, os processos em que aparece, a frequência e a tarefa ou passo relacionado.':linkedView?'Veja as tarefas e passos usados nos tópicos, os processos de cada tópico e o status das recorrências.':'Abra um mês para ver os registros de cada semana.';
+    if(trackersView)renderRecordTypes();
+    if(itemsView)renderRecordDirectory();
+    if(linkedView)renderRecordLinked();
     const months=new Map(),ensure=key=>{if(!months.has(key))months.set(key,{monthKey:key,monthText:'',weeks:[]});return months.get(key);};
     for(const [key,entry] of Object.entries(state.monthRegistries||{})){
       if(!/^\d{4}-\d{2}$/.test(key))continue;
@@ -3264,7 +3336,7 @@
     const leisure=event.target.closest('[data-open-leisure]');if(leisure){openActionDialog(leisure.dataset.openLeisure,'',false,true);return;}
     const occurrence=event.target.closest('[data-open-occurrence]');if(occurrence)openOccurrenceFocusFromElement(occurrence);
   });
-  $$('.registries-tab').forEach(button=>button.onclick=()=>{selectedRegistriesView=button.dataset.registriesView==='trackers'?'trackers':'diary';renderRegistries();});
+  $$('.registries-tab').forEach(button=>button.onclick=()=>{const view=button.dataset.registriesView;selectedRegistriesView=['trackers','items','linked'].includes(view)?view:'diary';renderRegistries();});
   $('#add-record-type').onclick=()=>openRecordTypeDialog();
   $('#record-type-filters').addEventListener('click',event=>{const button=event.target.closest('[data-record-category]');if(!button)return;selectedRecordTypeCategory=button.dataset.recordCategory||'';renderRecordTypes();});
   $$('.record-type-view-button').forEach(button=>button.onclick=()=>{selectedRecordTypeView=button.dataset.recordTypeView==='table'?'table':'cards';renderRecordTypes();});
