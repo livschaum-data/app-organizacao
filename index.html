@@ -7,12 +7,12 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261117-occurrence-recurrence-guard-v46">
+  <link rel="stylesheet" href="styles.css?v=20261117-occurrence-filter-row-v49">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261117-occurrence-recurrence-guard-v46"></script>
+  <script defer src="app.js?v=20261117-occurrence-filter-row-v49"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -255,8 +255,8 @@
             <label>Tipo<select id="occurrence-filter-type" class="text-input"><option value="">Todos</option><option value="reminder">Lembretes</option><option value="event">Eventos</option><option value="holiday">Feriados</option><option value="birthday">Aniversários</option><option value="cycle">Ciclos</option></select></label>
             <label>Agendamento<select id="occurrence-filter-schedule" class="text-input"><option value="">Todos</option><option value="month">Por mês</option><option value="date">Por data</option><option value="recurrence">Recorrentes</option></select></label>
             <label>Mês<input id="occurrence-filter-month" class="text-input" type="month"></label>
+            <button type="button" id="occurrence-clear-filters" class="text-button occurrence-clear-filters">Limpar filtros</button>
           </div>
-          <div class="action-list-sort"><label for="occurrence-sort-by">Ordenar por</label><select id="occurrence-sort-by" class="text-input"><option value="date">Data</option><option value="title">Nome</option><option value="type">Tipo</option><option value="created">Criação</option></select><select id="occurrence-sort-direction" class="text-input" aria-label="Direção da ordenação"><option value="asc">Crescente</option><option value="desc">Decrescente</option></select><button type="button" id="occurrence-clear-filters" class="text-button">Limpar filtros</button></div>
         </div>
         <div id="occurrence-calendar-filters" class="task-manage-filters hidden"><label>Grupo<select id="occurrence-calendar-filter-type" class="text-input"><option value="">Todos</option><option value="reminder">Lembretes</option><option value="event">Eventos</option><option value="holiday">Feriados</option><option value="birthday">Aniversários</option><option value="cycle">Ciclos</option></select></label><label>Frequência<select id="occurrence-calendar-filter-frequency" class="text-input"><option value="">Todas</option><option value="none">Sem recorrência</option><option value="every-week">Todas as semanas</option><option value="month-weeks">Semanas específicas do mês</option><option value="annual">Anual</option><option value="after-completion">Dias após a conclusão</option><option value="after-date">Dias após a data agendada</option></select></label></div>
         <div id="occurrence-review-filters" class="task-manage-filters hidden"><label>Buscar<input id="occurrence-review-search" class="text-input" type="search" placeholder="Nome, descrição ou notas"></label><label>Tipo<select id="occurrence-review-type" class="text-input"><option value="">Todos</option><option value="reminder">Lembretes</option><option value="event">Eventos</option><option value="holiday">Feriados</option><option value="birthday">Aniversários</option><option value="cycle">Ciclos</option></select></label><label>Frequência<select id="occurrence-review-frequency" class="text-input"><option value="">Todas</option><option value="none">Sem recorrência</option><option value="every-week">Todas as semanas</option><option value="month-weeks">Semanas específicas do mês</option><option value="annual">Anual</option><option value="after-completion">Dias após a conclusão</option><option value="after-date">Dias após a data agendada</option></select></label><label>Situação<select id="occurrence-review-status" class="text-input"><option value="pending" selected>Pendentes</option><option value="completed">Concluídos</option><option value="">Todos</option></select></label><label>Período<select id="occurrence-review-period" class="text-input"><option value="30">Últimos 30 dias</option><option value="90" selected>Últimos 90 dias</option><option value="365">Último ano</option><option value="all">Todo o histórico</option></select></label><button type="button" id="occurrence-review-clear" class="text-button">Limpar filtros</button></div>

@@ -691,3 +691,9 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .task-review-occurrence.is-completed{border-left-color:#6ca38a}
 @media(max-width:800px){.occurrence-review-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.occurrence-review-summary{grid-template-columns:1fr}}
+.occurrence-list-table{min-width:1180px}
+.occurrence-late-date{color:#a64e47;font-weight:700}
+.occurrence-filter-grid{grid-template-columns:repeat(4,minmax(0,1fr)) auto;align-items:end}
+.occurrence-filter-grid .occurrence-clear-filters{margin:0 0 8px 4px;justify-self:end;white-space:nowrap}
+@media(max-width:850px){.occurrence-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr)) auto}}
+@media(max-width:560px){.occurrence-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr)) auto}.occurrence-filter-grid .occurrence-clear-filters{grid-column:1/-1;justify-self:end;margin:0}}
