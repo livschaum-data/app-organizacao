@@ -682,3 +682,12 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .project-calendar-navigation [data-project-calendar-today]:hover{border-color:#9ab9b1;background:#f4f8f6}
 @media(max-width:700px){.project-calendar-navigation{gap:10px}.project-calendar-navigation h3{min-width:150px;font-size:14px}.project-calendar-navigation button[data-project-calendar-shift]{width:42px;height:42px}}
 .task-review-actions .task-review-locked{border-radius:999px;padding:4px 8px;background:#f1ece6;color:#6b645c;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.occurrence-review-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+.task-review-task-counts .is-pending{background:#fae7e4;color:#9a4549}
+.task-review-task-counts .is-completed{background:#e8f4eb;color:#306849}
+.task-review-status.is-pending{background:#fae7e4;color:#9a4549}
+.task-review-status.is-completed{background:#e8f4eb;color:#306849}
+.task-review-occurrence.is-pending{border-left-color:#d28b78}
+.task-review-occurrence.is-completed{border-left-color:#6ca38a}
+@media(max-width:800px){.occurrence-review-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.occurrence-review-summary{grid-template-columns:1fr}}
