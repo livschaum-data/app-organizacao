@@ -4,6 +4,43 @@
   const STORAGE_KEY = 'ritmo-routine-tracker-v1';
   const LAST_SYNC_KEY = `${STORAGE_KEY}-last-sync`;
   const PENDING_KEY = `${STORAGE_KEY}-pending-sync`;
+  const STORAGE_FORMAT_PREFIX = 'ancora-gz1:';
+  function decodeStoredState(value) {
+    if (!window.pako) throw new Error('Compactador indisponível');
+    const binary = atob(value);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+    return JSON.parse(window.pako.inflate(bytes, { to: 'string' }));
+  }
+  function readStoredState() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    try {
+      if (raw.startsWith(STORAGE_FORMAT_PREFIX)) return decodeStoredState(raw.slice(STORAGE_FORMAT_PREFIX.length));
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.ancoraCompressed === 'string') return decodeStoredState(parsed.ancoraCompressed);
+      return parsed;
+    } catch (error) {
+      console.error('Falha ao ler os dados salvos:', error);
+      return null;
+    }
+  }
+  function writeStoredState(data) {
+    const json = JSON.stringify(data);
+    let value = json;
+    if (window.pako) {
+      try {
+        const compressed = window.pako.deflate(json, { level: 9 });
+        const chunks = [];
+        const chunkSize = 0x8000;
+        for (let index = 0; index < compressed.length; index += chunkSize) chunks.push(String.fromCharCode.apply(null, compressed.subarray(index, index + chunkSize)));
+        value = JSON.stringify({ ancoraCompressed: btoa(chunks.join('')), routines: [], history: {} });
+      } catch (error) {
+        console.warn('Não foi possível compactar os dados; salvando sem compactação.', error);
+      }
+    }
+    localStorage.setItem(STORAGE_KEY, value);
+  }
   const SIDEBAR_KEY = 'ancora-sidebar-collapsed-v1';
   const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
   const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -307,16 +344,15 @@
     return data;
   }
   function loadState() {
-    let parsed;
-    try {parsed=JSON.parse(localStorage.getItem(STORAGE_KEY));} catch {}
+    const parsed=readStoredState();
     if(parsed && Array.isArray(parsed.routines) && parsed.history) {
       const needsUpgrade=plannerNeedsUpgrade(parsed);
       const normalized=ensurePlannerData(normalizeSeedItemIds(parsed));
-      try {localStorage.setItem(STORAGE_KEY,JSON.stringify(normalized));if(needsUpgrade)localStorage.setItem(PENDING_KEY,'local');} catch {}
+      try {writeStoredState(normalized);if(needsUpgrade)localStorage.setItem(PENDING_KEY,'local');} catch {}
       return normalized;
     }
     const fresh = makeSeed();
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh)); localStorage.setItem(PENDING_KEY,'local'); } catch {}
+    try { writeStoredState(fresh); localStorage.setItem(PENDING_KEY,'local'); } catch {}
     return fresh;
   }
   function monthWeekNumber(date){
@@ -474,7 +510,7 @@
   function saveLocal() {
     postponedOriginsCache = { date: '', map: null };
     localRevision++;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); localStorage.setItem(PENDING_KEY,session?.user?.id||'local'); }
+    try { writeStoredState(state); localStorage.setItem(PENDING_KEY,session?.user?.id||'local'); }
     catch { toast('O armazenamento deste navegador está cheio. Exporte seu histórico para guardar uma cópia.'); }
     setSyncStatus(session?.user?'syncing':'offline',session?.user?'Alterações aguardando sincronização...':'Dados neste aparelho');
     scheduleSync();
@@ -3219,7 +3255,7 @@
           const [remote,actionBackup]=await Promise.all([readRemote(),readActionBackup()]),remoteJson=JSON.stringify(remote?.data||{});
           state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{});
           await syncActionBackup(actionBackup);
-          localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+          writeStoredState(state);
           if(remote&&JSON.stringify(state)===remoteJson){
             committed=true;
             if(localRevision!==revisionAtStart)saveAgain=true;
@@ -3247,7 +3283,7 @@
       const [remote,actionBackup]=await Promise.all([readRemote(),readActionBackup()]);
       if(!remote&&!actionBackup){setSyncStatus('online','Ainda não há dados na nuvem para baixar.');return true;}
       state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{});
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(state));
+      writeStoredState(state);
       if(JSON.stringify(state)!==JSON.stringify(remote?.data||{})||JSON.stringify(actionBackupData())!==JSON.stringify(actionBackup?.data||{})){
         localStorage.setItem(PENDING_KEY,session.user.id);
         scheduleSync();

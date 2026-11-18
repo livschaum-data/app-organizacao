@@ -1,6 +1,6 @@
 # Âncora — acompanhamento de rotina diária
 
-Aplicativo estático, preparado para hospedagem no GitHub Pages. Rotinas, âncoras, áreas e histórico ficam no navegador e podem ser sincronizados entre dispositivos com Supabase Auth e uma tabela JSONB protegida por RLS.
+Aplicativo estático, preparado para hospedagem no GitHub Pages. Rotinas, âncoras, áreas e histórico ficam no navegador e podem ser sincronizados entre dispositivos com Supabase Auth e uma tabela JSONB protegida por RLS. Os dados locais são compactados automaticamente para reduzir o uso do armazenamento do navegador.
 
 O menu lateral reúne as visões diárias, semanais e mensais, além de Resumo, Processos, Âncoras, Rotinas, Tarefas e Ações. A visão diária mostra blocos editáveis de Tema do dia, Casa, Lazer, Estudos, Movimento e Extras, além das rotinas da data. As âncoras pré-cadastradas foram transcritas dos exemplos fornecidos e podem ter nome, ícone, área, descrição, dias da semana e período editados. Áreas também podem ser criadas, renomeadas, coloridas, reordenadas e excluídas quando vazias. Todos esses cadastros usam a mesma sincronização das rotinas.
 
