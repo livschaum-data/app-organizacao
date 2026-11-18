@@ -214,7 +214,9 @@
   let hideCompletedActions = false;
   let studyView = 'annual';
   let hideCompletedStudies = false;
+  let hideCompletedLeisure = false;
   let ignoreStudyClickUntil = 0;
+  let ignoreLeisureClickUntil = 0;
   let selectedStudyMonth = isoToday().slice(0,7), selectedStudyWeekDate = isoToday();
   let leisureView = 'annual';
   let selectedLeisureMonth = isoToday().slice(0,7), selectedLeisureWeekDate = isoToday();
@@ -1795,13 +1797,13 @@
   function studyCard(action,options={}){const drag=options.drag===true?` draggable="true" data-drag-study="${escapeHTML(action.id)}"`:'';return `<div class="weekly-action study-item${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}"${drag} style="--action-color:${escapeHTML(action.color||'#8e7cae')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-study="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${action.parentId?`<small>↳ ${escapeHTML(actionParent(action)?.title||'Matéria')}</small>`:''}${action.schedule==='month'&&action.week?`<small>${escapeHTML(monthWeekLabel(action.week))}</small>`:''}</button></div>`;}
   function renderCatalogSchedule(items,target,label,editAttr,options={}){
     const dates=weekDates(label==='Lazer'?selectedLeisureWeekDate:selectedStudyWeekDate),month=label==='Lazer'?selectedLeisureMonth:selectedStudyMonth;
-    const studyMode=label==='Estudos',card=item=>studyMode?studyCard(item,{drag:true}):leisureCard(item);
+    const studyMode=label==='Estudos',card=item=>studyMode?studyCard(item,{drag:true}):leisureCard(item,{drag:true});
     const annualNavigation=options.annualNavigation===true,unscheduledColumn=options.unscheduledColumn===true;
     if((label==='Lazer'?leisureView:studyView)==='week'){
       const months=new Set(dates.map(date=>date.slice(0,7)));
       const datedItems=unscheduledColumn?items.filter(item=>item.schedule==='date'&&dates.includes(item.scheduledDate)):items;
       const unscheduledItems=unscheduledColumn?items.filter(item=>item.schedule==='month'&&months.has(item.scheduledMonth)&&(!Number(item.week)||dates.some(date=>monthWeekMatches(item.week,date)))):[];
-      const cells=dates.map(date=>`<td data-catalog-date="${date}"${studyMode?` data-study-week-date="${date}"`:''}><div class="weekly-action-dropzone">${datedItems.filter(item=>actionIsScheduled(item,date)).map(card).join('')}</div></td>`).join('');
+      const cells=dates.map(date=>`<td data-catalog-date="${date}"${studyMode?` data-study-week-date="${date}"`:` data-catalog-week-date="${date}"`}><div class="weekly-action-dropzone">${datedItems.filter(item=>actionIsScheduled(item,date)).map(card).join('')}</div></td>`).join('');
       if(unscheduledColumn){
         const unscheduledCards=unscheduledItems.map(card).join('');
         $(target).innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table action-week-table action-weekly-table"><thead><tr><th scope="col" class="weekly-corner">${label}</th>${weeklyHeaders(dates,'actions')}<th scope="col" class="monthly-week monthly-week-undated"><span class="monthly-week-pill">não agendadas</span><small>mês ou semana</small></th></tr></thead><tbody><tr style="--area-color:${label==='Lazer'?'#f4e1e9':'#e8e7f3'}"><th scope="row"><span class="weekly-area-icon">${label==='Lazer'?'♡':'✎'}</span><span>Com data</span></th>${cells}<td class="monthly-undated-cell">${unscheduledCards||'<span class="planner-empty">Nenhum item nesta categoria.</span>'}</td></tr></tbody></table></div>`;
@@ -1814,7 +1816,7 @@
     if((label==='Lazer'?leisureView:studyView)==='monthly'){
       const weeks=monthlyWeeksFor(month),headers=weeks.map(week=>monthlyWeekHeader(month,week)).join('');
       const monthItems=items.filter(item=>actionMonth(item)===month),datedItems=monthItems.filter(item=>item.schedule==='date'||Number(item.week)>0),undatedItems=monthItems.filter(item=>item.schedule==='month'&&!item.week);
-      const cells=weeks.map(week=>`<td${studyMode?` data-study-month-week="${week}"`:''}>${datedItems.filter(item=>actionWeek(item)===week).map(card).join('')}</td>`).join('');
+      const cells=weeks.map(week=>`<td${studyMode?` data-study-month-week="${week}"`:` data-catalog-month-week="${week}"`}>${datedItems.filter(item=>actionWeek(item)===week).map(card).join('')}</td>`).join('');
       const undatedCards=undatedItems.map(card).join('');
       const body=monthItems.length?`<tr style="--area-color:${label==='Lazer'?'#f4e1e9':'#e8e7f3'}"><th scope="row"><span class="weekly-area-icon">${label==='Lazer'?'♡':'✎'}</span><span>Planejado</span></th>${cells}<td class="monthly-undated-cell">${undatedCards||'<span class="planner-empty">Nenhum item</span>'}</td></tr>`:`<tr><td colspan="${weeks.length+2}" class="monthly-empty">${label==='Estudos'?'Nenhuma matéria neste mês.':'Nenhum item neste mês.'}</td></tr>`;
       $(target).innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(`${month}-01`,{month:'long',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table monthly-table action-monthly-table"><thead><tr><th scope="col" class="weekly-corner">${label}</th>${headers}<th scope="col" class="monthly-week monthly-week-undated"><span class="monthly-week-pill">sem data</span><small>mês inteiro</small></th></tr></thead><tbody>${body}</tbody></table></div>`;
@@ -1822,8 +1824,8 @@
     }
     const year=month.slice(0,4),months=Array.from({length:12},(_,index)=>`${year}-${String(index+1).padStart(2,'0')}`),columns=months.map((key,index)=>{
       const entries=items.filter(item=>actionMonth(item)===key),selected=annualNavigation&&key===month;
-      const monthLabel=`<span class="annual-month-label${annualNavigation?` annual-month-${index+1}`:''}">${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span>`;
-      return `<section class="action-month-column${selected?' is-selected':''}" data-catalog-month="${key}"${annualNavigation?` data-study-month="${key}"`:''}><header>${annualNavigation?`<button type="button" class="annual-month-link" data-open-study-month="${key}">${monthLabel}</button>`:monthLabel}<b>${entries.length}</b></header><div class="action-card-list">${entries.map(card).join('')||'<p class="planner-empty">—</p>'}</div></section>`;
+      const monthLabel=`<span class="annual-month-label${annualNavigation?` annual-month-${index+1}`:''}">${escapeHTML(fmtDate(`${key}-01`,{month:'short'}))}</span>`,monthTarget=studyMode?` data-study-month="${key}"`:'',monthAction=studyMode?`data-open-study-month="${key}"`:`data-open-leisure-month="${key}"`;
+      return `<section class="action-month-column${selected?' is-selected':''}" data-catalog-month="${key}"${annualNavigation?monthTarget:''}><header>${annualNavigation?`<button type="button" class="annual-month-link" ${monthAction}>${monthLabel}</button>`:monthLabel}<b>${entries.length}</b></header><div class="action-card-list">${entries.map(card).join('')||'<p class="planner-empty">—</p>'}</div></section>`;
     }).join('');
     $(target).innerHTML=`<h3 class="action-period-title">${year}</h3><div class="action-month-board" role="region" aria-label="${label} por mês" tabindex="0">${columns}</div>`;
     if(annualNavigation){const container=$(target),board=container?.querySelector('.action-month-board'),selected=board?.querySelector('.action-month-column.is-selected');if(board&&selected)board.scrollLeft=Math.max(0,selected.offsetLeft-board.offsetLeft-12);}
@@ -1894,12 +1896,12 @@
     series.completed=complete;series.completedAt=complete?(series.completedAt||now):'';series.completionChangedAt=now;series.updatedAt=now;
   }
   function leisureItemCard(action,options={}){
-    const backlog=options.backlog===true,typeChip=leisureTypeChip(action),season=leisureSeasonLabel(action),parent=actionParent(action);
+    const backlog=options.backlog===true,drag=options.drag===true?` draggable="true" data-drag-leisure="${escapeHTML(action.id)}"`:'',typeChip=leisureTypeChip(action),season=leisureSeasonLabel(action),parent=actionParent(action);
     const meta=[typeChip,season?`<small>${escapeHTML(season)}</small>`:'',parent?`<small>↳ ${escapeHTML(parent.title)}</small>`:''].filter(Boolean).join('');
     const toggle=backlog?'':`<button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(leisureDisplayTitle(action))}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button>`;
-    return `<div class="weekly-action leisure-item${action.completed?' is-complete':''}${backlog?' is-backlog':''}" style="--action-color:${escapeHTML(action.color||'#d58ca6')}">${toggle}<button type="button" data-edit-leisure="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${meta?`<span class="leisure-item-meta">${meta}</span>`:''}</button>${backlog?`<button type="button" class="leisure-backlog-schedule" data-schedule-leisure="${escapeHTML(action.id)}">Agendar</button>`:''}</div>`;
+    return `<div class="weekly-action leisure-item${action.completed?' is-complete':''}${backlog?' is-backlog':''}"${drag} style="--action-color:${escapeHTML(action.color||'#d58ca6')}">${toggle}<button type="button" data-edit-leisure="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${meta?`<span class="leisure-item-meta">${meta}</span>`:''}</button>${backlog?`<button type="button" class="leisure-backlog-schedule" data-schedule-leisure="${escapeHTML(action.id)}">Agendar</button>`:''}</div>`;
   }
-  function leisureCard(action){return leisureItemCard(action);}
+  function leisureCard(action,options={}){return leisureItemCard(action,options);}
   function leisureSeriesGroup(series){
     const seasons=leisureSeasonsOf(series),done=seasons.filter(season=>season.completed).length,typeIcon=leisureTypeRecord(series.leisureType)?.icon||'📺';
     return `<div class="leisure-series-group"><div class="leisure-series-head"><span class="project-icon">${escapeHTML(series.icon||typeIcon)}</span><div><strong>${escapeHTML(series.title)}</strong>${leisureTypeChip(series)?`<span class="leisure-series-meta">${leisureTypeChip(series)}<small>${done} de ${seasons.length} temporadas</small></span>`:''}</div><button type="button" class="small-edit" data-edit-leisure="${escapeHTML(series.id)}">Editar</button></div><div class="leisure-season-list">${seasons.map(season=>leisureCard(season)).join('')}</div><button type="button" class="secondary-button study-add-topic" data-add-leisure-season="${escapeHTML(series.id)}">＋ Temporada</button></div>`;
@@ -1924,9 +1926,13 @@
     const items=leisureActions(),categories=items.filter(item=>!item.parentId);
     $$('.leisure-tab').forEach(button=>{const active=button.dataset.leisureView===leisureView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const isList=leisureView==='list',isBacklog=leisureView==='backlog';
+    const supportsCompletedToggle=!isList&&!isBacklog,completedToggle=$('#leisure-toggle-completed');
+    completedToggle.classList.toggle('hidden',!supportsCompletedToggle);completedToggle.setAttribute('aria-pressed',String(hideCompletedLeisure));
+    $('#leisure-toggle-completed-label').textContent=hideCompletedLeisure?'Mostrar concluídas':'Ocultar concluídas';
+    const viewItems=supportsCompletedToggle&&hideCompletedLeisure?items.filter(item=>!item.completed):items;
     $('.leisure-month-navigator').classList.toggle('hidden',isList||isBacklog||leisureView==='week');$('.leisure-week-navigator').classList.toggle('hidden',leisureView!=='week');$('#leisure-month').value=selectedLeisureMonth;$('#leisure-week-date').value=selectedLeisureWeekDate;$('#leisure-current-month').classList.toggle('hidden',selectedLeisureMonth===isoToday().slice(0,7));$('#leisure-week-today').classList.toggle('hidden',weekDates(selectedLeisureWeekDate).includes(isoToday()));
     if(isBacklog){$('#leisure-content').innerHTML=renderLeisureBacklog();return;}
-    if(!isList){renderCatalogSchedule(items.filter(leisureInCalendar),'#leisure-content','Lazer','data-edit-leisure',{unscheduledColumn:true});return;}
+    if(!isList){renderCatalogSchedule(viewItems.filter(leisureInCalendar),'#leisure-content','Lazer','data-edit-leisure',{annualNavigation:true,unscheduledColumn:true});return;}
     $('#leisure-content').innerHTML=categories.map(leisureCategoryCard).join('')||'<div class="empty-state"><h3>Seu lazer começa aqui</h3><p>Crie uma categoria e adicione filmes, séries, livros ou projetos criativos.</p></div>';
   }
   function scheduleLeisureItem(id){
@@ -2339,6 +2345,36 @@
     if(study.schedule==='date'&&study.scheduledDate===date)return;
     study.schedule='date';study.scheduledDate=date;study.scheduledMonth='';study.week=null;study.updatedAt=stamp();
     saveLocal();renderStudies();renderPlanner();toast(`Estudo movido para ${monthWeekLabel(targetWeek).toLowerCase()}.`);
+  }
+  function moveLeisureToMonth(id,monthKey){
+    if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey))return;
+    const item=state.actions.find(entry=>entry.id===id&&!entry.deleted&&entry.leisure&&leisureInCalendar(entry));if(!item||actionMonth(item)===monthKey)return;
+    const [year,month]=monthKey.split('-').map(Number),lastDay=new Date(year,month,0).getDate();
+    if(item.schedule==='date'){
+      const day=Math.min(Number(item.scheduledDate?.slice(8,10))||1,lastDay);
+      item.scheduledDate=`${monthKey}-${String(day).padStart(2,'0')}`;
+    }else{
+      item.scheduledMonth=monthKey;
+      if(item.week&&Number(item.week)!==6){const weeks=Array.from({length:lastDay},(_,index)=>monthWeekNumber(`${monthKey}-${String(index+1).padStart(2,'0')}`));item.week=Math.min(Number(item.week),Math.max(...weeks));}
+    }
+    item.updatedAt=stamp();selectedLeisureMonth=monthKey;saveLocal();renderLeisure();renderPlanner();toast(`“${leisureDisplayTitle(item)}” movido para ${fmtDate(`${monthKey}-01`,{month:'long',year:'numeric'})}.`);
+  }
+  function moveLeisureToWeekDate(id,date){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+    const item=state.actions.find(entry=>entry.id===id&&!entry.deleted&&entry.leisure&&leisureInCalendar(entry));if(!item)return;
+    if(item.schedule==='date'&&item.scheduledDate===date&&!item.scheduledMonth&&!item.week)return;
+    item.schedule='date';item.scheduledDate=date;item.scheduledMonth='';item.week=null;item.updatedAt=stamp();selectedLeisureWeekDate=date;selectedLeisureMonth=date.slice(0,7);
+    saveLocal();renderLeisure();renderPlanner();toast(`“${leisureDisplayTitle(item)}” movido para o dia escolhido.`);
+  }
+  function moveLeisureToMonthlyWeek(id,week){
+    const item=state.actions.find(entry=>entry.id===id&&!entry.deleted&&entry.leisure&&leisureInCalendar(entry)),targetWeek=Number(week);if(!item||!targetWeek)return;
+    const [year,month]=selectedLeisureMonth.split('-').map(Number),lastDay=new Date(year,month,0).getDate();
+    const targetDay=Array.from({length:lastDay},(_,index)=>index+1).find(day=>monthWeekMatches(targetWeek,`${selectedLeisureMonth}-${String(day).padStart(2,'0')}`));
+    if(!targetDay)return;
+    const date=`${selectedLeisureMonth}-${String(targetDay).padStart(2,'0')}`;
+    if(item.schedule==='date'&&item.scheduledDate===date)return;
+    item.schedule='date';item.scheduledDate=date;item.scheduledMonth='';item.week=null;item.updatedAt=stamp();
+    saveLocal();renderLeisure();renderPlanner();toast(`“${leisureDisplayTitle(item)}” movido para ${monthWeekLabel(targetWeek).toLowerCase()}.`);
   }
   function openActionAreaDialog(id=null){
     const area=state.actionAreas.find(entry=>entry.id===id&&!entry.deleted);
@@ -4107,10 +4143,118 @@
     else if(view==='annual'&&month)moveStudyToMonth(id,month);
   },{passive:true});
   studiesContent.addEventListener('touchcancel',finishTouchStudyDrag);
-  $$('.leisure-tab').forEach(button=>button.onclick=()=>{leisureView=button.dataset.leisureView;$$('.leisure-tab').forEach(tab=>tab.classList.toggle('active',tab===button));renderLeisure();});
+  const leisureContent=$('#leisure-content');
+  let draggedLeisureId='',leisureDropTarget=null,touchLeisureDrag=null;
+  const setLeisureDropTarget=column=>{
+    if(leisureDropTarget===column)return;
+    leisureDropTarget?.classList.remove('is-drop-target');
+    leisureDropTarget=column;
+    leisureDropTarget?.classList.add('is-drop-target');
+  };
+  const clearLeisureDropTargets=()=>{
+    $$('[data-catalog-week-date]',leisureContent).forEach(cell=>cell.classList.remove('is-drop-target'));
+    $$('[data-catalog-month-week]',leisureContent).forEach(cell=>cell.classList.remove('is-drop-target'));
+    setLeisureDropTarget(null);
+  };
+  leisureContent.addEventListener('dragstart',event=>{
+    if(!['annual','monthly','week'].includes(leisureView))return;
+    const card=event.target.closest('[data-drag-leisure]');if(!card)return;
+    draggedLeisureId=card.dataset.dragLeisure;card.classList.add('is-dragging');
+    event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',draggedLeisureId);
+  });
+  leisureContent.addEventListener('dragover',event=>{
+    if(!draggedLeisureId)return;
+    if(leisureView==='week'){
+      const target=event.target.closest('td[data-catalog-week-date]');
+      if(target){event.preventDefault();event.dataTransfer.dropEffect='move';$$('[data-catalog-week-date]',leisureContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
+      return;
+    }
+    if(leisureView==='monthly'){
+      const target=event.target.closest('td[data-catalog-month-week]');
+      if(target){event.preventDefault();event.dataTransfer.dropEffect='move';$$('[data-catalog-month-week]',leisureContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
+      return;
+    }
+    if(leisureView==='annual'){
+      const board=$('.action-month-board',leisureContent),rect=board?.getBoundingClientRect();
+      if(rect&&event.clientX>rect.right-34)board.scrollLeft+=18;
+      else if(rect&&event.clientX<rect.left+34)board.scrollLeft-=18;
+      const column=event.target.closest('[data-catalog-month]');setLeisureDropTarget(column);
+      if(column){event.preventDefault();event.dataTransfer.dropEffect='move';}
+    }
+  });
+  leisureContent.addEventListener('drop',event=>{
+    const id=draggedLeisureId;if(!id)return;
+    if(leisureView==='week'){
+      const target=event.target.closest('td[data-catalog-week-date]');
+      clearLeisureDropTargets();draggedLeisureId='';
+      if(target){event.preventDefault();moveLeisureToWeekDate(id,target.dataset.catalogWeekDate);}
+      return;
+    }
+    if(leisureView==='monthly'){
+      const target=event.target.closest('td[data-catalog-month-week]');
+      clearLeisureDropTargets();draggedLeisureId='';
+      if(target){event.preventDefault();moveLeisureToMonthlyWeek(id,target.dataset.catalogMonthWeek);}
+      return;
+    }
+    if(leisureView==='annual'){
+      const column=event.target.closest('[data-catalog-month]');
+      clearLeisureDropTargets();draggedLeisureId='';
+      if(column){event.preventDefault();moveLeisureToMonth(id,column.dataset.catalogMonth);}
+    }
+  });
+  leisureContent.addEventListener('dragend',()=>{
+    leisureContent.querySelector('.weekly-action.is-dragging')?.classList.remove('is-dragging');
+    clearLeisureDropTargets();draggedLeisureId='';
+  });
+  const finishTouchLeisureDrag=()=>{
+    if(!touchLeisureDrag)return;
+    clearTimeout(touchLeisureDrag.timer);
+    touchLeisureDrag.preview?.remove();
+    touchLeisureDrag.source.classList.remove('is-dragging');
+    clearLeisureDropTargets();touchLeisureDrag=null;
+  };
+  leisureContent.addEventListener('touchstart',event=>{
+    if(!['annual','monthly','week'].includes(leisureView)||event.touches.length!==1)return;
+    const card=event.target.closest('[data-drag-leisure]');if(!card)return;
+    const touch=event.touches[0];
+    touchLeisureDrag={id:card.dataset.dragLeisure,view:leisureView,touchId:touch.identifier,startX:touch.clientX,startY:touch.clientY,x:touch.clientX,y:touch.clientY,source:card,preview:null,active:false,timer:null};
+    touchLeisureDrag.timer=setTimeout(()=>{
+      const drag=touchLeisureDrag;if(!drag)return;
+      drag.active=true;drag.source.classList.add('is-dragging');
+      drag.preview=drag.source.cloneNode(true);drag.preview.removeAttribute('draggable');drag.preview.classList.add('action-drag-preview');
+      drag.preview.style.width=`${drag.source.getBoundingClientRect().width}px`;
+      document.body.append(drag.preview);
+      drag.preview.style.left=`${drag.x}px`;drag.preview.style.top=`${drag.y}px`;
+    },300);
+  },{passive:true});
+  leisureContent.addEventListener('touchmove',event=>{
+    const drag=touchLeisureDrag;if(!drag)return;
+    const touch=[...event.touches].find(item=>item.identifier===drag.touchId);if(!touch)return;
+    drag.x=touch.clientX;drag.y=touch.clientY;
+    if(!drag.active){if(Math.hypot(drag.x-drag.startX,drag.y-drag.startY)>10)finishTouchLeisureDrag();return;}
+    event.preventDefault();
+    drag.preview.style.left=`${drag.x}px`;drag.preview.style.top=`${drag.y}px`;
+    if(drag.view==='week'){const target=document.elementFromPoint(drag.x,drag.y)?.closest('[data-catalog-week-date]');$$('[data-catalog-week-date]',leisureContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
+    else if(drag.view==='monthly'){const target=document.elementFromPoint(drag.x,drag.y)?.closest('[data-catalog-month-week]');$$('[data-catalog-month-week]',leisureContent).forEach(cell=>cell.classList.toggle('is-drop-target',cell===target));}
+    else{const board=$('.action-month-board',leisureContent),rect=board?.getBoundingClientRect();if(rect&&drag.x>rect.right-34)board.scrollLeft+=18;else if(rect&&drag.x<rect.left+34)board.scrollLeft-=18;setLeisureDropTarget(document.elementFromPoint(drag.x,drag.y)?.closest('[data-catalog-month]')||null);}
+  },{passive:false});
+  leisureContent.addEventListener('touchend',event=>{
+    const drag=touchLeisureDrag;if(!drag)return;
+    const touch=[...event.changedTouches].find(item=>item.identifier===drag.touchId);if(!touch)return;
+    const id=drag.id,active=drag.active,view=drag.view,moved=Math.hypot(touch.clientX-drag.startX,touch.clientY-drag.startY)>10,target=document.elementFromPoint(touch.clientX,touch.clientY),date=target?.closest('[data-catalog-week-date]')?.dataset.catalogWeekDate,week=target?.closest('[data-catalog-month-week]')?.dataset.catalogMonthWeek,month=target?.closest('[data-catalog-month]')?.dataset.catalogMonth;
+    finishTouchLeisureDrag();
+    if(!active||!moved)return;
+    ignoreLeisureClickUntil=Date.now()+500;
+    if(view==='week'&&date)moveLeisureToWeekDate(id,date);
+    else if(view==='monthly'&&week)moveLeisureToMonthlyWeek(id,week);
+    else if(view==='annual'&&month)moveLeisureToMonth(id,month);
+  },{passive:true});
+  leisureContent.addEventListener('touchcancel',finishTouchLeisureDrag);
+  $$('.leisure-tab').forEach(button=>button.onclick=()=>{leisureView=button.dataset.leisureView;renderLeisure();});
+  $('#leisure-toggle-completed').onclick=()=>{hideCompletedLeisure=!hideCompletedLeisure;renderLeisure();};
   $('#leisure-prev-month').onclick=()=>{const d=safeDate(`${selectedLeisureMonth}-01`);d.setMonth(d.getMonth()-1);selectedLeisureMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderLeisure();};$('#leisure-next-month').onclick=()=>{const d=safeDate(`${selectedLeisureMonth}-01`);d.setMonth(d.getMonth()+1);selectedLeisureMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderLeisure();};$('#leisure-current-month').onclick=()=>{selectedLeisureMonth=isoToday().slice(0,7);renderLeisure();};$('#leisure-month').onchange=e=>{if(e.target.value){selectedLeisureMonth=e.target.value;renderLeisure();}};
   $('#leisure-week-prev').onclick=()=>{const d=safeDate(selectedLeisureWeekDate);d.setDate(d.getDate()-7);selectedLeisureWeekDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;renderLeisure();};$('#leisure-week-next').onclick=()=>{const d=safeDate(selectedLeisureWeekDate);d.setDate(d.getDate()+7);selectedLeisureWeekDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;renderLeisure();};$('#leisure-week-today').onclick=()=>{selectedLeisureWeekDate=isoToday();renderLeisure();};$('#leisure-week-date').onchange=e=>{if(e.target.value){selectedLeisureWeekDate=e.target.value;renderLeisure();}};
-  $('#leisure-content').addEventListener('click',event=>{const edit=event.target.closest('[data-edit-leisure]');if(edit){openActionDialog(edit.dataset.editLeisure,'',false,true);return;}const item=event.target.closest('[data-add-leisure-item]');if(item){openActionDialog(null,item.dataset.addLeisureItem,false,true);return;}const backlogItem=event.target.closest('[data-add-leisure-backlog-item]');if(backlogItem){openActionDialog(null,backlogItem.dataset.addLeisureBacklogItem,false,true,true);return;}const season=event.target.closest('[data-add-leisure-season]');if(season){addNextLeisureSeason(season.dataset.addLeisureSeason);return;}const schedule=event.target.closest('[data-schedule-leisure]');if(schedule){scheduleLeisureItem(schedule.dataset.scheduleLeisure);return;}const toggle=event.target.closest('[data-toggle-action]');if(toggle)toggleAction(toggle.dataset.toggleAction);});
+  $('#leisure-content').addEventListener('click',event=>{if(Date.now()<ignoreLeisureClickUntil){event.preventDefault();return;}const annualMonth=event.target.closest('[data-open-leisure-month]');if(annualMonth){selectedLeisureMonth=annualMonth.dataset.openLeisureMonth;leisureView='monthly';renderLeisure();return;}const edit=event.target.closest('[data-edit-leisure]');if(edit){openActionDialog(edit.dataset.editLeisure,'',false,true);return;}const item=event.target.closest('[data-add-leisure-item]');if(item){openActionDialog(null,item.dataset.addLeisureItem,false,true);return;}const backlogItem=event.target.closest('[data-add-leisure-backlog-item]');if(backlogItem){openActionDialog(null,backlogItem.dataset.addLeisureBacklogItem,false,true,true);return;}const season=event.target.closest('[data-add-leisure-season]');if(season){addNextLeisureSeason(season.dataset.addLeisureSeason);return;}const schedule=event.target.closest('[data-schedule-leisure]');if(schedule){scheduleLeisureItem(schedule.dataset.scheduleLeisure);return;}const toggle=event.target.closest('[data-toggle-action]');if(toggle)toggleAction(toggle.dataset.toggleAction);});
   $('#add-action-area').onclick=()=>openActionAreaDialog();
   $('#action-area-form').addEventListener('submit',saveActionArea);$('#delete-action-area').onclick=deleteActionArea;
   $('#action-area-list').addEventListener('click',event=>{const move=event.target.closest('[data-move-action-area]');if(move){moveActionArea(move.dataset.areaId,move.dataset.moveActionArea);return;}const edit=event.target.closest('[data-edit-action-area]');if(edit)openActionAreaDialog(edit.dataset.editActionArea);});

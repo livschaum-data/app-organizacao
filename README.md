@@ -59,6 +59,8 @@ O **Backlog** é uma visão separada do calendário. Itens no backlog não apare
 
 Tipos marcados como “usar temporadas” mostram automaticamente o campo de temporadas. Ao criar uma série, informe quantas temporadas existem: cada temporada é criada como um item independente no backlog e pode ser agendada, concluída e editada separadamente. O campo de temporadas também permite acrescentar temporadas depois, sem excluir as existentes. A série funciona como um agrupamento e mostra o progresso de temporadas concluídas.
 
+Nas visões anual, mensal e semanal, os meses do quadro anual são clicáveis, os itens podem ser arrastados para outra data, semana ou mês — inclusive por toque — e o botão **Ocultar concluídas** filtra os itens concluídos.
+
 ## Ações
 
 A seção **Ações** oferece um quadro com os meses do ano lado a lado e um calendário mensal. Cada ação pode ser agendada para um mês inteiro, para uma semana específica do mês ou para uma data, com nome, ícone, cor, área, descrição e notas opcionais. As **Áreas** são compartilhadas por ações, estudos, lazer e tarefas e ficam na aba **Áreas** da Configuração, onde podem ser criadas, editadas, excluídas e reordenadas com as setas; a ordem vale para os filtros e cadastros de todo o app. Os tipos de âncora continuam sendo um cadastro estrutural separado. A data de criação é registrada automaticamente. As ações do mês aparecem nos dias correspondentes na Visão secundária; as ações com data aparecem apenas na data escolhida. É possível concluir ou reabrir uma ação nas visões e na edição. Ações não entram na contagem de dias incompletos, mesmo quando não são concluídas. Os cadastros e a conclusão são salvos junto com os demais dados e sincronizados entre dispositivos conectados à mesma conta.
