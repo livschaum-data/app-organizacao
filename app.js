@@ -1240,7 +1240,7 @@
       if(!steps.length)return '';
       return `<optgroup label="${escapeHTML(`${routine.icon?`${routine.icon} `:''}${routine.name}`)}">${steps.map(item=>`<option value="${escapeHTML(routine.id)}::${escapeHTML(item.id)}">${escapeHTML(item.label)}</option>`).join('')}</optgroup>`;
     }).join('');
-    return '<option value="">Selecione…</option>'+state.tasks.filter(task=>!task.deleted&&!taskIsConsultation(task)).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(task=>`<option value="${escapeHTML(task.id)}">${escapeHTML(task.icon||'✓')} ${escapeHTML(task.name)}</option>`).join('');
+    return '<option value="">Selecione…</option>'+state.tasks.filter(task=>!task.deleted).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(task=>`<option value="${escapeHTML(task.id)}">${escapeHTML(task.icon||'✓')} ${escapeHTML(task.name)}${taskIsConsultation(task)?' · Consulta':''}</option>`).join('');
   }
   function updateRecordTypeTargets(preserve=''){
     const select=$('#record-type-target'),current=preserve||select.value;
@@ -1294,6 +1294,7 @@
     if(!target)return {target:null,step:null,occurrences:[]};
     const step=type.kind==='routine'?((target.items||[]).find(item=>item.id===type.stepId)||null):null;
     if(type.kind==='routine'&&!step)return {target,step:null,occurrences:[]};
+    const consultation=type.kind==='task'&&taskIsConsultation(target);
     const today=isoToday(),floor=safeDate(today);floor.setFullYear(floor.getFullYear()-5);
     const startKey=String(target.startDate||target.createdAt||'').slice(0,10),start=startKey?safeDate(startKey):floor,earliest=start>floor?start:floor;
     const occurrences=[],cursor=safeDate(today);
@@ -1302,8 +1303,8 @@
       if(type.kind==='task'){
         const day=state.taskHistory[key],snapshot=day?.tasks?.[target.id],excluded=day?.excludedTasks?.[target.id];
         if(!excluded&&(taskIsScheduled(target,key)||snapshot)){
-          const record=snapshot?{...snapshot,taskId:target.id}:{...target,taskId:target.id},status=taskOccurrenceStatus(record);
-          occurrences.push({date:key,status,done:status==='completed',total:0,doneCount:0});
+          const record=snapshot?{...snapshot,taskId:target.id}:{...target,taskId:target.id},status=consultation?'completed':taskOccurrenceStatus(record);
+          occurrences.push({date:key,status,done:consultation||status==='completed',total:0,doneCount:0});
         }
       }else{
         const day=state.history[key],excluded=day?.excludedRoutines?.[target.id];
@@ -1314,6 +1315,7 @@
       }
       cursor.setDate(cursor.getDate()-1);
     }
+    if(consultation&&!occurrences.length)occurrences.push({date:today,status:'completed',done:true,total:0,doneCount:0});
     return {target,step,occurrences};
   }
   function recordTypeCardStatus(occurrences){
