@@ -53,13 +53,11 @@ A **Visão mensal** organiza as âncoras com semanas específicas nas colunas Se
 
 ## Lazer
 
-A seção **Lazer** organiza filmes, séries, livros, jogos e outros itens em categorias e itens. A lista mostra o tipo de cada item com ícone e cor, e o tipo escolhido no cadastro também aparece nos cartões das visões anual, mensal e semanal. Os tipos são configuráveis na aba **Lazer** da Configuração: é possível criar, renomear, recolorir, reordenar e excluir tipos, além de marcar quais usam temporadas.
+A seção **Lazer** organiza filmes, séries, livros, jogos e outros itens diretamente pelo tipo. Cada item tem um tipo — como Filme, Série ou Livro — e os itens sem tipo ficam no grupo **Sem tipo**. Os tipos são configuráveis na aba **Lazer** da Configuração: é possível criar, renomear, recolorir, reordenar e excluir tipos, além de marcar quais usam temporadas.
 
-Use o botão **＋ Novo item** no topo da seção para adicionar um item. Se ainda não houver categorias, o app abre o cadastro de categoria e, ao salvar, continua automaticamente no cadastro do item. Na aba **Backlog**, o botão passa a ser **＋ Item no backlog**.
+Use o botão **＋ Novo item** no topo da seção para adicionar um item. Na aba **Backlog**, o botão passa a ser **＋ Item no backlog**.
 
-As categorias funcionam apenas como agrupamentos. Agendamento, horário, duração, vencimento e conclusão são definidos em cada item; o cadastro da categoria mostra apenas nome, descrição, ícone, cor e notas.
-
-O **Backlog** é uma visão separada do calendário. Itens no backlog não aparecem nas visões anual, mensal, semanal, na lista nem no planejador diário; eles ficam reunidos por categoria na aba **Backlog**, com o botão **Agendar** para levá-los ao mês selecionado. Também é possível criar um item diretamente no backlog pelo botão **＋ Backlog** de cada categoria.
+O **Backlog** é uma visão separada do calendário. Itens no backlog não aparecem nas visões anual, mensal, semanal, na lista nem no planejador diário; eles ficam reunidos por tipo na aba **Backlog**, com o botão **Agendar** para levá-los ao mês selecionado.
 
 Tipos marcados como “usar temporadas” mostram automaticamente o campo de temporadas. Ao criar uma série, informe quantas temporadas existem: cada temporada é criada como um item independente no backlog e pode ser agendada, concluída e editada separadamente. O campo de temporadas também permite acrescentar temporadas depois, sem excluir as existentes. A série funciona como um agrupamento e mostra o progresso de temporadas concluídas.
 

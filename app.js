@@ -215,7 +215,6 @@
   let studyView = 'annual';
   let hideCompletedStudies = false;
   let hideCompletedLeisure = false;
-  let pendingLeisureItemAfterCategory = null;
   let ignoreStudyClickUntil = 0;
   let ignoreLeisureClickUntil = 0;
   let selectedStudyMonth = isoToday().slice(0,7), selectedStudyWeekDate = isoToday();
@@ -253,7 +252,7 @@
   }
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:12, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])),dailyViewsUpdatedAt:'',menuIcons:{},menuIconsUpdatedAt:'',leisureTypes:makeLeisureTypeSeed(), routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],projects:makeProjectSeedData(),taskHistory:{},dayNotes:{},weekNotes:{},monthNotes:{},weekRegistries:{},monthRegistries:{},recordTypes:[],globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:13, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])),dailyViewsUpdatedAt:'',menuIcons:{},menuIconsUpdatedAt:'',leisureTypes:makeLeisureTypeSeed(), routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],projects:makeProjectSeedData(),taskHistory:{},dayNotes:{},weekNotes:{},monthNotes:{},weekRegistries:{},monthRegistries:{},recordTypes:[],globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',weeklyView:true,timelineView:true,order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeLeisureTypeSeed(){return LEISURE_TYPE_SEED.map(([id,name,icon,color,usesSeasons],order)=>({id,name,icon,color,usesSeasons,order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
@@ -325,11 +324,14 @@
       if(!data.actions.some(action=>action.id===seasonId))data.actions.push({...structuredClone(series),id:seasonId,seasonOf:series.id,season:number,backlog:series.backlog===true,updatedAt:series.updatedAt||SEED_TIMESTAMP});
       series.season=null;series.backlog=true;
     }
-    for(const category of data.actions.filter(action=>!action.deleted&&action.leisure&&!action.parentId&&!action.seasonOf)){
-      category.leisureType='';category.backlog=false;category.season=null;
-      category.schedule='month';category.scheduledMonth='';category.scheduledDate='';category.week=null;
-      category.scheduledTime='';category.durationMinutes=null;category.dueDate='';
-      category.completed=false;category.completedAt='';category.completionChangedAt='';
+    if(previousVersion<13){
+      const now=new Date().toISOString(),categoryIds=new Set(data.actions.filter(action=>!action.deleted&&action.leisure&&!action.parentId&&!action.seasonOf).map(action=>action.id));
+      if(categoryIds.size){
+        for(const action of data.actions){
+          if(categoryIds.has(action.id)){action.deleted=true;action.updatedAt=now;continue;}
+          if(action.parentId&&categoryIds.has(action.parentId)){action.parentId='';action.updatedAt=now;}
+        }
+      }
     }
     if(!Array.isArray(data.recordTypes))data.recordTypes=[];
     for(const type of data.recordTypes){
@@ -361,7 +363,7 @@
     const activeActionIds=new Set(data.actions.filter(action=>!action.deleted).map(action=>action.id));
     for(const action of data.actions)if(action.parentId===action.id||action.parentId&&!activeActionIds.has(action.parentId))action.parentId='';
     for(const action of data.actions)if(action.seasonOf&&(action.seasonOf===action.id||!activeActionIds.has(action.seasonOf)))action.seasonOf='';
-    data.version=12;
+    data.version=13;
     const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
     for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
     for(const area of data.areas){if(typeof area.weeklyView!=='boolean')area.weeklyView=true;if(typeof area.timelineView!=='boolean')area.timelineView=area.weeklyView;}
@@ -1813,11 +1815,11 @@
       const cells=dates.map(date=>`<td data-catalog-date="${date}"${studyMode?` data-study-week-date="${date}"`:` data-catalog-week-date="${date}"`}><div class="weekly-action-dropzone">${datedItems.filter(item=>actionIsScheduled(item,date)).map(card).join('')}</div></td>`).join('');
       if(unscheduledColumn){
         const unscheduledCards=unscheduledItems.map(card).join('');
-        $(target).innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table action-week-table action-weekly-table"><thead><tr><th scope="col" class="weekly-corner">${label}</th>${weeklyHeaders(dates,'actions')}<th scope="col" class="monthly-week monthly-week-undated"><span class="monthly-week-pill">não agendadas</span><small>mês ou semana</small></th></tr></thead><tbody><tr style="--area-color:${label==='Lazer'?'#f4e1e9':'#e8e7f3'}"><th scope="row"><span class="weekly-area-icon">${label==='Lazer'?'♡':'✎'}</span><span>Com data</span></th>${cells}<td class="monthly-undated-cell">${unscheduledCards||'<span class="planner-empty">Nenhum item nesta categoria.</span>'}</td></tr></tbody></table></div>`;
+        $(target).innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="weekly-scroll"><table class="weekly-table action-week-table action-weekly-table"><thead><tr><th scope="col" class="weekly-corner">${label}</th>${weeklyHeaders(dates,'actions')}<th scope="col" class="monthly-week monthly-week-undated"><span class="monthly-week-pill">não agendadas</span><small>mês ou semana</small></th></tr></thead><tbody><tr style="--area-color:${label==='Lazer'?'#f4e1e9':'#e8e7f3'}"><th scope="row"><span class="weekly-area-icon">${label==='Lazer'?'♡':'✎'}</span><span>Com data</span></th>${cells}<td class="monthly-undated-cell">${unscheduledCards||'<span class="planner-empty">Nenhum item.</span>'}</td></tr></tbody></table></div>`;
         return;
       }
       const undatedCards=items.filter(item=>item.schedule==='month'&&!item.week).map(card).join('');
-      $(target).innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">${label}</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:${label==='Lazer'?'#f4e1e9':'#e8e7f3'}"><th scope="row"><span class="weekly-area-icon">${label==='Lazer'?'♡':'✎'}</span><span>Planejado</span></th>${cells}</tr></tbody></table></div><aside class="action-monthly-undated"><h4>Sem data específica</h4><p>Itens agendados por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhum item nesta categoria.</span>'}</div></aside></div>`;
+      $(target).innerHTML=`<h3 class="action-period-title">${escapeHTML(fmtDate(dates[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(dates[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="action-monthly-layout"><div class="weekly-scroll"><table class="weekly-table action-week-table"><thead><tr><th scope="col" class="weekly-corner">${label}</th>${weeklyHeaders(dates,'actions')}</tr></thead><tbody><tr style="--area-color:${label==='Lazer'?'#f4e1e9':'#e8e7f3'}"><th scope="row"><span class="weekly-area-icon">${label==='Lazer'?'♡':'✎'}</span><span>Planejado</span></th>${cells}</tr></tbody></table></div><aside class="action-monthly-undated"><h4>Sem data específica</h4><p>Itens agendados por mês ou semana.</p><div>${undatedCards||'<span class="planner-empty">Nenhum item.</span>'}</div></aside></div>`;
       return;
     }
     if((label==='Lazer'?leisureView:studyView)==='monthly'){
@@ -1867,7 +1869,7 @@
   function leisureIsSeason(action){return Boolean(action?.seasonOf);}
   function leisureHasSeasons(action){return Boolean(action)&&!action.seasonOf&&leisureSeasonsOf(action).length>0;}
   function leisureIsContainer(action){return leisureHasSeasons(action);}
-  function leisureInCalendar(action){return Boolean(action)&&Boolean(action.parentId)&&!action.backlog&&!leisureIsContainer(action);}
+  function leisureInCalendar(action){return Boolean(action)&&!action.backlog&&!leisureIsContainer(action);}
   function leisureIsScheduled(action,date){return leisureInCalendar(action)&&actionIsScheduled(action,date);}
   function leisureSeasonLabel(action){return leisureIsSeason(action)&&action.season?`Temporada ${action.season}`:'';}
   function leisureScheduleSummary(action){
@@ -1879,7 +1881,7 @@
   function leisureDisplayTitle(action){const season=leisureSeasonLabel(action);return season?`${action.title} · ${season}`:action.title;}
   function createLeisureSeason(series,number,now=stamp()){
     const date=isoToday();
-    return {id:uid(),parentId:series.parentId||'',study:false,leisure:true,leisureType:series.leisureType||'',backlog:true,seasonOf:series.id,season:number,title:series.title,description:'',notes:'',icon:series.icon||'',color:series.color||'#d58ca6',areaId:'',scheduledTime:'',durationMinutes:null,schedule:'month',scheduledMonth:'',scheduledDate:'',week:null,dueDate:'',createdAt:date,completed:false,completedAt:'',completionChangedAt:'',updatedAt:now,deleted:false};
+    return {id:uid(),parentId:'',study:false,leisure:true,leisureType:series.leisureType||'',backlog:true,seasonOf:series.id,season:number,title:series.title,description:'',notes:'',icon:series.icon||'',color:series.color||'#d58ca6',areaId:'',scheduledTime:'',durationMinutes:null,schedule:'month',scheduledMonth:'',scheduledDate:'',week:null,dueDate:'',createdAt:date,completed:false,completedAt:'',completionChangedAt:'',updatedAt:now,deleted:false};
   }
   function ensureLeisureSeasons(series,count,now=stamp()){
     const target=Math.max(0,Math.min(30,Number(count)||0)),used=new Set(leisureSeasonsOf(series).map(item=>Number(item.season)||0)),created=[];
@@ -1903,8 +1905,8 @@
     series.completed=complete;series.completedAt=complete?(series.completedAt||now):'';series.completionChangedAt=now;series.updatedAt=now;
   }
   function leisureItemCard(action,options={}){
-    const backlog=options.backlog===true,drag=options.drag===true?` draggable="true" data-drag-leisure="${escapeHTML(action.id)}"`:'',typeChip=leisureTypeChip(action),season=leisureSeasonLabel(action),parent=actionParent(action);
-    const meta=[typeChip,season?`<small>${escapeHTML(season)}</small>`:'',parent?`<small>↳ ${escapeHTML(parent.title)}</small>`:''].filter(Boolean).join('');
+    const backlog=options.backlog===true,drag=options.drag===true?` draggable="true" data-drag-leisure="${escapeHTML(action.id)}"`:'',typeChip=leisureTypeChip(action),season=leisureSeasonLabel(action);
+    const meta=[typeChip,season?`<small>${escapeHTML(season)}</small>`:''].filter(Boolean).join('');
     const toggle=backlog?'':`<button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(leisureDisplayTitle(action))}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button>`;
     return `<div class="weekly-action leisure-item${action.completed?' is-complete':''}${backlog?' is-backlog':''}"${drag} style="--action-color:${escapeHTML(action.color||'#d58ca6')}">${toggle}<button type="button" data-edit-leisure="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${meta?`<span class="leisure-item-meta">${meta}</span>`:''}</button>${backlog?`<button type="button" class="leisure-backlog-schedule" data-schedule-leisure="${escapeHTML(action.id)}">Agendar</button>`:''}</div>`;
   }
@@ -1913,24 +1915,29 @@
     const seasons=leisureSeasonsOf(series),done=seasons.filter(season=>season.completed).length,typeIcon=leisureTypeRecord(series.leisureType)?.icon||'📺';
     return `<div class="leisure-series-group"><div class="leisure-series-head"><span class="project-icon">${escapeHTML(series.icon||typeIcon)}</span><div><strong>${escapeHTML(series.title)}</strong>${leisureTypeChip(series)?`<span class="leisure-series-meta">${leisureTypeChip(series)}<small>${done} de ${seasons.length} temporadas</small></span>`:''}</div><button type="button" class="small-edit" data-edit-leisure="${escapeHTML(series.id)}">Editar</button></div><div class="leisure-season-list">${seasons.map(season=>leisureCard(season)).join('')}</div><button type="button" class="secondary-button study-add-topic" data-add-leisure-season="${escapeHTML(series.id)}">＋ Temporada</button></div>`;
   }
-  function leisureCategoryCard(category){
-    const items=leisureActions().filter(item=>item.parentId===category.id&&!item.seasonOf);
-    const count=items.reduce((total,item)=>total+1+leisureSeasonsOf(item).length,0);
-    const body=items.map(item=>leisureHasSeasons(item)?leisureSeriesGroup(item):leisureCard(item)).join('')||'<p class="planner-empty">Nenhum item cadastrado.</p>';
-    return `<article class="study-subject-card leisure-category-card"><div class="study-subject-head"><span class="project-icon">${escapeHTML(category.icon||'♡')}</span><div><strong>${escapeHTML(category.title)}</strong><small>${count} ${count===1?'item':'itens'}</small></div><button type="button" class="small-edit" data-edit-leisure="${escapeHTML(category.id)}">Editar</button></div><div class="study-topic-list">${body}</div><div class="leisure-category-actions"><button type="button" class="secondary-button study-add-topic" data-add-leisure-item="${escapeHTML(category.id)}">＋ Novo item</button><button type="button" class="secondary-button study-add-topic" data-add-leisure-backlog-item="${escapeHTML(category.id)}">＋ Backlog</button></div></article>`;
-  }
-  function leisureBacklogItems(){return leisureActions().filter(item=>item.backlog&&item.parentId&&!leisureIsContainer(item));}
-  function leisureBacklogCategoryCard(category,items){
+  function leisureTypeGroup(typeId,items,options={}){
     if(!items.length)return '';
-    return `<article class="study-subject-card leisure-backlog-group"><div class="study-subject-head"><span class="project-icon">${escapeHTML(category.icon||'♡')}</span><div><strong>${escapeHTML(category.title)}</strong><small>${items.length} ${items.length===1?'item no backlog':'itens no backlog'}</small></div></div><div class="study-topic-list">${items.map(item=>leisureItemCard(item,{backlog:true})).join('')}</div><button type="button" class="secondary-button study-add-topic" data-add-leisure-backlog-item="${escapeHTML(category.id)}">＋ Item no backlog</button></article>`;
+    const backlog=options.backlog===true,type=leisureTypeRecord(typeId),name=type?.name||(typeId?'Tipo removido':'Sem tipo'),icon=type?.icon||'♡',color=type?.color||'#f4e1e9';
+    const count=backlog?items.length:items.reduce((total,item)=>total+1+leisureSeasonsOf(item).length,0);
+    const body=items.map(item=>backlog?leisureItemCard(item,{backlog:true}):leisureHasSeasons(item)?leisureSeriesGroup(item):leisureCard(item)).join('');
+    return `<article class="study-subject-card leisure-type-group"><div class="study-subject-head"><span class="leisure-type-mark" style="background:${escapeHTML(color)};color:${escapeHTML(plannerHeadingInk(color))}">${escapeHTML(icon)}</span><div><strong>${escapeHTML(name)}</strong><small>${count} ${count===1?'item':'itens'}${backlog?' no backlog':''}</small></div></div><div class="study-topic-list">${body}</div></article>`;
   }
+  function leisureTypeGroups(items){
+    const groups=new Map();
+    for(const item of items){const key=item.leisureType||'';if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);}
+    const typeOrder=new Map(orderedLeisureTypes().map((type,index)=>[type.id,index]));
+    return [...groups.entries()].sort(([a],[b])=>{
+      if(!a)return 1;if(!b)return -1;
+      return (typeOrder.get(a)??999)-(typeOrder.get(b)??999)||a.localeCompare(b);
+    });
+  }
+  function leisureBacklogItems(){return leisureActions().filter(item=>item.backlog&&!leisureIsContainer(item));}
   function renderLeisureBacklog(){
-    const items=leisureBacklogItems(),categories=leisureActions().filter(item=>!item.parentId).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
-    const groups=categories.map(category=>leisureBacklogCategoryCard(category,items.filter(item=>item.parentId===category.id))).filter(Boolean).join('');
-    return `<div class="leisure-backlog-intro"><div><div class="eyebrow">FORA DO CALENDÁRIO</div><h3>Seu backlog</h3><p>Filmes, livros, jogos e temporadas que você quer ver, ler ou jogar um dia. Escolha “Agendar” para levar um item ao mês de ${escapeHTML(fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'}))}.</p></div><div class="leisure-backlog-tools"><span class="leisure-backlog-count">${items.length} ${items.length===1?'item':'itens'}</span><label class="leisure-backlog-month"><span>Mês para agendar</span><input type="month" id="leisure-backlog-month" value="${escapeHTML(selectedLeisureMonth)}" aria-label="Mês para agendar itens do backlog"></label></div></div>${groups||`<div class="empty-state"><h3>Seu backlog está vazio</h3><p>Use o botão “＋ Item no backlog” acima para adicionar algo. Se ainda não houver categorias, crie uma categoria primeiro.</p></div>`}`;
+    const items=leisureBacklogItems(),groups=leisureTypeGroups(items).map(([typeId,groupItems])=>leisureTypeGroup(typeId,groupItems,{backlog:true})).join('');
+    return `<div class="leisure-backlog-intro"><div><div class="eyebrow">FORA DO CALENDÁRIO</div><h3>Seu backlog</h3><p>Filmes, livros, jogos e temporadas que você quer ver, ler ou jogar um dia. Escolha “Agendar” para levar um item ao mês de ${escapeHTML(fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'}))}.</p></div><div class="leisure-backlog-tools"><span class="leisure-backlog-count">${items.length} ${items.length===1?'item':'itens'}</span><label class="leisure-backlog-month"><span>Mês para agendar</span><input type="month" id="leisure-backlog-month" value="${escapeHTML(selectedLeisureMonth)}" aria-label="Mês para agendar itens do backlog"></label></div></div>${groups||`<div class="empty-state"><h3>Seu backlog está vazio</h3><p>Use o botão “＋ Item no backlog” acima para adicionar algo.</p></div>`}`;
   }
   function renderLeisure(){
-    const items=leisureActions(),categories=items.filter(item=>!item.parentId);
+    const items=leisureActions();
     $$('.leisure-tab').forEach(button=>{const active=button.dataset.leisureView===leisureView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const isList=leisureView==='list',isBacklog=leisureView==='backlog';
     const addItemButton=$('#add-leisure-item');if(addItemButton)addItemButton.textContent=isBacklog?'＋ Item no backlog':'＋ Novo item';
@@ -1941,7 +1948,8 @@
     $('.leisure-month-navigator').classList.toggle('hidden',isList||isBacklog||leisureView==='week');$('.leisure-week-navigator').classList.toggle('hidden',leisureView!=='week');$('#leisure-month').value=selectedLeisureMonth;$('#leisure-week-date').value=selectedLeisureWeekDate;$('#leisure-current-month').classList.toggle('hidden',selectedLeisureMonth===isoToday().slice(0,7));$('#leisure-week-today').classList.toggle('hidden',weekDates(selectedLeisureWeekDate).includes(isoToday()));
     if(isBacklog){$('#leisure-content').innerHTML=renderLeisureBacklog();return;}
     if(!isList){renderCatalogSchedule(viewItems.filter(leisureInCalendar),'#leisure-content','Lazer','data-edit-leisure',{annualNavigation:true,unscheduledColumn:true});return;}
-    $('#leisure-content').innerHTML=categories.map(leisureCategoryCard).join('')||'<div class="empty-state"><h3>Seu lazer começa aqui</h3><p>Crie uma categoria e adicione filmes, séries, livros ou projetos criativos.</p></div>';
+    const mainItems=items.filter(item=>!item.seasonOf),groups=leisureTypeGroups(mainItems).map(([typeId,groupItems])=>leisureTypeGroup(typeId,groupItems)).join('');
+    $('#leisure-content').innerHTML=groups||'<div class="empty-state"><h3>Seu lazer começa aqui</h3><p>Use ＋ Novo item para adicionar filmes, séries, livros ou projetos criativos.</p></div>';
   }
   function scheduleLeisureItem(id){
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted&&entry.leisure);
@@ -1951,9 +1959,7 @@
     toast(`“${leisureDisplayTitle(action)}” agendado para ${fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'})}.`);
   }
   function openNewLeisureItem(backlog=false){
-    const categories=leisureActions().filter(item=>!item.parentId).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
-    if(!categories.length){pendingLeisureItemAfterCategory={backlog:Boolean(backlog)};toast('Crie uma categoria primeiro para adicionar itens.');openActionDialog(null,'',false,true);return;}
-    openActionDialog(null,categories[0].id,false,true,Boolean(backlog));
+    openActionDialog(null,'',false,true,Boolean(backlog));
   }
 
   function renderActions(){
@@ -2145,15 +2151,15 @@
     $('#action-season').value=action?.season||'';
     $('#action-series-seasons').value=action?leisureSeasonsOf(action).length:1;
     $('#action-leisure-backlog').checked=action?action.backlog===true:Boolean(backlogMode);
-    const studyActive=$('#action-study').value==='true',leisureActive=$('#action-leisure').value==='true',isChild=Boolean(action?.parentId||suggestedParent?.id),isSeries=leisureActive&&!editingSeason&&isChild&&(leisureHasSeasons(action)||leisureTypeUsesSeasons(typeSelect.value));
-    $('#action-dialog-title').textContent=action?(action.study?(action.parentId?'Editar tópico':'Editar matéria'):action.leisure?(editingSeason?'Editar temporada':leisureHasSeasons(action)?'Editar série':action.parentId?'Editar item':'Editar categoria'):'Editar ação'):(studyMode||suggestedParent?.study?(suggestedParent?'Novo tópico':'Nova matéria'):leisureMode||suggestedParent?.leisure?(suggestedParent?'Novo item':'Nova categoria'):suggestedParent?'Nova subação':'Nova ação');
+    const studyActive=$('#action-study').value==='true',leisureActive=$('#action-leisure').value==='true',isChild=Boolean(action?.parentId||suggestedParent?.id),isSeries=leisureActive&&!editingSeason&&(leisureHasSeasons(action)||leisureTypeUsesSeasons(typeSelect.value));
+    $('#action-dialog-title').textContent=action?(action.study?(action.parentId?'Editar tópico':'Editar matéria'):action.leisure?(editingSeason?'Editar temporada':leisureHasSeasons(action)?'Editar série':'Editar item'):'Editar ação'):(studyMode||suggestedParent?.study?(suggestedParent?'Novo tópico':'Nova matéria'):leisureMode||suggestedParent?.leisure?'Novo item':suggestedParent?'Nova subação':'Nova ação');
     $('#action-title').value=action?.title||'';$('#action-description').value=action?.description||'';
     $('#action-icon').value=action?.icon||'';$('#action-color').value=action?.color||suggestedParent?.color||'#bbdcd8';
     const hideArea=studyActive||leisureActive,actionAreas=orderedActionAreas();
-    const contextNoun=studyActive?(isChild?'tópico':'matéria'):leisureActive?(editingSeason?'temporada':leisureHasSeasons(action)?'série':isChild?'item':'categoria'):(isChild?'subação':'ação');
+    const contextNoun=studyActive?(isChild?'tópico':'matéria'):leisureActive?(editingSeason?'temporada':leisureHasSeasons(action)?'série':'item'):(isChild?'subação':'ação');
     const childSingular=studyActive?'tópico':leisureActive?'item':'subação',childPlural=studyActive?'tópicos':leisureActive?'itens':'subações';
-    $('#action-title-label').textContent=studyActive?(isChild?'Nome do tópico':'Nome da matéria'):leisureActive?(editingSeason?'Nome da temporada':leisureHasSeasons(action)?'Nome da série':isChild?'Nome do item':'Nome da categoria'):(isChild?'Nome da subação':'Nome da ação');
-    $('#action-title').placeholder=studyActive?(isChild?'Ex.: Frações':'Ex.: Matemática'):leisureActive?(editingSeason?'Ex.: Temporada 1':leisureHasSeasons(action)?'Ex.: Dark':isChild?'Ex.: Interestelar':'Ex.: Filmes'):(isChild?'Ex.: Reservar hotel':'Ex.: Preparar viagem');
+    $('#action-title-label').textContent=studyActive?(isChild?'Nome do tópico':'Nome da matéria'):leisureActive?(editingSeason?'Nome da temporada':leisureHasSeasons(action)?'Nome da série':'Nome do item'):(isChild?'Nome da subação':'Nome da ação');
+    $('#action-title').placeholder=studyActive?(isChild?'Ex.: Frações':'Ex.: Matemática'):leisureActive?(editingSeason?'Ex.: Temporada 1':leisureHasSeasons(action)?'Ex.: Dark':'Ex.: Interestelar'):(isChild?'Ex.: Reservar hotel':'Ex.: Preparar viagem');
     $('#action-completed-label').textContent=`${contextNoun.charAt(0).toUpperCase()+contextNoun.slice(1)} concluíd${['tópico','item','série'].includes(contextNoun)&&contextNoun!=='série'?'o':'a'}`;
     $('#delete-action').textContent=editingSeason?'Excluir temporada':`Excluir ${contextNoun}`;$('#action-save').textContent=editingSeason?'Salvar temporada':`Salvar ${contextNoun}`;
     $('#action-area-field').classList.toggle('hidden',hideArea);
@@ -2163,7 +2169,7 @@
     const allChildren=action?actionChildren(action):[],children=leisureActive&&!editingSeason?allChildren.filter(item=>!item.seasonOf):allChildren,parentFilter=studyActive?(entry=>entry.study===true):leisureActive?(entry=>entry.leisure===true):(entry=>!entry.study&&!entry.leisure),parentOptions=state.actions.filter(entry=>!entry.deleted&&!entry.parentId&&entry.id!==action?.id&&parentFilter(entry)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const currentParent=action?.parentId?state.actions.find(entry=>entry.id===action.parentId&&!entry.deleted):null;
     if(currentParent&&!parentOptions.some(entry=>entry.id===currentParent.id))parentOptions.unshift(currentParent);
-    const parentPlaceholder=studyActive?'Sem matéria':leisureActive?'Sem categoria':'Ação principal';
+    const parentPlaceholder=studyActive?'Sem matéria':leisureActive?'Sem vínculo':'Ação principal';
     $('#action-parent').innerHTML=`<option value="">${parentPlaceholder}</option>`+parentOptions.map(entry=>`<option value="${escapeHTML(entry.id)}">${escapeHTML(entry.title)}</option>`).join('');
     $('#action-parent').value=action?.parentId||suggestedParent?.id||'';$('#action-parent').disabled=children.length>0||editingSeason;
     $('#action-parent-field').classList.toggle('hidden',editingSeason||((studyActive||leisureActive)&&!isChild));
@@ -2180,9 +2186,9 @@
     $('#action-created-at').textContent=action?`${['tópico','item'].includes(contextNoun)?'Criado':'Criada'} em ${fmtDate((action.createdAt||action.updatedAt).slice(0,10),{day:'numeric',month:'long',year:'numeric'})}`:'';
     $('#action-created-at').classList.toggle('hidden',!action);
     $('#action-notes').value=action?.notes||'';
-    $('#action-notes').placeholder=studyActive?(isChild?'Anotações sobre este tópico':'Anotações sobre esta matéria'):leisureActive?(editingSeason?'Anotações sobre esta temporada':leisureHasSeasons(action)?'Anotações sobre esta série':isChild?'Anotações sobre este item':'Anotações sobre esta categoria'):(isChild?'Anotações sobre esta subação':'Anotações sobre esta ação');
+    $('#action-notes').placeholder=studyActive?(isChild?'Anotações sobre este tópico':'Anotações sobre esta matéria'):leisureActive?(editingSeason?'Anotações sobre esta temporada':leisureHasSeasons(action)?'Anotações sobre esta série':'Anotações sobre este item'):(isChild?'Anotações sobre esta subação':'Anotações sobre esta ação');
     $('#delete-action').classList.toggle('hidden',!action);
-    const seriesSeasons=action&&leisureActive&&!editingSeason?leisureSeasonsOf(action):[],showSeasons=leisureActive&&!editingSeason&&isSeries,showSubactions=Boolean(action)&&!editingSeason&&(!action.parentId||showSeasons);
+    const seriesSeasons=action&&leisureActive&&!editingSeason?leisureSeasonsOf(action):[],showSeasons=leisureActive&&!editingSeason&&isSeries,showSubactions=Boolean(action)&&!editingSeason&&(leisureActive?showSeasons:!action.parentId);
     $('#action-subactions-section').classList.toggle('hidden',!showSubactions);
     $('#action-subactions-eyebrow').textContent=studyActive?'TÓPICOS':showSeasons?'TEMPORADAS':leisureActive?'ITENS':'SUBAÇÕES';
     $('#add-subaction').textContent=studyActive?'＋ Novo tópico':showSeasons?'＋ Adicionar temporada':leisureActive?'＋ Novo item':'＋ Nova subação';
@@ -2192,7 +2198,7 @@
       $('#action-subactions-list').innerHTML=seriesSeasons.length?seriesSeasons.map(season=>`<button type="button" class="action-dialog-child${season.completed?' is-complete':''}" data-edit-subaction="${escapeHTML(season.id)}"><span>${season.completed?'✓':'○'}</span><strong>Temporada ${escapeHTML(season.season)}</strong><small>${escapeHTML(leisureScheduleSummary(season))}</small></button>`).join(''):'<p class="planner-empty">Adicione temporadas para agendar cada uma separadamente.</p>';
     }else{
       $('#action-subactions-count').textContent=children.length?`${children.length} ${children.length===1?childSingular:childPlural}`:(studyActive?'Nenhum tópico':leisureActive?'Nenhum item':'Nenhuma subação');
-      $('#action-subactions-list').innerHTML=children.length?children.map(child=>`<button type="button" class="action-dialog-child${child.completed?' is-complete':''}" data-edit-subaction="${escapeHTML(child.id)}"><span>${child.completed?'✓':'○'}</span><strong>${escapeHTML(child.title)}</strong><small>${escapeHTML(actionScheduleLabel(child)||'Sem período')}</small></button>`).join(''):`<p class="planner-empty">${studyActive?'Crie tópicos para organizar a matéria.':leisureActive?'Crie itens para organizar a categoria.':'Crie ações menores, cada uma com seu próprio planejamento.'}</p>`;
+      $('#action-subactions-list').innerHTML=children.length?children.map(child=>`<button type="button" class="action-dialog-child${child.completed?' is-complete':''}" data-edit-subaction="${escapeHTML(child.id)}"><span>${child.completed?'✓':'○'}</span><strong>${escapeHTML(child.title)}</strong><small>${escapeHTML(actionScheduleLabel(child)||'Sem período')}</small></button>`).join(''):`<p class="planner-empty">${studyActive?'Crie tópicos para organizar a matéria.':leisureActive?'Crie temporadas para organizar a série.':'Crie ações menores, cada uma com seu próprio planejamento.'}</p>`;
     }
     updateActionSchedule();updateLeisureFields();refreshColorPalettes();if(!$('#action-dialog').open)$('#action-dialog').showModal();
   }
@@ -2201,30 +2207,26 @@
     $('#action-schedule-fields').classList.remove('hidden');
     $('#action-backlog-hint').classList.add('hidden');
     $('#action-series-container-hint').classList.add('hidden');
-    $('#action-category-hint').classList.add('hidden');
     $('#action-time-fields').classList.remove('hidden');
     $('#action-due-field').classList.remove('hidden');
     $('#action-completed-field').classList.remove('hidden');
     $('#leisure-extra-fields').classList.toggle('hidden',!leisureActive);
     if(!leisureActive){updateActionSchedule();return;}
-    const itemLike=Boolean($('#action-parent').value)||isSeason,isCategory=!isSeason&&!itemLike,current=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted),existingSeasons=current?leisureSeasonsOf(current):[];
-    $('#leisure-extra-fields').classList.toggle('hidden',isCategory);
-    $('#action-leisure-type-field').classList.toggle('hidden',isSeason||!itemLike);
-    const seriesContainer=leisureActive&&!isSeason&&itemLike&&(existingSeasons.length>0||(usesSeasons&&(Number($('#action-series-seasons').value)||0)>0));
-    $('#action-series-seasons-field').classList.toggle('hidden',isSeason||!usesSeasons||!itemLike);
+    const current=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted),existingSeasons=current?leisureSeasonsOf(current):[];
+    const seriesContainer=leisureActive&&!isSeason&&(existingSeasons.length>0||(usesSeasons&&(Number($('#action-series-seasons').value)||0)>0));
+    $('#action-leisure-type-field').classList.toggle('hidden',isSeason);
+    $('#action-series-seasons-field').classList.toggle('hidden',isSeason||!usesSeasons);
     $('#action-season-field').classList.toggle('hidden',!isSeason);
-    $('#action-backlog-field').classList.toggle('hidden',!itemLike||seriesContainer);
-    $('#action-series-seasons-hint').classList.toggle('hidden',isSeason||!usesSeasons||!itemLike);
+    $('#action-backlog-field').classList.toggle('hidden',seriesContainer);
+    $('#action-series-seasons-hint').classList.toggle('hidden',isSeason||!usesSeasons);
     $('#action-series-container-hint').classList.toggle('hidden',!seriesContainer);
     $('#action-series-seasons-hint').textContent=existingSeasons.length?`${existingSeasons.length} ${existingSeasons.length===1?'temporada criada':'temporadas criadas'}. Aumente o número para criar as que faltam; diminuir não exclui nenhuma.`:'Ao salvar, as temporadas serão criadas no backlog para agendar separadamente.';
-    const backlog=!seriesContainer&&$('#action-leisure-backlog').checked,hideTiming=isCategory||seriesContainer;
-    $('#action-schedule-fields').classList.toggle('hidden',backlog||seriesContainer||isCategory);
-    $('#action-time-fields').classList.toggle('hidden',hideTiming);
-    $('#action-due-field').classList.toggle('hidden',hideTiming);
-    $('#action-completed-field').classList.toggle('hidden',isCategory);
-    $('#action-category-hint').classList.toggle('hidden',!isCategory);
+    const backlog=!seriesContainer&&$('#action-leisure-backlog').checked;
+    $('#action-schedule-fields').classList.toggle('hidden',backlog||seriesContainer);
+    $('#action-time-fields').classList.toggle('hidden',seriesContainer);
+    $('#action-due-field').classList.toggle('hidden',seriesContainer);
     $('#action-backlog-hint').classList.toggle('hidden',!backlog||seriesContainer);
-    if(!backlog&&!seriesContainer&&!isCategory)updateActionSchedule();
+    if(!backlog&&!seriesContainer)updateActionSchedule();
   }
 
   function updateActionSchedule(){
@@ -2236,12 +2238,12 @@
   function saveAction(event){
     event.preventDefault();
     const title=$('#action-title').value.trim(),schedule=$('#action-schedule').value,scheduledMonth=$('#action-scheduled-month').value,scheduledDate=$('#action-scheduled-date').value;
-    const studyFlag=$('#action-study').value==='true',leisureFlag=$('#action-leisure').value==='true',hasParent=Boolean($('#action-parent').value),editingSeason=$('#action-form').dataset.editingSeason==='true',backlogFlag=leisureFlag&&$('#action-leisure-backlog').checked&&hasParent,isLeisureCategory=leisureFlag&&!editingSeason&&!hasParent;
-    const contextNoun=studyFlag?(hasParent?'tópico':'matéria'):leisureFlag?(editingSeason?'temporada':hasParent?'item':'categoria'):(hasParent?'subação':'ação'),contextArticle=['tópico','item'].includes(contextNoun)?'ao':'à';
+    const studyFlag=$('#action-study').value==='true',leisureFlag=$('#action-leisure').value==='true',hasParent=Boolean($('#action-parent').value),editingSeason=$('#action-form').dataset.editingSeason==='true',backlogFlag=leisureFlag&&$('#action-leisure-backlog').checked;
+    const contextNoun=studyFlag?(hasParent?'tópico':'matéria'):leisureFlag?(editingSeason?'temporada':'item'):(hasParent?'subação':'ação'),contextArticle=['tópico','item'].includes(contextNoun)?'ao':'à';
     if(!title){toast(`Dê um nome ${contextArticle} ${contextNoun}.`);return;}
-    const existingId=$('#action-id').value,existing=state.actions.find(action=>action.id===existingId),leisureTypeValue=$('#action-leisure-type').value,existingSeasonCount=existing?leisureSeasonsOf(existing).length:0,seriesContainerFlag=leisureFlag&&!editingSeason&&hasParent&&(existingSeasonCount>0||(leisureTypeUsesSeasons(leisureTypeValue)&&(Number($('#action-series-seasons').value)||0)>0)),containerLike=isLeisureCategory||seriesContainerFlag;
-    if(!backlogFlag&&!seriesContainerFlag&&!isLeisureCategory&&(schedule==='date'?!scheduledDate:!scheduledMonth)){toast('Escolha a data ou o mês, ou deixe o item no backlog.');return;}
-    const id=existingId||uid(),now=stamp(),completed=$('#action-completed').checked,parentId=$('#action-parent').disabled?existing?.parentId||'':$('#action-parent').value;
+    const existingId=$('#action-id').value,existing=state.actions.find(action=>action.id===existingId),leisureTypeValue=$('#action-leisure-type').value,existingSeasonCount=existing?leisureSeasonsOf(existing).length:0,seriesContainerFlag=leisureFlag&&!editingSeason&&(existingSeasonCount>0||(leisureTypeUsesSeasons(leisureTypeValue)&&(Number($('#action-series-seasons').value)||0)>0)),containerLike=seriesContainerFlag;
+    if(!backlogFlag&&!seriesContainerFlag&&(schedule==='date'?!scheduledDate:!scheduledMonth)){toast('Escolha a data ou o mês, ou deixe o item no backlog.');return;}
+    const id=existingId||uid(),now=stamp(),completed=$('#action-completed').checked,parentId=leisureFlag?'':($('#action-parent').disabled?existing?.parentId||'':$('#action-parent').value);
     const parent=parentId?state.actions.find(action=>action.id===parentId&&!action.deleted&&!action.parentId):null;if(parentId&&!parent){toast('Escolha um vínculo válido.');return;}
     const study=$('#action-study').value==='true'||existing?.study===true;
     const leisure=$('#action-leisure').value==='true'||existing?.leisure===true;
@@ -2251,7 +2253,7 @@
     if(editingSeason&&(!Number.isInteger(season)||season<1)){toast('Informe um número de temporada válido.');return;}
     if(editingSeason){const series=leisureSeriesOf(existing),duplicate=series?leisureSeasonsOf(series).find(item=>item.id!==existing.id&&Number(item.season)===season):null;if(duplicate){toast(`A Temporada ${season} já existe nesta série.`);return;}}
     const previousTitle=existing?.title||'',previousIcon=existing?.icon||'',previousColor=existing?.color||'';
-    const next={id,parentId:parent?.id||'',study,leisure,leisureType:isLeisureCategory?'':leisureType,backlog:isLeisureCategory?false:(seriesContainerFlag?true:(leisure?backlogFlag:false)),seasonOf:existing?.seasonOf||'',season,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:(study||leisure)?'':$('#action-area').value,scheduledTime:containerLike?'':$('#action-time').value,durationMinutes:containerLike?null:($('#action-duration').value?Number($('#action-duration').value):null),schedule:containerLike?'month':schedule,scheduledMonth:containerLike?'':(schedule==='month'?scheduledMonth:''),scheduledDate:containerLike?'':(schedule==='date'?scheduledDate:''),week:containerLike?null:(schedule==='month'?Number($('#action-week').value)||null:null),dueDate:containerLike?'':$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed:isLeisureCategory?false:completed,completedAt:isLeisureCategory?'':(completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):''),completionChangedAt:isLeisureCategory?now:(existing?.completed===completed?existing?.completionChangedAt||'':now),updatedAt:now,deleted:false};
+    const next={id,parentId:parent?.id||'',study,leisure,leisureType:leisure?leisureType:'',backlog:seriesContainerFlag?true:(leisure?backlogFlag:false),seasonOf:existing?.seasonOf||'',season,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:(study||leisure)?'':$('#action-area').value,scheduledTime:containerLike?'':$('#action-time').value,durationMinutes:containerLike?null:($('#action-duration').value?Number($('#action-duration').value):null),schedule:containerLike?'month':schedule,scheduledMonth:containerLike?'':(schedule==='month'?scheduledMonth:''),scheduledDate:containerLike?'':(schedule==='date'?scheduledDate:''),week:containerLike?null:(schedule==='month'?Number($('#action-week').value)||null:null),dueDate:containerLike?'':$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
     const index=state.actions.findIndex(action=>action.id===id);
     if(index<0)state.actions.push(next);else state.actions[index]=next;
     const saved=state.actions.find(action=>action.id===id)||next;
@@ -2262,7 +2264,7 @@
         if(!previousColor||seasonItem.color===previousColor)seasonItem.color=saved.color;
         seasonItem.parentId=saved.parentId;seasonItem.leisureType=saved.leisureType;seasonItem.updatedAt=now;
       }
-      if(leisureTypeUsesSeasons(saved.leisureType)&&saved.parentId){
+      if(leisureTypeUsesSeasons(saved.leisureType)){
         const requested=Math.max(0,Math.min(30,Number($('#action-series-seasons').value)||0));
         ensureLeisureSeasons(saved,requested,now);
       }
@@ -2276,16 +2278,13 @@
     if(saved.seasonOf)syncLeisureSeriesCompletion(saved.seasonOf);
     const monthKey=containerLike?'':(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
     if(/^\d{4}-\d{2}$/.test(monthKey)){selectedActionMonth=monthKey;if(leisure)selectedLeisureMonth=monthKey;}
-    const pendingItem=pendingLeisureItemAfterCategory;pendingLeisureItemAfterCategory=null;
     saveLocal();$('#action-dialog').close();renderActions();renderStudies();renderLeisure();renderPlanner();
-    if(pendingItem&&saved.leisure&&!saved.parentId)setTimeout(()=>openActionDialog(null,saved.id,false,true,pendingItem.backlog===true),0);
-    toast(saved.study?(saved.parentId?'Tópico salvo.':'Matéria salva.'):saved.leisure?(saved.seasonOf?'Temporada salva.':leisureHasSeasons(saved)?'Série salva.':saved.backlog?'Item salvo no backlog.':saved.parentId?'Item salvo.':'Categoria salva.'):(saved.parentId?'Subação salva.':'Ação salva.'));
+    toast(saved.study?(saved.parentId?'Tópico salvo.':'Matéria salva.'):saved.leisure?(saved.seasonOf?'Temporada salva.':leisureHasSeasons(saved)?'Série salva.':saved.backlog?'Item salvo no backlog.':'Item salvo.'):(saved.parentId?'Subação salva.':'Ação salva.'));
   }
   function deleteAction(){
     const action=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted);if(!action)return;
-    const study=action.study===true,leisure=action.leisure===true,season=Boolean(action.seasonOf),child=Boolean(action.parentId),seasons=leisure&&!season?leisureSeasonsOf(action):[],noun=study?(child?'tópico':'matéria'):leisure?(season?'temporada':leisureHasSeasons(action)?'série':child?'item':'categoria'):(child?'subação':'ação'),childNoun=study?'tópico':season?'temporada':leisure?'item':'subação',childPlural=study?'tópicos':season?'temporadas':leisure?'itens':'subações';
+    const study=action.study===true,leisure=action.leisure===true,season=Boolean(action.seasonOf),child=Boolean(action.parentId),seasons=leisure&&!season?leisureSeasonsOf(action):[],noun=study?(child?'tópico':'matéria'):leisure?(season?'temporada':leisureHasSeasons(action)?'série':'item'):(child?'subação':'ação'),childNoun=study?'tópico':season?'temporada':leisure?'item':'subação',childPlural=study?'tópicos':season?'temporadas':leisure?'itens':'subações';
     const children=actionChildren(action),seasonNote=seasons.length?` As ${seasons.length} ${seasons.length===1?'temporada também será excluída':'temporadas também serão excluídas'}.`:'',kept=children.length?` ${children.length} ${children.length===1?childNoun:childPlural} ${children.length===1?'permanecerá':'permanecerão'} na lista.`:'';
-    if(leisure&&!season&&!child&&children.length){toast('Esta categoria ainda tem itens. Mova ou exclua os itens antes de excluir a categoria.');return;}
     if(!confirm(`Excluir ${noun} “${action.title}”?${seasonNote}${kept}`))return;
     const now=stamp();action.deleted=true;action.updatedAt=now;
     for(const seasonItem of seasons){seasonItem.deleted=true;seasonItem.updatedAt=now;}
@@ -3644,7 +3643,7 @@
     const useRightMenuIcons=rightMenuIconsAt?rightMenuIconsAt>=leftMenuIconsAt:!leftMenuIconsAt&&Boolean(b.menuIcons);
     const menuIcons=structuredClone((useRightMenuIcons?b.menuIcons:a.menuIcons)||b.menuIcons||a.menuIcons||{});
     const menuIconsUpdatedAt=useRightMenuIcons?rightMenuIconsAt:leftMenuIconsAt;
-    return {version:12,dailyViews,dailyViewsUpdatedAt,menuIcons,menuIconsUpdatedAt,leisureTypes,routines:[...routines.values()],tasks,actions,occurrences,actionAreas,projects,areas,anchors,history,taskHistory,dayNotes,weekNotes,monthNotes,weekRegistries,monthRegistries,recordTypes,globalEntries};
+    return {version:13,dailyViews,dailyViewsUpdatedAt,menuIcons,menuIconsUpdatedAt,leisureTypes,routines:[...routines.values()],tasks,actions,occurrences,actionAreas,projects,areas,anchors,history,taskHistory,dayNotes,weekNotes,monthNotes,weekRegistries,monthRegistries,recordTypes,globalEntries};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -4280,7 +4279,7 @@
   $('#leisure-toggle-completed').onclick=()=>{hideCompletedLeisure=!hideCompletedLeisure;renderLeisure();};
   $('#leisure-prev-month').onclick=()=>{const d=safeDate(`${selectedLeisureMonth}-01`);d.setMonth(d.getMonth()-1);selectedLeisureMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderLeisure();};$('#leisure-next-month').onclick=()=>{const d=safeDate(`${selectedLeisureMonth}-01`);d.setMonth(d.getMonth()+1);selectedLeisureMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderLeisure();};$('#leisure-current-month').onclick=()=>{selectedLeisureMonth=isoToday().slice(0,7);renderLeisure();};$('#leisure-month').onchange=e=>{if(e.target.value){selectedLeisureMonth=e.target.value;renderLeisure();}};
   $('#leisure-week-prev').onclick=()=>{const d=safeDate(selectedLeisureWeekDate);d.setDate(d.getDate()-7);selectedLeisureWeekDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;renderLeisure();};$('#leisure-week-next').onclick=()=>{const d=safeDate(selectedLeisureWeekDate);d.setDate(d.getDate()+7);selectedLeisureWeekDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;renderLeisure();};$('#leisure-week-today').onclick=()=>{selectedLeisureWeekDate=isoToday();renderLeisure();};$('#leisure-week-date').onchange=e=>{if(e.target.value){selectedLeisureWeekDate=e.target.value;renderLeisure();}};
-  $('#leisure-content').addEventListener('click',event=>{if(Date.now()<ignoreLeisureClickUntil){event.preventDefault();return;}const annualMonth=event.target.closest('[data-open-leisure-month]');if(annualMonth){selectedLeisureMonth=annualMonth.dataset.openLeisureMonth;leisureView='monthly';renderLeisure();return;}const edit=event.target.closest('[data-edit-leisure]');if(edit){openActionDialog(edit.dataset.editLeisure,'',false,true);return;}const item=event.target.closest('[data-add-leisure-item]');if(item){openActionDialog(null,item.dataset.addLeisureItem,false,true);return;}const backlogItem=event.target.closest('[data-add-leisure-backlog-item]');if(backlogItem){openActionDialog(null,backlogItem.dataset.addLeisureBacklogItem,false,true,true);return;}const season=event.target.closest('[data-add-leisure-season]');if(season){addNextLeisureSeason(season.dataset.addLeisureSeason);return;}const schedule=event.target.closest('[data-schedule-leisure]');if(schedule){scheduleLeisureItem(schedule.dataset.scheduleLeisure);return;}const toggle=event.target.closest('[data-toggle-action]');if(toggle)toggleAction(toggle.dataset.toggleAction);});
+  $('#leisure-content').addEventListener('click',event=>{if(Date.now()<ignoreLeisureClickUntil){event.preventDefault();return;}const annualMonth=event.target.closest('[data-open-leisure-month]');if(annualMonth){selectedLeisureMonth=annualMonth.dataset.openLeisureMonth;leisureView='monthly';renderLeisure();return;}const edit=event.target.closest('[data-edit-leisure]');if(edit){openActionDialog(edit.dataset.editLeisure,'',false,true);return;}const season=event.target.closest('[data-add-leisure-season]');if(season){addNextLeisureSeason(season.dataset.addLeisureSeason);return;}const schedule=event.target.closest('[data-schedule-leisure]');if(schedule){scheduleLeisureItem(schedule.dataset.scheduleLeisure);return;}const toggle=event.target.closest('[data-toggle-action]');if(toggle)toggleAction(toggle.dataset.toggleAction);});
   $('#add-action-area').onclick=()=>openActionAreaDialog();
   $('#action-area-form').addEventListener('submit',saveActionArea);$('#delete-action-area').onclick=deleteActionArea;
   $('#action-area-list').addEventListener('click',event=>{const move=event.target.closest('[data-move-action-area]');if(move){moveActionArea(move.dataset.areaId,move.dataset.moveActionArea);return;}const edit=event.target.closest('[data-edit-action-area]');if(edit)openActionAreaDialog(edit.dataset.editActionArea);});
@@ -4293,7 +4292,6 @@
   $('#leisure-type-list').addEventListener('click',event=>{const move=event.target.closest('[data-move-leisure-type]');if(move){moveLeisureType(move.dataset.leisureTypeId,move.dataset.moveLeisureType);return;}const edit=event.target.closest('[data-edit-leisure-type]');if(edit)openLeisureTypeDialog(edit.dataset.editLeisureType);});
   $('#action-scheduled-date').onchange=updateActionSchedule;
   $('#action-form').addEventListener('submit',saveAction);$('#delete-action').onclick=deleteAction;
-  $('#action-dialog').addEventListener('close',()=>{pendingLeisureItemAfterCategory=null;});
   $('#add-subaction').onclick=()=>{const parentId=$('#action-id').value,seasonParent=$('#add-subaction').dataset.addSeason;if(seasonParent){const season=addNextLeisureSeason(seasonParent);if(season)openActionDialog(season.id);return;}if(parentId)openActionDialog(null,parentId);};
   $('#action-subactions-list').addEventListener('click',event=>{const child=event.target.closest('[data-edit-subaction]');if(child)openActionDialog(child.dataset.editSubaction);});
   $$('.occurrence-tab').forEach(button=>button.onclick=()=>{occurrenceView=button.dataset.occurrenceView;if(occurrenceView==='week'&&selectedOccurrenceWeekDate.slice(0,7)!==selectedOccurrenceMonth)selectedOccurrenceWeekDate=`${selectedOccurrenceMonth}-01`;renderOccurrences();});

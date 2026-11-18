@@ -823,11 +823,10 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .action-completed-toggle[aria-pressed="true"]{background:var(--accent-soft);border-color:#9db6b1;color:var(--accent-dark)}
 @media(max-width:560px){.action-view-options{margin:10px 0 -4px}.action-completed-toggle{padding:6px 9px;font-size:9px}}
 .leisure-type-settings-panel .leisure-type-list{padding:14px 19px 18px}
-.leisure-type-row .leisure-type-mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border:1px solid #d8d1c8;border-radius:9px;font-size:15px}
+.leisure-type-mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:28px;height:28px;border:1px solid #d8d1c8;border-radius:9px;font-size:15px}
 .leisure-type-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:999px;background:var(--type-color,#f4e1e9);color:var(--type-ink,#543f4b);font-size:9px;font-weight:700;line-height:1.5;white-space:nowrap}
 .leisure-item-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:4px}
 .leisure-item-meta small{margin-top:0;color:#7a6670;font-size:9px}
-.leisure-category-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .leisure-series-group{margin:6px 0;padding:10px;border:1px solid #ecdfe4;border-radius:10px;background:#fffafc}
 .leisure-series-head{display:flex;align-items:center;gap:9px}
 .leisure-series-head>div{display:grid;gap:2px;flex:1}
