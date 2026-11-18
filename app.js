@@ -11,8 +11,8 @@
   const MONTHLY_TASK_FREQUENCIES=['monthly','bimonthly','quarterly','semiannual','annual'];
   const TASK_FREQUENCY_LABELS={weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
   const RECORD_FREQUENCY_LABELS={daily:'Diária',weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
-  const RECORD_CATEGORY_LABELS={record:'Registro',review:'Revisão',planning:'Planejamento',alignment:'Alinhamento',entries:'Entradas'};
-  const RECORD_CATEGORY_COLORS={record:'#8fb2aa',review:'#b189aa',planning:'#dba866',alignment:'#7484a8',entries:'#88a67a'};
+  const RECORD_CATEGORY_LABELS={record:'Registro',review:'Revisão',planning:'Planejamento',alignment:'Alinhamento',capture:'Entrada | Captura',processing:'Entrada | Processamento'};
+  const RECORD_CATEGORY_COLORS={record:'#8fb2aa',review:'#b189aa',planning:'#dba866',alignment:'#7484a8',capture:'#d98ba8',processing:'#c77fa6'};
   const TASK_FREQUENCY_PLURAL={weekly:'Semanais',biweekly:'Quinzenais',monthly:'Mensais',bimonthly:'Bimestrais',quarterly:'Trimestrais',semiannual:'Semestrais',annual:'Anuais'};
   const TASK_FREQUENCY_MONTHS={monthly:1,bimonthly:2,quarterly:3,semiannual:6,annual:12};
   const MONTH_WEEK_OPTIONS=[1,2,3,4,5,6];
@@ -146,6 +146,7 @@
   let recordTypeSort = { key: 'name', dir: 'asc' };
   let selectedRecordLinkedView = 'cards';
   let recordLinkedSort = { key: 'name', dir: 'asc' };
+  let recordDirectorySearch = '';
   let selectedTaskWeekDate = isoToday();
   let selectedTaskMonth = isoToday().slice(0,7);
   let selectedTaskYear = Number(isoToday().slice(0,4));
@@ -248,7 +249,13 @@
       if(typeof type.name!=='string')type.name='';
       if(typeof type.icon!=='string')type.icon='';
       if(!RECORD_FREQUENCY_LABELS[type.frequency])type.frequency='weekly';
+      const previousCategory=type.category;
+      if(type.category==='entries')type.category='capture';
+      else if(type.category==='Entrada | Captura')type.category='capture';
+      else if(type.category==='Entrada | Processamento')type.category='processing';
       if(!RECORD_CATEGORY_LABELS[type.category])type.category='record';
+      if(previousCategory!==type.category&&typeof type.categoryUpdatedAt!=='string')type.categoryUpdatedAt=type.updatedAt||type.createdAt||SEED_TIMESTAMP;
+      if(typeof type.categoryUpdatedAt!=='string')type.categoryUpdatedAt='';
       if(!['task','routine'].includes(type.kind))type.kind='task';
       if(typeof type.targetId!=='string')type.targetId='';
       if(typeof type.stepId!=='string')type.stepId='';
@@ -1235,11 +1242,11 @@
       const routine=state.routines.find(item=>item.id===targetId&&!item.deleted);
       if(!routine||!routine.items?.some(item=>item.id===stepId)){toast('Escolha um passo válido da rotina.');return;}
     }else if(!targetValue){toast('Escolha uma tarefa.');return;}
-    const existing=state.recordTypes.find(item=>item.id===id),now=stamp();
-    const next={id,name,icon,category,frequency,kind,targetId,stepId,createdAt:existing?.createdAt||now,updatedAt:now,deleted:false};
+    const existing=state.recordTypes.find(item=>item.id===id),now=stamp(),categoryChanged=existing?.category!==category;
+    const next={id,name,icon,category,frequency,kind,targetId,stepId,createdAt:existing?.createdAt||now,categoryUpdatedAt:categoryChanged?now:(existing?.categoryUpdatedAt||''),updatedAt:now,deleted:false};
     if(existing)state.recordTypes=state.recordTypes.map(item=>item.id===id?next:item);else state.recordTypes.push(next);
     selectedRecordTypeCategory='';
-    saveLocal();$('#record-type-dialog').close();renderRegistries();toast('Tipo de processo salvo.');
+    saveLocal();$('#record-type-dialog').close();renderRegistries();toast(`Tipo de processo salvo: ${RECORD_CATEGORY_LABELS[category]||category}.`);
   }
   function deleteRecordType(){
     const id=$('#record-type-id').value,type=state.recordTypes.find(item=>item.id===id&&!item.deleted);if(!type)return;
@@ -1389,9 +1396,7 @@
     }).join('');
     return `<article class="record-type-card record-directory-card" style="--record-color:${color}"><header><span class="record-type-icon" aria-hidden="true">${escapeHTML(first.icon||'✍')}</span><div class="record-type-title"><strong>${escapeHTML(group.name)}</strong><small>${count===1?'1 cadastro':`${count} cadastros`}</small></div></header><div class="record-directory-entries">${rows}</div></article>`;
   }
-  function renderRecordDirectory(){
-    const list=$('#record-directory-list'),types=state.recordTypes.filter(item=>!item.deleted);
-    if(!types.length){list.innerHTML='<div class="empty-state"><span>✍</span><h3>Nenhum acompanhamento cadastrado ainda</h3><p>Crie um tipo na aba Processos para vê-lo listado aqui.</p></div>';return;}
+  function recordDirectoryGroups(types){
     const groups=new Map();
     for(const type of types){
       const name=String(type.name||'').trim(),key=name.toLocaleLowerCase('pt-BR');
@@ -1399,7 +1404,23 @@
       if(!groups.has(key))groups.set(key,{name,types:[]});
       groups.get(key).types.push(type);
     }
-    list.innerHTML=[...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(recordDirectoryCardHtml).join('');
+    return [...groups.values()].sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+  }
+  function normalizeRecordSearch(value){
+    return String(value||'').toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
+  function recordTypeMatchesSearch(type,search){
+    if(!search)return true;
+    const text=[type.name,RECORD_CATEGORY_LABELS[type.category]||'Registro',RECORD_FREQUENCY_LABELS[type.frequency]||'Semanal',recordTypeTargetLabel(type)].join(' ');
+    return normalizeRecordSearch(text).includes(search);
+  }
+  function renderRecordDirectory(){
+    const list=$('#record-directory-list'),allTypes=state.recordTypes.filter(item=>!item.deleted),search=normalizeRecordSearch(recordDirectorySearch.trim());
+    const allGroups=recordDirectoryGroups(allTypes),groups=search?recordDirectoryGroups(allTypes.filter(type=>recordTypeMatchesSearch(type,search))):allGroups;
+    $('#record-directory-summary').textContent=allGroups.length?(search?`${groups.length} de ${allGroups.length} ${allGroups.length===1?'tópico':'tópicos'}`:`${allGroups.length} ${allGroups.length===1?'tópico':'tópicos'}`):'';
+    if(!allGroups.length){list.innerHTML='<div class="empty-state"><span>✍</span><h3>Nenhum acompanhamento cadastrado ainda</h3><p>Crie um tipo na aba Processos para vê-lo listado aqui.</p></div>';return;}
+    if(!groups.length){list.innerHTML='<div class="empty-state"><span>✍</span><h3>Nenhum tópico encontrado</h3><p>Revise a busca ou limpe o campo para ver todos os tópicos.</p></div>';return;}
+    list.innerHTML=groups.map(recordDirectoryCardHtml).join('');
   }
   function recordLinkedEntries(){
     const items=new Map();
@@ -1435,7 +1456,8 @@
       const category=RECORD_CATEGORY_LABELS[type.category]||'Registro',frequency=RECORD_FREQUENCY_LABELS[type.frequency]||'Semanal';
       return `<div class="record-linked-topic"><span class="record-linked-topic-name">${type.icon?`${escapeHTML(type.icon)} `:''}${escapeHTML(type.name)}</span>${recordCategoryTagHtml(type.category,category)}<span class="record-directory-frequency">${escapeHTML(frequency)}</span></div>`;
     }).join('');
-    return `<article class="record-type-card record-linked-card" style="--record-color:${escapeHTML(item.color)}"><header><span class="record-type-icon" aria-hidden="true">${escapeHTML(item.icon)}</span><div class="record-type-title"><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.context)} · ${count} ${count===1?'tópico':'tópicos'}</small></div><span class="record-type-status is-${item.status.key}">${escapeHTML(item.status.label)}</span></header><div class="record-type-summary"><span>${item.doneCount} de ${item.occurrences.length} realizadas</span><span>${item.rate}%</span></div><ul class="record-type-occurrences">${occurrenceRows||'<li class="record-occurrence-empty">Nenhuma ocorrência registrada.</li>'}</ul><div class="record-linked-topics"><span class="record-linked-topics-label">Tópicos vinculados</span>${topicRows}</div></article>`;
+    const editAttribute=item.kind==='task'?`data-edit-linked-task="${escapeHTML(item.id)}"`:`data-edit-linked-routine="${escapeHTML(item.id)}"`;
+    return `<article class="record-type-card record-linked-card" style="--record-color:${escapeHTML(item.color)}"><header><button type="button" class="record-linked-open" ${editAttribute} aria-label="Editar ${escapeHTML(item.name)}"><span class="record-type-icon" aria-hidden="true">${escapeHTML(item.icon)}</span><span class="record-type-title"><strong>${escapeHTML(item.name)}</strong><small>${escapeHTML(item.context)} · ${count} ${count===1?'tópico':'tópicos'}</small></span></button><span class="record-type-status is-${item.status.key}">${escapeHTML(item.status.label)}</span></header><div class="record-type-summary"><span>${item.doneCount} de ${item.occurrences.length} realizadas</span><span>${item.rate}%</span></div><ul class="record-type-occurrences">${occurrenceRows||'<li class="record-occurrence-empty">Nenhuma ocorrência registrada.</li>'}</ul><div class="record-linked-topics"><span class="record-linked-topics-label">Tópicos vinculados</span>${topicRows}</div></article>`;
   }
   function recordLinkedSortValue(item,key){
     if(key==='name')return item.name;
@@ -1468,7 +1490,7 @@
         const category=RECORD_CATEGORY_LABELS[type.category]||'Registro',frequency=RECORD_FREQUENCY_LABELS[type.frequency]||'Semanal';
         return `<span class="record-linked-table-topic"><strong>${type.icon?`${escapeHTML(type.icon)} `:''}${escapeHTML(type.name)}</strong><small>${escapeHTML(category)} · ${escapeHTML(frequency)}</small></span>`;
       }).join('');
-      return `<tr class="record-type-table-row"><td><span class="record-type-table-name"><span class="record-type-icon" style="--record-color:${escapeHTML(item.color)}" aria-hidden="true">${escapeHTML(item.icon)}</span><strong>${escapeHTML(item.name)}</strong></span></td><td>${escapeHTML(item.context)}</td><td><div class="record-linked-table-categories">${item.categories.map(category=>recordCategoryTagHtml(category.key,category.label)).join('')}</div></td><td><span class="record-type-status is-${item.status.key}">${escapeHTML(item.status.label)}</span></td><td>${item.occurrences.length?`${item.doneCount}/${item.occurrences.length} · ${item.rate}%`:'—'}</td><td>${latest?`${escapeHTML(fmtDate(latest.date,{day:'2-digit',month:'2-digit'}))} · ${escapeHTML(recordOccurrenceLabel(latest))}`:'—'}</td><td><div class="record-linked-table-topics">${topics}</div></td></tr>`;
+      return `<tr class="record-type-table-row"><td><button type="button" class="record-type-table-name record-linked-table-open" ${item.kind==='task'?`data-edit-linked-task="${escapeHTML(item.id)}"`:`data-edit-linked-routine="${escapeHTML(item.id)}"`} aria-label="Editar ${escapeHTML(item.name)}"><span class="record-type-icon" style="--record-color:${escapeHTML(item.color)}" aria-hidden="true">${escapeHTML(item.icon)}</span><strong>${escapeHTML(item.name)}</strong></button></td><td>${escapeHTML(item.context)}</td><td><div class="record-linked-table-categories">${item.categories.map(category=>recordCategoryTagHtml(category.key,category.label)).join('')}</div></td><td><span class="record-type-status is-${item.status.key}">${escapeHTML(item.status.label)}</span></td><td>${item.occurrences.length?`${item.doneCount}/${item.occurrences.length} · ${item.rate}%`:'—'}</td><td>${latest?`${escapeHTML(fmtDate(latest.date,{day:'2-digit',month:'2-digit'}))} · ${escapeHTML(recordOccurrenceLabel(latest))}`:'—'}</td><td><div class="record-linked-table-topics">${topics}</div></td></tr>`;
     }).join('')}</tbody></table></div>`;
   }
   function renderRecordLinked(){
@@ -3103,7 +3125,23 @@
     const recordTypesMap=new Map();
     for(const recordType of [...(a.recordTypes||[]),...(b.recordTypes||[])]){
       const existing=recordTypesMap.get(recordType.id);
-      if(!existing||(recordType.updatedAt||'')>=(existing.updatedAt||''))recordTypesMap.set(recordType.id,structuredClone(recordType));
+      if(!existing){recordTypesMap.set(recordType.id,structuredClone(recordType));continue;}
+      const latest=(recordType.updatedAt||'')>=(existing.updatedAt||'')?recordType:existing;
+      const merged=structuredClone(latest);
+      const existingCategoryAt=Date.parse(existing.categoryUpdatedAt||'')||0,recordCategoryAt=Date.parse(recordType.categoryUpdatedAt||'')||0;
+      if(existingCategoryAt||recordCategoryAt){
+        let categorySource;
+        if(recordCategoryAt>existingCategoryAt)categorySource=recordType;
+        else if(existingCategoryAt>recordCategoryAt)categorySource=existing;
+        else categorySource=existing.category==='record'&&recordType.category!=='record'?recordType:recordType.category==='record'&&existing.category!=='record'?existing:latest;
+        merged.category=categorySource.category;
+        merged.categoryUpdatedAt=categorySource.categoryUpdatedAt||'';
+      }else if(existing.category!==recordType.category){
+        const categorySource=existing.category==='record'?recordType:recordType.category==='record'?existing:latest;
+        merged.category=categorySource.category;
+        merged.categoryUpdatedAt=categorySource.categoryUpdatedAt||'';
+      }
+      recordTypesMap.set(recordType.id,merged);
     }
     const recordTypes=[...recordTypesMap.values()];
     const leftDailyViewsAt=a.dailyViewsUpdatedAt||'',rightDailyViewsAt=b.dailyViewsUpdatedAt||'';
@@ -3400,8 +3438,9 @@
     const occurrence=event.target.closest('[data-open-occurrence]');if(occurrence)openOccurrenceFocusFromElement(occurrence);
   });
   $$('.registries-tab').forEach(button=>button.onclick=()=>{const view=button.dataset.registriesView;selectedRegistriesView=['trackers','items','linked'].includes(view)?view:'trackers';renderRegistries();});
-  $('#add-record-type').onclick=()=>openRecordTypeDialog();
+  $$('.add-record-type-button').forEach(button=>button.onclick=()=>openRecordTypeDialog());
   $('#record-type-filters').addEventListener('click',event=>{const button=event.target.closest('[data-record-category]');if(!button)return;selectedRecordTypeCategory=button.dataset.recordCategory||'';renderRecordTypes();});
+  $('#record-directory-search').addEventListener('input',event=>{recordDirectorySearch=event.target.value;renderRecordDirectory();});
   $$('.record-type-view-button').forEach(button=>button.onclick=()=>{selectedRecordTypeView=button.dataset.recordTypeView==='table'?'table':'cards';renderRecordTypes();});
   $('#record-type-kind').onchange=()=>updateRecordTypeKindUI();
   $('#record-type-form').addEventListener('submit',saveRecordType);
@@ -3413,12 +3452,19 @@
     const task=event.target.closest('[data-record-task]');if(task){openTaskFocus(task.dataset.recordTask,task.dataset.recordDate);return;}
     const routine=event.target.closest('[data-record-routine]');if(routine){openFocusRoutine(routine.dataset.recordRoutine,routine.dataset.recordDate);if(!$('#routine-focus-dialog').open)toast('Não há registro desta rotina nesse dia.');return;}
   });
+  const openLinkedEdit=event=>{
+    const task=event.target.closest('[data-edit-linked-task]');if(task){openTaskDialog(task.dataset.editLinkedTask);return true;}
+    const routine=event.target.closest('[data-edit-linked-routine]');if(routine){openRoutineDialog(routine.dataset.editLinkedRoutine);return true;}
+    return false;
+  };
   $('#record-linked-list').addEventListener('click',event=>{
+    if(openLinkedEdit(event))return;
     const task=event.target.closest('[data-record-task]');if(task){openTaskFocus(task.dataset.recordTask,task.dataset.recordDate);return;}
     const routine=event.target.closest('[data-record-routine]');if(routine){openFocusRoutine(routine.dataset.recordRoutine,routine.dataset.recordDate);if(!$('#routine-focus-dialog').open)toast('Não há registro desta rotina nesse dia.');return;}
   });
   $$('.record-linked-view-button').forEach(button=>button.onclick=()=>{selectedRecordLinkedView=button.dataset.recordLinkedView==='table'?'table':'cards';renderRecordLinked();});
   $('#record-linked-table').addEventListener('click',event=>{
+    if(openLinkedEdit(event))return;
     const sort=event.target.closest('[data-sort-linked]');if(!sort)return;
     const key=sort.dataset.sortLinked;
     recordLinkedSort=recordLinkedSort.key===key?{key,dir:recordLinkedSort.dir==='asc'?'desc':'asc'}:{key,dir:['done','last'].includes(key)?'desc':'asc'};
