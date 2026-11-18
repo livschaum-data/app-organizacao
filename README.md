@@ -51,10 +51,18 @@ A **Visão semanal** distribui as âncoras pelos dias. O cabeçalho indica a sem
 
 A **Visão mensal** organiza as âncoras com semanas específicas nas colunas Semana 1 a Semana 5 e as áreas nas linhas. Âncoras configuradas para todas as semanas não entram nessa visão. As semanas seguem a mesma regra do cadastro de âncoras: de segunda a domingo, com a Semana 1 sendo a primeira que tem pelo menos quatro dias no mês escolhido. Os cabeçalhos usam a paleta azul enviada como referência. A aba **Mês** mostra o mesmo período em cartões por grupo: ações, estudos, lazer, tarefas com frequência mensal ou maior e cada tipo de acontecimento, com a data de cada item. Âncoras, rotinas, consultas, tarefas semanais, quinzenais e blocos ficam de fora dessa aba.
 
+## Lazer
+
+A seção **Lazer** organiza filmes, séries, livros, jogos e outros itens em categorias e itens. A lista mostra o tipo de cada item com ícone e cor, e o tipo escolhido no cadastro também aparece nos cartões das visões anual, mensal e semanal. Os tipos são configuráveis na aba **Lazer** da Configuração: é possível criar, renomear, recolorir, reordenar e excluir tipos, além de marcar quais usam temporadas.
+
+O **Backlog** é uma visão separada do calendário. Itens no backlog não aparecem nas visões anual, mensal, semanal, na lista nem no planejador diário; eles ficam reunidos por categoria na aba **Backlog**, com o botão **Agendar** para levá-los ao mês selecionado. Também é possível criar um item diretamente no backlog pelo botão **＋ Backlog** de cada categoria.
+
+Tipos marcados como “usar temporadas” mostram automaticamente o campo de temporadas. Ao criar uma série, informe quantas temporadas existem: cada temporada é criada como um item independente no backlog e pode ser agendada, concluída e editada separadamente. O campo de temporadas também permite acrescentar temporadas depois, sem excluir as existentes. A série funciona como um agrupamento e mostra o progresso de temporadas concluídas.
+
 ## Ações
 
 A seção **Ações** oferece um quadro com os meses do ano lado a lado e um calendário mensal. Cada ação pode ser agendada para um mês inteiro, para uma semana específica do mês ou para uma data, com nome, ícone, cor, área, descrição e notas opcionais. As **Áreas** são compartilhadas por ações, estudos, lazer e tarefas e ficam na aba **Áreas** da Configuração, onde podem ser criadas, editadas, excluídas e reordenadas com as setas; a ordem vale para os filtros e cadastros de todo o app. Os tipos de âncora continuam sendo um cadastro estrutural separado. A data de criação é registrada automaticamente. As ações do mês aparecem nos dias correspondentes na Visão secundária; as ações com data aparecem apenas na data escolhida. É possível concluir ou reabrir uma ação nas visões e na edição. Ações não entram na contagem de dias incompletos, mesmo quando não são concluídas. Os cadastros e a conclusão são salvos junto com os demais dados e sincronizados entre dispositivos conectados à mesma conta.
 
-Os seletores de cor oferecem como atalhos as 11 cores da paleta enviada, além do seletor nativo para escolher qualquer outra cor. A paleta aparece nos cadastros de rotinas, tarefas, ações, áreas e tipos de âncora.
+Os seletores de cor oferecem como atalhos as 11 cores da paleta enviada, além do seletor nativo para escolher qualquer outra cor. A paleta aparece nos cadastros de rotinas, tarefas, ações, áreas, tipos de âncora e tipos de lazer.
 
 A aba **Lista** de Ações reúne todos os meses e permite combinar busca, estado, área, tipo de agendamento, mês, semana e intervalos de criação, conclusão e vencimento. A ordenação pode usar nome, área, estado, mês, semana ou essas datas. O vencimento pode ser informado no cadastro; se ficar vazio, usa a data agendada ou o último dia do mês ou da semana agendada. A data de conclusão é registrada ao concluir a ação e removida quando ela é reaberta.

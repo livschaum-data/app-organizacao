@@ -71,6 +71,19 @@
     ['tema-do-dia','Tema do dia','#e9e1ec']
   ];
   const AREA_ICONS = {'area-tema-do-dia':'♡','area-casa':'⌂','area-lazer':'♡','area-estudos':'✎','area-movimento':'✳','area-extras':'✦'};
+  const LEISURE_TYPE_SEED = [
+    ['film','Filme','🎬','#f7dfe6',false],
+    ['series','Série','📺','#e9e2f6',true],
+    ['book','Livro','📚','#e5efe4',false],
+    ['painting','Pintura','🎨','#f7e8d8',false],
+    ['craft','Artesanato','🧵','#f3e6ef',false],
+    ['game','Jogo','🎮','#e2ecf6',false],
+    ['podcast','Podcast','🎧','#e8e7f3',false],
+    ['music','Música','🎵','#f0e6f6',false],
+    ['course','Curso','🎓','#e6f0ee',false],
+    ['trip','Viagem','🧭','#f5efd9',false],
+    ['other','Outro','✦','#eceae4',false]
+  ];
   const COLOR_PALETTE = ['#808080','#FFC001','#5DFF5D','#31869B','#FF5399','#CC66FF','#366092','#60497A','#963634','#76933C','#E26B0A'];
   const OCCURRENCE_TYPES = {reminder:{label:'Lembrete',icon:'◉'},event:{label:'Evento',icon:'◆'},holiday:{label:'Feriado',icon:'⚑'},birthday:{label:'Aniversário',icon:'🎂'},cycle:{label:'Ciclo',icon:'↻'}};
   // Títulos legíveis nos exemplos enviados. Os campos e os dias podem ser editados.
@@ -237,9 +250,10 @@
   }
   function makeSeed() {
     const now = SEED_TIMESTAMP;
-    return {version:10, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])),dailyViewsUpdatedAt:'',menuIcons:{},menuIconsUpdatedAt:'', routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],projects:makeProjectSeedData(),taskHistory:{},dayNotes:{},weekNotes:{},monthNotes:{},weekRegistries:{},monthRegistries:{},recordTypes:[],globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
+    return {version:12, dailyViews:Object.fromEntries(DAILY_VIEW_GROUPS.map(([key,,view,weekly,timeline])=>[key,{view,weekly,timeline}])),dailyViewsUpdatedAt:'',menuIcons:{},menuIconsUpdatedAt:'',leisureTypes:makeLeisureTypeSeed(), routines:SEED.map(([icon,name,color,items], i) => ({id:`routine-seed-${i+1}`,name,description:'',icon,color,scheduledTime:'',weekdays:[0,1,2,3,4,5,6],startDate:'',endDate:'',items:items.map((label,j)=>({id:`routine-seed-${i+1}-item-${j+1}`,label,description:'',active:true})),updatedAt:now,deleted:false})),tasks:[],actions:[],occurrences:[],actionAreas:[],projects:makeProjectSeedData(),taskHistory:{},dayNotes:{},weekNotes:{},monthNotes:{},weekRegistries:{},monthRegistries:{},recordTypes:[],globalEntries:{text:'',updatedAt:''},areas:makeAreaSeed(),anchors:makeAnchorSeed(),history:{}};
   }
   function makeAreaSeed(){return AREA_SEED.map(([id,name,color],order)=>({id:`area-${id}`,name,color,dailyView:'primary',weeklyView:true,timelineView:true,order:id==='tema-do-dia'?-1:order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
+  function makeLeisureTypeSeed(){return LEISURE_TYPE_SEED.map(([id,name,icon,color,usesSeasons],order)=>({id,name,icon,color,usesSeasons,order,updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function makeAnchorSeed(){return ANCHOR_SEED.map(([area,icon,title,weekdays],index)=>({id:`anchor-seed-${index+1}`,areaId:`area-${area}`,icon,title,description:'',scheduleType:'day',weekdays,monthWeeks:[],scheduledMonths:[],startDate:'',endDate:'',updatedAt:SEED_TIMESTAMP,deleted:false}));}
   function plannerNeedsUpgrade(data){
     return !Array.isArray(data.areas)||!Array.isArray(data.anchors)||!Array.isArray(data.occurrences)||!data.globalEntries||typeof data.globalEntries!=='object'||
@@ -257,6 +271,18 @@
     for(const item of data.occurrences){if(!Array.isArray(item.completionHistory))item.completionHistory=[];if(!Array.isArray(item.dateExceptions))item.dateExceptions=[];if(!Array.isArray(item.completedDates))item.completedDates=[];if(typeof item.consultative!=='boolean')item.consultative=false;item.leadDays=Math.max(0,Math.min(365,Number(item.leadDays)||0));if(item.repeatMode==='after-completion'&&!item.recurrenceMode)item.recurrenceMode='after-completion';if(!Number.isFinite(Number(item.intervalDays))&&['after-completion','after-date'].includes(item.recurrenceMode))item.intervalDays=1;if(item.schedule==='recurrence'&&!item.scheduledDate)item.scheduledDate=item.startDate||(item.createdAt||'').slice(0,10);}
     if(!Array.isArray(data.actionAreas))data.actionAreas=[];
     data.actionAreas.forEach((area,index)=>{if(!Number.isFinite(Number(area.order)))area.order=index;if(typeof area.deleted!=='boolean')area.deleted=false;});
+    if(!Array.isArray(data.leisureTypes))data.leisureTypes=[];
+    if(previousVersion<12){const knownTypes=new Set(data.leisureTypes.map(type=>type.id));for(const type of makeLeisureTypeSeed())if(!knownTypes.has(type.id))data.leisureTypes.push(type);}
+    data.leisureTypes.forEach((type,index)=>{
+      if(typeof type.id!=='string'||!type.id)type.id=`leisure-type-${index+1}`;
+      if(typeof type.name!=='string'||!type.name.trim())type.name='Tipo de lazer';
+      if(typeof type.icon!=='string')type.icon='';
+      if(!/^#[0-9a-f]{6}$/i.test(type.color||''))type.color='#eceae4';
+      if(typeof type.usesSeasons!=='boolean')type.usesSeasons=false;
+      if(!Number.isFinite(Number(type.order)))type.order=index;
+      if(typeof type.deleted!=='boolean')type.deleted=false;
+      if(!type.updatedAt)type.updatedAt=SEED_TIMESTAMP;
+    });
     if(!Array.isArray(data.projects))data.projects=[];
     if(!data.projects.length)data.projects=makeProjectSeedData();
     else if(previousVersion<9&&Array.isArray(window.ANCORA_PROJECT_IMPORT_SEED)&&window.ANCORA_PROJECT_IMPORT_SEED.length){const custom=data.projects.filter(project=>!['example','spreadsheet'].includes(project.source));data.projects=[...makeProjectSeedData(),...custom];}
@@ -282,11 +308,19 @@
       if(action.study&&action.areaId)action.areaId='';if(action.leisure&&action.areaId)action.areaId='';
       if(typeof action.leisure!=='boolean')action.leisure=false;
       if(typeof action.leisureType!=='string')action.leisureType='';
+      if(typeof action.backlog!=='boolean')action.backlog=false;
+      if(typeof action.seasonOf!=='string')action.seasonOf='';
       if(!Number.isFinite(Number(action.season)))action.season=null;
       if(typeof action.parentId!=='string')action.parentId='';
       if(!action.createdAt)action.createdAt=action.updatedAt||SEED_TIMESTAMP;
       if(action.completed&&!action.completedAt)action.completedAt=action.completionChangedAt||action.updatedAt||'';
       if(!action.completed)action.completedAt='';
+    }
+    for(const series of data.actions.filter(action=>!action.deleted&&action.leisure&&!action.seasonOf&&action.season&&action.parentId)){
+      const number=Number(series.season);if(!number)continue;
+      const seasonId=`${series.id}-season-${number}`;
+      if(!data.actions.some(action=>action.id===seasonId))data.actions.push({...structuredClone(series),id:seasonId,seasonOf:series.id,season:number,backlog:series.backlog===true,updatedAt:series.updatedAt||SEED_TIMESTAMP});
+      series.season=null;series.backlog=true;
     }
     if(!Array.isArray(data.recordTypes))data.recordTypes=[];
     for(const type of data.recordTypes){
@@ -317,7 +351,8 @@
     if(typeof data.globalEntries.updatedAt!=='string')data.globalEntries.updatedAt='';
     const activeActionIds=new Set(data.actions.filter(action=>!action.deleted).map(action=>action.id));
     for(const action of data.actions)if(action.parentId===action.id||action.parentId&&!activeActionIds.has(action.parentId))action.parentId='';
-    data.version=11;
+    for(const action of data.actions)if(action.seasonOf&&(action.seasonOf===action.id||!activeActionIds.has(action.seasonOf)))action.seasonOf='';
+    data.version=12;
     const areaIds=new Set(data.areas.map(area=>area.id)),anchorIds=new Set(data.anchors.map(anchor=>anchor.id));
     for(const area of makeAreaSeed())if(!areaIds.has(area.id))data.areas.push(area);
     for(const area of data.areas){if(typeof area.weeklyView!=='boolean')area.weeklyView=true;if(typeof area.timelineView!=='boolean')area.timelineView=area.weeklyView;}
@@ -945,8 +980,8 @@
     const visibleTasks=Object.values(taskDay.tasks||{}).filter(task=>taskIsVisibleOnDay(task,date)&&groupInTimeline(taskGroup(task)));
     const scheduledActions=groupInTimeline('actions')?state.actions.filter(action=>!action.study&&!action.leisure&&actionIsScheduled(action,date)):[];
     const scheduledStudies=groupInTimeline('studies')?state.actions.filter(action=>action.study&&actionIsScheduled(action,date)):[];
-    const scheduledLeisure=groupInTimeline('leisure')?state.actions.filter(action=>action.leisure&&actionIsScheduled(action,date)):[];
-    const timed=[...scheduledRoutines.map(routine=>({...routine,type:'routine',id:routine.routineId})),...visibleTasks.map(task=>({...task,type:'task',id:task.taskId})),...scheduledAnchors.map(anchor=>({...anchor,type:'anchor',name:anchor.title,color:areaById.get(anchor.areaId)?.color||'#8eada8'})),...scheduledActions.map(action=>({...action,type:'action',name:actionDisplayTitle(action)})),...scheduledStudies.map(action=>({...action,type:'study',name:actionDisplayTitle(action)})),...scheduledLeisure.map(action=>({...action,type:'leisure',name:actionDisplayTitle(action)}))].filter(hasTime).sort((a,b)=>a.scheduledTime.localeCompare(b.scheduledTime));
+    const scheduledLeisure=groupInTimeline('leisure')?state.actions.filter(action=>action.leisure&&leisureIsScheduled(action,date)):[];
+    const timed=[...scheduledRoutines.map(routine=>({...routine,type:'routine',id:routine.routineId})),...visibleTasks.map(task=>({...task,type:'task',id:task.taskId})),...scheduledAnchors.map(anchor=>({...anchor,type:'anchor',name:anchor.title,color:areaById.get(anchor.areaId)?.color||'#8eada8'})),...scheduledActions.map(action=>({...action,type:'action',name:actionDisplayTitle(action)})),...scheduledStudies.map(action=>({...action,type:'study',name:actionDisplayTitle(action)})),...scheduledLeisure.map(action=>({...action,type:'leisure',name:leisureDisplayTitle(action)}))].filter(hasTime).sort((a,b)=>a.scheduledTime.localeCompare(b.scheduledTime));
     const untimedRoutines=scheduledRoutines.filter(routine=>!hasTime(routine));
     const untimedTasks=visibleTasks.filter(task=>!hasTime(task));
     const untimedActions=scheduledActions.filter(action=>!hasTime(action)),untimedStudies=scheduledStudies.filter(action=>!hasTime(action)),untimedLeisure=scheduledLeisure.filter(action=>!hasTime(action));
@@ -978,7 +1013,7 @@
       ...anchors.map(({area,entries})=>({label:area.name,entries:entries.map(anchor=>`<span>${anchor.icon?`${escapeHTML(anchor.icon)} `:''}${escapeHTML(anchor.title)}</span>`)})),
       {label:'Ações',entries:untimedActions.map(action=>`<button type="button" data-timeline-action="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(actionDisplayTitle(action))}</button>`)},
       {label:'Estudos',entries:untimedStudies.map(action=>`<button type="button" data-timeline-study="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(actionDisplayTitle(action))}</button>`)},
-      {label:'Lazer',entries:untimedLeisure.map(action=>`<button type="button" data-timeline-leisure="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(actionDisplayTitle(action))}</button>`)}
+      {label:'Lazer',entries:untimedLeisure.map(action=>`<button type="button" data-timeline-leisure="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(leisureDisplayTitle(action))}</button>`)}
     ].filter(group=>group.entries.length);
     const unscheduled=untimedGroups.map(group=>`<div class="timeline-anchor-group"><strong>${escapeHTML(group.label)}</strong>${group.entries.join('')}</div>`);
     const untimedCount=untimedGroups.reduce((total,group)=>total+group.entries.length,0);
@@ -1045,10 +1080,10 @@
     };
     const actions=state.actions.filter(action=>!action.deleted&&action.schedule==='date'&&action.scheduledDate===selectedDate&&!action.study&&!action.leisure).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const studies=state.actions.filter(action=>!action.deleted&&action.study&&action.schedule==='date'&&action.scheduledDate===selectedDate).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
-    const leisure=state.actions.filter(action=>!action.deleted&&action.leisure&&action.schedule==='date'&&action.scheduledDate===selectedDate).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    const leisure=state.actions.filter(action=>!action.deleted&&action.leisure&&leisureIsScheduled(action,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const actionBlock=view=>{const entries=dailyViewOfGroup('actions')===view?actions:[];return entries.length?`<section class="planner-block planner-block-actions"><h2><span class="planner-heading-icon" aria-hidden="true">✦</span><span>Ações</span></h2><div class="planner-block-body">${entries.map(action=>{const area=state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted);return `<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-action="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button>${area?`<span class="planner-action-area-tag" style="--tag-color:${escapeHTML(area.color||'#dcebe7')};--tag-ink:${plannerHeadingInk(area.color)}">${escapeHTML(area.name)}</span>`:''}</div>`;}).join('')}</div></section>`:'';};
     const studyBlock=view=>{const entries=dailyViewOfGroup('studies')===view?studies:[];return entries.length?`<section class="planner-block planner-block-studies"><h2><span class="planner-heading-icon">✎</span><span>Estudos</span></h2><div class="planner-block-body">${entries.map(action=>`<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-study="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button></div>`).join('')}</div></section>`:'';};
-    const leisureBlock=view=>{const entries=dailyViewOfGroup('leisure')===view?leisure:[];return entries.length?`<section class="planner-block planner-block-studies"><h2><span class="planner-heading-icon">♡</span><span>Lazer</span></h2><div class="planner-block-body">${entries.map(action=>`<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-leisure="${escapeHTML(action.id)}">${escapeHTML(actionDisplayTitle(action))}</button></div>`).join('')}</div></section>`:'';};
+    const leisureBlock=view=>{const entries=dailyViewOfGroup('leisure')===view?leisure:[];return entries.length?`<section class="planner-block planner-block-studies"><h2><span class="planner-heading-icon">♡</span><span>Lazer</span></h2><div class="planner-block-body">${entries.map(action=>`<div class="planner-item planner-action-item${action.parentId?' is-subaction':''}"><button type="button" class="planner-action-link" data-open-leisure="${escapeHTML(action.id)}">${escapeHTML(leisureDisplayTitle(action))}</button></div>`).join('')}</div></section>`:'';};
     const occurrences=state.occurrences.filter(item=>occurrenceAppearsOn(item,selectedDate)&&occurrenceVisibleOnDate(item,selectedDate)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const occurrenceBlock=view=>{const entries=occurrences.filter(item=>dailyViewOfGroup(`occurrence-${item.type}`)===view);return entries.length?`<section class="planner-block planner-block-occurrences"><h2><span class="planner-heading-icon" aria-hidden="true">◉</span><span>Acontecimentos</span></h2><div class="planner-block-body">${entries.map(item=>{const kind=OCCURRENCE_TYPES[item.type]||OCCURRENCE_TYPES.reminder;return `<div class="planner-item planner-action-item occurrence-planner-row"><span class="planner-item-icon" aria-hidden="true">${escapeHTML(item.icon||kind.icon)}</span><button type="button" class="planner-action-link" data-open-occurrence="${escapeHTML(item.id)}" data-occurrence-date="${escapeHTML(selectedDate)}">${escapeHTML(item.title)}</button><span class="occurrence-type occurrence-type-${escapeHTML(item.type)}">${escapeHTML(kind.label)}</span>${item.consultative?'<span class="occurrence-status is-consultative">Consultivo</span>':''}</div>`;}).join('')}</div></section>`:'';};
     const plannerExtras=view=>`${dailyViewOfGroup('routines')===view?routineBlock(view):''}${dailyViewOfGroup('overdue')===view?overdueBlock(view):''}${dailyViewOfGroup('actions-overdue')===view?overdueActionBlock(view):''}${dailyViewOfGroup('occurrences-overdue')===view?overdueOccurrenceBlock(view):''}${dailyViewOfGroup('tasks-weekly')===view?taskGroup(taskDay,'weekly',true,view,'tasks-weekly',false):''}${dailyViewOfGroup('tasks-biweekly')===view?taskGroup(taskDay,'biweekly',true,view,'tasks-biweekly',false):''}${dailyViewOfGroup('tasks-monthly')===view?monthlyTaskGroups(taskDay,true,view):''}${dailyViewOfGroup('consultations')===view?taskGroup(taskDay,null,true,view,'consultations',true):''}${dailyViewOfGroup('blocks')===view?blockGroup(taskDay,true,view):''}${actionBlock(view)}${studyBlock(view)}${leisureBlock(view)}${occurrenceBlock(view)}`;
@@ -1132,7 +1167,7 @@
       ['consultations','Consultas','#edf0e5','◌',(_,index)=>taskEntries(index,null,'regular',true).map(item=>card(item.icon,item.name,`data-open-task="${escapeHTML(item.taskId)}" data-task-week-date="${dates[index]}"`))],
       ['actions','Ações','#f3e6d7','✦',(date)=>state.actions.filter(item=>!item.deleted&&!item.study&&!item.leisure&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon,actionDisplayTitle(item),`data-open-action="${escapeHTML(item.id)}"`))],
       ['studies','Estudos','#e8e7f3','✎',(date)=>state.actions.filter(item=>!item.deleted&&item.study&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon||'✎',actionDisplayTitle(item),`data-open-study="${escapeHTML(item.id)}"`))],
-      ['leisure','Lazer','#f4e1e9','♡',(date)=>state.actions.filter(item=>!item.deleted&&item.leisure&&item.schedule==='date'&&actionIsScheduled(item,date)).map(item=>card(item.icon||'♡',actionDisplayTitle(item),`data-open-leisure="${escapeHTML(item.id)}"`))],
+      ['leisure','Lazer','#f4e1e9','♡',(date)=>state.actions.filter(item=>!item.deleted&&item.leisure&&leisureIsScheduled(item,date)).map(item=>card(item.icon||'♡',leisureDisplayTitle(item),`data-open-leisure="${escapeHTML(item.id)}"`))],
       ...Object.entries(OCCURRENCE_TYPES).map(([type,kind])=>[`occurrence-${type}`,`${kind.label}${type==='holiday'?'s':'s'}`,'#e8eeee',kind.icon,(date)=>state.occurrences.filter(item=>!item.deleted&&item.type===type&&occurrenceAppearsOn(item,date)&&occurrenceVisibleOnDate(item,date)).map(item=>card(item.icon||kind.icon,item.title,`data-open-occurrence="${escapeHTML(item.id)}" data-occurrence-date="${date}"`))])
     ];
     const groupRows=groupDefinitions.filter(([key])=>groupInWeekly(key)).map(([,label,color,icon,entriesFor])=>{
@@ -1147,10 +1182,10 @@
     const actionItem=(action,kind,date)=>{
       const area=kind==='action'?state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted):null;
       const attribute=kind==='study'?`data-open-study="${escapeHTML(action.id)}"`:kind==='leisure'?`data-open-leisure="${escapeHTML(action.id)}"`:`data-open-action="${escapeHTML(action.id)}"`;
-      return `<button type="button" class="monthly-group-item${action.completed?' is-done':''}" ${attribute}><span class="monthly-group-date">${dateLabel(date)}</span><span class="monthly-group-copy"><strong>${escapeHTML(actionDisplayTitle(action))}</strong>${area?`<small>${escapeHTML(area.name)}</small>`:''}</span>${action.completed?'<span class="monthly-group-done" aria-hidden="true">✓</span>':''}</button>`;
+      return `<button type="button" class="monthly-group-item${action.completed?' is-done':''}" ${attribute}><span class="monthly-group-date">${dateLabel(date)}</span><span class="monthly-group-copy"><strong>${escapeHTML(kind==='leisure'?leisureDisplayTitle(action):actionDisplayTitle(action))}</strong>${area?`<small>${escapeHTML(area.name)}</small>`:''}</span>${action.completed?'<span class="monthly-group-done" aria-hidden="true">✓</span>':''}</button>`;
     };
     const actionCard=(kind,title,icon,color)=>{
-      const list=state.actions.filter(action=>!action.deleted&&(kind==='action'?!action.study&&!action.leisure:kind==='study'?action.study:action.leisure)).map(action=>{const date=dates.find(day=>actionIsScheduled(action,day));return date?{action,date}:null;}).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date)||a.action.title.localeCompare(b.action.title,'pt-BR'));
+      const list=state.actions.filter(action=>!action.deleted&&(kind==='action'?!action.study&&!action.leisure:kind==='study'?action.study:action.leisure)&&(kind!=='leisure'||leisureInCalendar(action))).map(action=>{const date=dates.find(day=>kind==='leisure'?leisureIsScheduled(action,day):actionIsScheduled(action,day));return date?{action,date}:null;}).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date)||a.action.title.localeCompare(b.action.title,'pt-BR'));
       return card(title,icon,color,list.map(({action,date})=>actionItem(action,kind,date)));
     };
     const collectTasks=filter=>{
@@ -1219,11 +1254,11 @@
       const area=kind==='action'?state.actionAreas.find(entry=>entry.id===action.areaId&&!entry.deleted):null;
       const dateText=action.schedule==='date'?(action.scheduledDate?dateLabel(action.scheduledDate):'—'):(action.week?`Sem ${action.week}`:'Mês');
       const attribute=kind==='study'?`data-open-study="${escapeHTML(action.id)}"`:kind==='leisure'?`data-open-leisure="${escapeHTML(action.id)}"`:`data-open-action="${escapeHTML(action.id)}"`;
-      return `<button type="button" class="monthly-group-item${action.completed?' is-done':''}" ${attribute}><span class="monthly-group-date">${escapeHTML(dateText)}</span><span class="monthly-group-copy"><strong>${escapeHTML(actionDisplayTitle(action))}</strong>${area?`<small>${escapeHTML(area.name)}</small>`:''}</span>${action.completed?'<span class="monthly-group-done" aria-hidden="true">✓</span>':''}</button>`;
+      return `<button type="button" class="monthly-group-item${action.completed?' is-done':''}" ${attribute}><span class="monthly-group-date">${escapeHTML(dateText)}</span><span class="monthly-group-copy"><strong>${escapeHTML(kind==='leisure'?leisureDisplayTitle(action):actionDisplayTitle(action))}</strong>${area?`<small>${escapeHTML(area.name)}</small>`:''}</span>${action.completed?'<span class="monthly-group-done" aria-hidden="true">✓</span>':''}</button>`;
     };
     const actionSortKey=action=>action.schedule==='date'?action.scheduledDate||'':`${action.scheduledMonth||''}-${String(action.week||0).padStart(2,'0')}`;
     const actionCard=(kind,title,icon,color)=>{
-      const list=state.actions.filter(action=>!action.deleted&&(kind==='action'?!action.study&&!action.leisure:kind==='study'?action.study:action.leisure)&&((action.schedule==='date'&&(action.scheduledDate||'').startsWith(monthKey))||(action.schedule==='month'&&action.scheduledMonth===monthKey))).sort((a,b)=>actionSortKey(a).localeCompare(actionSortKey(b))||a.title.localeCompare(b.title,'pt-BR'));
+      const list=state.actions.filter(action=>!action.deleted&&(kind==='action'?!action.study&&!action.leisure:kind==='study'?action.study:action.leisure)&&(kind!=='leisure'||leisureInCalendar(action))&&((action.schedule==='date'&&(action.scheduledDate||'').startsWith(monthKey))||(action.schedule==='month'&&action.scheduledMonth===monthKey))).sort((a,b)=>actionSortKey(a).localeCompare(actionSortKey(b))||a.title.localeCompare(b.title,'pt-BR'));
       return card(title,icon,color,list.map(action=>actionItem(action,kind)));
     };
     const collectTasks=filter=>{
@@ -1808,14 +1843,100 @@
     $('#studies-content').innerHTML=body;
   }
   function leisureActions(){return state.actions.filter(action=>!action.deleted&&action.leisure);}
-  function leisureTypeLabel(type){return {film:'Filme',series:'Série',book:'Livro',painting:'Pintura',craft:'Artesanato',other:'Outro'}[type]||'';}
-  function leisureCard(action){const season=action.leisureType==='series'&&action.season?` · Temporada ${action.season}`:'';return `<div class="weekly-action leisure-item${action.completed?' is-complete':''}${action.parentId?' is-subaction':''}" style="--action-color:${escapeHTML(action.color||'#d58ca6')}"><button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(action.title)}">${action.completed?'✓':'○'}</button><button type="button" data-edit-leisure="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${season?`<small>${escapeHTML(season)}</small>`:''}${action.parentId?`<small>↳ ${escapeHTML(actionParent(action)?.title||'Categoria')}</small>`:''}</button></div>`;}
-  function renderLeisure(){
-    const items=leisureActions(),categories=items.filter(item=>!item.parentId),children=items.filter(item=>item.parentId);
-    $('.leisure-month-navigator').classList.toggle('hidden',leisureView==='list'||leisureView==='week');$('.leisure-week-navigator').classList.toggle('hidden',leisureView!=='week');$('#leisure-month').value=selectedLeisureMonth;$('#leisure-week-date').value=selectedLeisureWeekDate;$('#leisure-current-month').classList.toggle('hidden',selectedLeisureMonth===isoToday().slice(0,7));$('#leisure-week-today').classList.toggle('hidden',weekDates(selectedLeisureWeekDate).includes(isoToday()));
-    if(leisureView!=='list'){renderCatalogSchedule(items,'#leisure-content','Lazer','data-edit-leisure');return;}
-    const body=leisureView==='list'?categories.map(category=>`<article class="study-subject-card"><div class="study-subject-head"><span class="project-icon">${escapeHTML(category.icon||'♡')}</span><div><strong>${escapeHTML(category.title)}</strong><small>${children.filter(item=>item.parentId===category.id).length} itens</small></div><button type="button" class="small-edit" data-edit-leisure="${escapeHTML(category.id)}">Editar</button></div><div class="study-topic-list">${children.filter(item=>item.parentId===category.id).map(leisureCard).join('')||'<p class="planner-empty">Nenhum item cadastrado.</p>'}</div><button type="button" class="secondary-button study-add-topic" data-add-leisure-item="${escapeHTML(category.id)}">＋ Novo item</button></article>`).join('')||'<div class="empty-state"><h3>Seu lazer começa aqui</h3><p>Crie uma categoria e adicione filmes, séries, livros ou projetos criativos.</p></div>':leisureView==='week'?`<h3 class="action-period-title">${escapeHTML(fmtDate(weekDates(selectedLeisureWeekDate)[0],{day:'numeric',month:'short'}))} a ${escapeHTML(fmtDate(weekDates(selectedLeisureWeekDate)[6],{day:'numeric',month:'short',year:'numeric'}))}</h3><div class="study-week-list">${weekDates(selectedLeisureWeekDate).map(date=>`<section><h4>${escapeHTML(fmtDate(date,{weekday:'long',day:'numeric',month:'short'}))}</h4>${items.filter(item=>actionIsScheduled(item,date)).map(leisureCard).join('')||'<p class="planner-empty">Nenhum item planejado.</p>'}</section>`).join('')}</div>`:leisureView==='monthly'?`<h3 class="action-period-title">${escapeHTML(fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'}))}</h3><div class="study-month-grid">${MONTH_WEEK_OPTIONS.map(week=>`<section><h4>${escapeHTML(monthWeekLabel(week))}</h4>${items.filter(item=>actionMonth(item)===selectedLeisureMonth&&actionWeek(item)===week).map(leisureCard).join('')||'<p class="planner-empty">Nenhum item.</p>'}</section>`).join('')}</div>`:`<h3 class="action-period-title">${selectedLeisureMonth.slice(0,4)}</h3><div class="action-month-board study-annual-board">${Array.from({length:12},(_,i)=>{const month=`${selectedLeisureMonth.slice(0,4)}-${String(i+1).padStart(2,'0')}`,entries=items.filter(item=>actionMonth(item)===month);return `<section class="action-month-column"><header><span class="annual-month-label">${escapeHTML(fmtDate(`${month}-01`,{month:'short'}))}</span><b>${entries.length}</b></header><div class="action-card-list">${entries.map(leisureCard).join('')||'<p class="planner-empty">—</p>'}</div></section>`}).join('')}</div>`;$('#leisure-content').innerHTML=body;
+  function orderedLeisureTypes(){return (state.leisureTypes||[]).filter(type=>!type.deleted).sort((a,b)=>(Number(a.order)||0)-(Number(b.order)||0)||a.name.localeCompare(b.name,'pt-BR'));}
+  function leisureTypeRecord(id){return (state.leisureTypes||[]).find(type=>type.id===id)||null;}
+  function leisureTypeName(id){const type=leisureTypeRecord(id);return type?type.name:(id?String(id):'');}
+  function leisureTypeLabel(type){return leisureTypeName(type);}
+  function leisureTypeUsesSeasons(id){return Boolean(leisureTypeRecord(id)?.usesSeasons);}
+  function leisureTypeChip(action){
+    const type=leisureTypeRecord(action?.leisureType);if(!type)return '';
+    const color=type.color||'#f4e1e9';
+    return `<span class="leisure-type-chip" style="--type-color:${escapeHTML(color)};--type-ink:${escapeHTML(plannerHeadingInk(color))}">${type.icon?`${escapeHTML(type.icon)} `:''}${escapeHTML(type.name)}</span>`;
   }
+  function leisureSeasonsOf(series){return state.actions.filter(action=>!action.deleted&&action.leisure&&action.seasonOf===series?.id).sort((a,b)=>(Number(a.season)||0)-(Number(b.season)||0));}
+  function leisureSeriesOf(action){return action?.seasonOf?state.actions.find(entry=>entry.id===action.seasonOf&&!entry.deleted)||null:null;}
+  function leisureIsSeason(action){return Boolean(action?.seasonOf);}
+  function leisureHasSeasons(action){return Boolean(action)&&!action.seasonOf&&leisureSeasonsOf(action).length>0;}
+  function leisureIsContainer(action){return leisureHasSeasons(action);}
+  function leisureInCalendar(action){return Boolean(action)&&Boolean(action.parentId)&&!action.backlog&&!leisureIsContainer(action);}
+  function leisureIsScheduled(action,date){return leisureInCalendar(action)&&actionIsScheduled(action,date);}
+  function leisureSeasonLabel(action){return leisureIsSeason(action)&&action.season?`Temporada ${action.season}`:'';}
+  function leisureScheduleSummary(action){
+    if(action.backlog)return 'Backlog';
+    if(action.schedule==='date')return actionScheduleLabel(action)||'Sem data';
+    if(action.scheduledMonth)return `${action.week?monthWeekLabel(action.week):'Mês inteiro'} · ${fmtDate(`${action.scheduledMonth}-01`,{month:'short',year:'numeric'})}`;
+    return 'Sem período';
+  }
+  function leisureDisplayTitle(action){const season=leisureSeasonLabel(action);return season?`${action.title} · ${season}`:action.title;}
+  function createLeisureSeason(series,number,now=stamp()){
+    const date=isoToday();
+    return {id:uid(),parentId:series.parentId||'',study:false,leisure:true,leisureType:series.leisureType||'',backlog:true,seasonOf:series.id,season:number,title:series.title,description:'',notes:'',icon:series.icon||'',color:series.color||'#d58ca6',areaId:'',scheduledTime:'',durationMinutes:null,schedule:'month',scheduledMonth:'',scheduledDate:'',week:null,dueDate:'',createdAt:date,completed:false,completedAt:'',completionChangedAt:'',updatedAt:now,deleted:false};
+  }
+  function ensureLeisureSeasons(series,count,now=stamp()){
+    const target=Math.max(0,Math.min(30,Number(count)||0)),used=new Set(leisureSeasonsOf(series).map(item=>Number(item.season)||0)),created=[];
+    for(let number=1;number<=target;number++){if(used.has(number))continue;const season=createLeisureSeason(series,number,now);state.actions.push(season);created.push(season);}
+    if(created.length){series.backlog=true;series.updatedAt=now;}
+    return created;
+  }
+  function addNextLeisureSeason(seriesId){
+    const series=state.actions.find(entry=>entry.id===seriesId&&!entry.deleted&&entry.leisure);
+    if(!series)return null;
+    const number=leisureSeasonsOf(series).reduce((max,item)=>Math.max(max,Number(item.season)||0),0)+1,season=createLeisureSeason(series,number);
+    state.actions.push(season);series.backlog=true;series.updatedAt=season.updatedAt;
+    syncLeisureSeriesCompletion(series.id);
+    saveLocal();renderLeisure();toast(`Temporada ${number} adicionada ao backlog.`);
+    return season;
+  }
+  function syncLeisureSeriesCompletion(seriesId){
+    const series=state.actions.find(entry=>entry.id===seriesId&&!entry.deleted);if(!series)return;
+    const seasons=leisureSeasonsOf(series);if(!seasons.length)return;
+    const complete=seasons.every(season=>season.completed),now=stamp();
+    series.completed=complete;series.completedAt=complete?(series.completedAt||now):'';series.completionChangedAt=now;series.updatedAt=now;
+  }
+  function leisureItemCard(action,options={}){
+    const backlog=options.backlog===true,typeChip=leisureTypeChip(action),season=leisureSeasonLabel(action),parent=actionParent(action);
+    const meta=[typeChip,season?`<small>${escapeHTML(season)}</small>`:'',parent?`<small>↳ ${escapeHTML(parent.title)}</small>`:''].filter(Boolean).join('');
+    const toggle=backlog?'':`<button type="button" data-toggle-action="${escapeHTML(action.id)}" aria-label="${action.completed?'Reabrir':'Concluir'} ${escapeHTML(leisureDisplayTitle(action))}" aria-pressed="${action.completed?'true':'false'}">${action.completed?'✓':'○'}</button>`;
+    return `<div class="weekly-action leisure-item${action.completed?' is-complete':''}${backlog?' is-backlog':''}" style="--action-color:${escapeHTML(action.color||'#d58ca6')}">${toggle}<button type="button" data-edit-leisure="${escapeHTML(action.id)}">${action.icon?`${escapeHTML(action.icon)} `:''}${escapeHTML(action.title)}${meta?`<span class="leisure-item-meta">${meta}</span>`:''}</button>${backlog?`<button type="button" class="leisure-backlog-schedule" data-schedule-leisure="${escapeHTML(action.id)}">Agendar</button>`:''}</div>`;
+  }
+  function leisureCard(action){return leisureItemCard(action);}
+  function leisureSeriesGroup(series){
+    const seasons=leisureSeasonsOf(series),done=seasons.filter(season=>season.completed).length,typeIcon=leisureTypeRecord(series.leisureType)?.icon||'📺';
+    return `<div class="leisure-series-group"><div class="leisure-series-head"><span class="project-icon">${escapeHTML(series.icon||typeIcon)}</span><div><strong>${escapeHTML(series.title)}</strong>${leisureTypeChip(series)?`<span class="leisure-series-meta">${leisureTypeChip(series)}<small>${done} de ${seasons.length} temporadas</small></span>`:''}</div><button type="button" class="small-edit" data-edit-leisure="${escapeHTML(series.id)}">Editar</button></div><div class="leisure-season-list">${seasons.map(season=>leisureCard(season)).join('')}</div><button type="button" class="secondary-button study-add-topic" data-add-leisure-season="${escapeHTML(series.id)}">＋ Temporada</button></div>`;
+  }
+  function leisureCategoryCard(category){
+    const items=leisureActions().filter(item=>item.parentId===category.id&&!item.seasonOf);
+    const count=items.reduce((total,item)=>total+1+leisureSeasonsOf(item).length,0);
+    const body=items.map(item=>leisureHasSeasons(item)?leisureSeriesGroup(item):leisureCard(item)).join('')||'<p class="planner-empty">Nenhum item cadastrado.</p>';
+    return `<article class="study-subject-card leisure-category-card"><div class="study-subject-head"><span class="project-icon">${escapeHTML(category.icon||'♡')}</span><div><strong>${escapeHTML(category.title)}</strong><small>${count} ${count===1?'item':'itens'}</small></div><button type="button" class="small-edit" data-edit-leisure="${escapeHTML(category.id)}">Editar</button></div><div class="study-topic-list">${body}</div><div class="leisure-category-actions"><button type="button" class="secondary-button study-add-topic" data-add-leisure-item="${escapeHTML(category.id)}">＋ Novo item</button><button type="button" class="secondary-button study-add-topic" data-add-leisure-backlog-item="${escapeHTML(category.id)}">＋ Backlog</button></div></article>`;
+  }
+  function leisureBacklogItems(){return leisureActions().filter(item=>item.backlog&&item.parentId&&!leisureIsContainer(item));}
+  function leisureBacklogCategoryCard(category,items){
+    if(!items.length)return '';
+    return `<article class="study-subject-card leisure-backlog-group"><div class="study-subject-head"><span class="project-icon">${escapeHTML(category.icon||'♡')}</span><div><strong>${escapeHTML(category.title)}</strong><small>${items.length} ${items.length===1?'item no backlog':'itens no backlog'}</small></div></div><div class="study-topic-list">${items.map(item=>leisureItemCard(item,{backlog:true})).join('')}</div><button type="button" class="secondary-button study-add-topic" data-add-leisure-backlog-item="${escapeHTML(category.id)}">＋ Item no backlog</button></article>`;
+  }
+  function renderLeisureBacklog(){
+    const items=leisureBacklogItems(),categories=leisureActions().filter(item=>!item.parentId).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    const groups=categories.map(category=>leisureBacklogCategoryCard(category,items.filter(item=>item.parentId===category.id))).filter(Boolean).join('');
+    return `<div class="leisure-backlog-intro"><div><div class="eyebrow">FORA DO CALENDÁRIO</div><h3>Seu backlog</h3><p>Filmes, livros, jogos e temporadas que você quer ver, ler ou jogar um dia. Escolha “Agendar” para levar um item ao mês de ${escapeHTML(fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'}))}.</p></div><div class="leisure-backlog-tools"><span class="leisure-backlog-count">${items.length} ${items.length===1?'item':'itens'}</span><label class="leisure-backlog-month"><span>Mês para agendar</span><input type="month" id="leisure-backlog-month" value="${escapeHTML(selectedLeisureMonth)}" aria-label="Mês para agendar itens do backlog"></label></div></div>${groups||`<div class="empty-state"><h3>Seu backlog está vazio</h3><p>Use a aba Lista para criar categorias e adicionar itens ao backlog.</p></div>`}`;
+  }
+  function renderLeisure(){
+    const items=leisureActions(),categories=items.filter(item=>!item.parentId);
+    $$('.leisure-tab').forEach(button=>{const active=button.dataset.leisureView===leisureView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
+    const isList=leisureView==='list',isBacklog=leisureView==='backlog';
+    $('.leisure-month-navigator').classList.toggle('hidden',isList||isBacklog||leisureView==='week');$('.leisure-week-navigator').classList.toggle('hidden',leisureView!=='week');$('#leisure-month').value=selectedLeisureMonth;$('#leisure-week-date').value=selectedLeisureWeekDate;$('#leisure-current-month').classList.toggle('hidden',selectedLeisureMonth===isoToday().slice(0,7));$('#leisure-week-today').classList.toggle('hidden',weekDates(selectedLeisureWeekDate).includes(isoToday()));
+    if(isBacklog){$('#leisure-content').innerHTML=renderLeisureBacklog();return;}
+    if(!isList){renderCatalogSchedule(items.filter(leisureInCalendar),'#leisure-content','Lazer','data-edit-leisure',{unscheduledColumn:true});return;}
+    $('#leisure-content').innerHTML=categories.map(leisureCategoryCard).join('')||'<div class="empty-state"><h3>Seu lazer começa aqui</h3><p>Crie uma categoria e adicione filmes, séries, livros ou projetos criativos.</p></div>';
+  }
+  function scheduleLeisureItem(id){
+    const action=state.actions.find(entry=>entry.id===id&&!entry.deleted&&entry.leisure);
+    if(!action)return;
+    action.backlog=false;action.schedule='month';action.scheduledMonth=selectedLeisureMonth;action.scheduledDate='';action.week=null;action.updatedAt=stamp();
+    saveLocal();renderLeisure();renderPlanner();
+    toast(`“${leisureDisplayTitle(action)}” agendado para ${fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'})}.`);
+  }
+
   function renderActions(){
     const originalActions=state.actions;
     state.actions=originalActions.filter(action=>!action.study&&!action.leisure);
@@ -1932,13 +2053,15 @@
   }
   function renderSettings(){
     $$('.settings-tab').forEach(button=>{const active=button.dataset.settingsView===selectedSettingsView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
-    const areasView=selectedSettingsView==='areas',menuView=selectedSettingsView==='menu',viewsView=!areasView&&!menuView;
+    const areasView=selectedSettingsView==='areas',menuView=selectedSettingsView==='menu',leisureTypesView=selectedSettingsView==='leisure',viewsView=!areasView&&!menuView&&!leisureTypesView;
     $('#settings-views-panel').classList.toggle('hidden',!viewsView);
     $('#settings-areas-panel').classList.toggle('hidden',!areasView);
+    $('#settings-leisure-panel').classList.toggle('hidden',!leisureTypesView);
     $('#settings-menu-panel').classList.toggle('hidden',!menuView);
-    $('#settings-subtitle').textContent=menuView?'Personalize o ícone de cada seção do menu. Novas seções aparecem aqui automaticamente.':areasView?'Organize as áreas usadas em ações, estudos, lazer e tarefas. Use as setas para definir a ordem.':'Escolha onde cada grupo e tipo de âncora aparece nas diferentes visões.';
+    $('#settings-subtitle').textContent=menuView?'Personalize o ícone de cada seção do menu. Novas seções aparecem aqui automaticamente.':areasView?'Organize as áreas usadas em ações, estudos, lazer e tarefas. Use as setas para definir a ordem.':leisureTypesView?'Crie e organize os tipos de lazer. Tipos com temporadas permitem agendar cada temporada separadamente.':'Escolha onde cada grupo e tipo de âncora aparece nas diferentes visões.';
     renderActionAreas();
     if(menuView)renderMenuIconSettings();
+    if(leisureTypesView)renderLeisureTypeSettings();
     applyMenuIcons();
   }
   function moveActionArea(id,direction){
@@ -1949,37 +2072,86 @@
     areas.forEach((area,order)=>{if(area.order!==order){area.order=order;area.updatedAt=now;}});
     saveLocal();render();toast('Ordem das áreas atualizada.');
   }
-  function openActionDialog(id=null,parentId='',studyMode=false,leisureMode=false){
+  function leisureTypeUsageCount(id){return state.actions.filter(action=>!action.deleted&&action.leisure&&action.leisureType===id).length;}
+  function renderLeisureTypeSettings(){
+    const list=$('#leisure-type-list');if(!list)return;
+    const types=orderedLeisureTypes();
+    list.innerHTML=types.length?types.map((type,index)=>{
+      const count=leisureTypeUsageCount(type.id),color=type.color||'#f4e1e9';
+      return `<article class="area-card leisure-type-row"><span class="leisure-type-mark" style="background:${escapeHTML(color)};color:${escapeHTML(plannerHeadingInk(color))}">${escapeHTML(type.icon||'✦')}</span><strong>${escapeHTML(type.name)}</strong><small class="area-view-tag">${count} ${count===1?'item':'itens'}${type.usesSeasons?' · temporadas':''}</small><div class="area-card-actions"><button type="button" data-move-leisure-type="up" data-leisure-type-id="${escapeHTML(type.id)}" aria-label="Mover ${escapeHTML(type.name)} para cima" ${index===0?'disabled':''}>↑</button><button type="button" data-move-leisure-type="down" data-leisure-type-id="${escapeHTML(type.id)}" aria-label="Mover ${escapeHTML(type.name)} para baixo" ${index===types.length-1?'disabled':''}>↓</button><button type="button" class="small-edit" data-edit-leisure-type="${escapeHTML(type.id)}">Editar</button></div></article>`;
+    }).join(''):'<p class="planner-empty">Nenhum tipo cadastrado. Crie o primeiro para classificar seus itens.</p>';
+  }
+  function openLeisureTypeDialog(id=null){
+    state.leisureTypes=state.leisureTypes||[];
+    const type=state.leisureTypes.find(entry=>entry.id===id&&!entry.deleted);
+    $('#leisure-type-form').reset();$('#leisure-type-id').value=type?.id||'';
+    $('#leisure-type-dialog-title').textContent=type?'Editar tipo':'Novo tipo';
+    $('#leisure-type-name').value=type?.name||'';$('#leisure-type-icon').value=type?.icon||'';$('#leisure-type-color').value=type?.color||'#f4e1e9';$('#leisure-type-seasons').checked=type?.usesSeasons===true;
+    $('#delete-leisure-type').classList.toggle('hidden',!type);refreshColorPalettes();$('#leisure-type-dialog').showModal();
+  }
+  function saveLeisureType(event){
+    event.preventDefault();state.leisureTypes=state.leisureTypes||[];const name=$('#leisure-type-name').value.trim();if(!name){toast('Dê um nome ao tipo de lazer.');return;}
+    const id=$('#leisure-type-id').value||uid(),existing=state.leisureTypes.find(type=>type.id===id),order=existing&&Number.isFinite(Number(existing.order))?existing.order:state.leisureTypes.reduce((max,type)=>Math.max(max,Number(type.order)||0),-1)+1,next={id,name,icon:$('#leisure-type-icon').value.trim(),color:$('#leisure-type-color').value,usesSeasons:$('#leisure-type-seasons').checked,order,updatedAt:stamp(),deleted:false};
+    if(existing?.usesSeasons&&!next.usesSeasons&&state.actions.some(action=>!action.deleted&&action.leisure&&action.leisureType===id&&action.seasonOf)){toast('Este tipo tem temporadas em uso. Exclua essas temporadas antes de desativar o uso de temporadas.');return;}
+    const index=state.leisureTypes.findIndex(type=>type.id===id);
+    if(index<0)state.leisureTypes.push(next);else state.leisureTypes[index]=next;
+    saveLocal();$('#leisure-type-dialog').close();renderSettings();renderLeisure();toast('Tipo de lazer salvo.');
+  }
+  function deleteLeisureType(){
+    state.leisureTypes=state.leisureTypes||[];
+    const type=state.leisureTypes.find(entry=>entry.id===$('#leisure-type-id').value&&!entry.deleted);if(!type)return;
+    const count=leisureTypeUsageCount(type.id);
+    if(count){toast(`Este tipo está em ${count} ${count===1?'item':'itens'} de lazer. Troque o tipo desses itens antes de excluí-lo.`);return;}
+    if(!confirm(`Excluir o tipo “${type.name}”?`))return;
+    type.deleted=true;type.updatedAt=stamp();saveLocal();$('#leisure-type-dialog').close();renderSettings();renderLeisure();toast('Tipo de lazer excluído.');
+  }
+  function moveLeisureType(id,direction){
+    const types=orderedLeisureTypes(),index=types.findIndex(type=>type.id===id),target=direction==='up'?index-1:index+1;
+    if(index<0||target<0||target>=types.length)return;
+    [types[index],types[target]]=[types[target],types[index]];
+    const now=stamp();
+    types.forEach((type,order)=>{if(type.order!==order){type.order=order;type.updatedAt=now;}});
+    saveLocal();renderSettings();renderLeisure();toast('Ordem dos tipos de lazer atualizada.');
+  }
+  function openActionDialog(id=null,parentId='',studyMode=false,leisureMode=false,backlogMode=false){
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted),suggestedParent=!action&&parentId?state.actions.find(entry=>entry.id===parentId&&!entry.deleted):null;
-    $('#action-form').reset();$('#action-id').value=action?.id||'';
+    const editingSeason=Boolean(action?.seasonOf);
+    $('#action-form').reset();$('#action-id').value=action?.id||'';$('#action-form').dataset.editingSeason=editingSeason?'true':'false';
     $('#action-study').value=String(action?.study||studyMode||suggestedParent?.study||false);
-    $('#action-leisure').value=String(action?.leisure||leisureMode||suggestedParent?.leisure||false);$('#leisure-extra-fields').classList.toggle('hidden',$('#action-leisure').value!=='true');
-    $('#action-leisure-type').value=action?.leisureType||'';$('#action-season').value=action?.season||'';
-    $('#action-dialog-title').textContent=action?(action.study?(action.parentId?'Editar tópico':'Editar matéria'):action.leisure?(action.parentId?'Editar item':'Editar categoria'):'Editar ação'):(studyMode||suggestedParent?.study?(suggestedParent?'Novo tópico':'Nova matéria'):leisureMode||suggestedParent?.leisure?(suggestedParent?'Novo item':'Nova categoria'):suggestedParent?'Nova subação':'Nova ação');
+    $('#action-leisure').value=String(action?.leisure||leisureMode||suggestedParent?.leisure||false);
+    const typeSelect=$('#action-leisure-type'),types=orderedLeisureTypes();
+    typeSelect.innerHTML='<option value="">Sem tipo</option>'+types.map(type=>`<option value="${escapeHTML(type.id)}">${type.icon?`${escapeHTML(type.icon)} `:''}${escapeHTML(type.name)}</option>`).join('');
+    if(action?.leisureType&&leisureTypeRecord(action.leisureType)&&!types.some(type=>type.id===action.leisureType))typeSelect.insertAdjacentHTML('beforeend',`<option value="${escapeHTML(action.leisureType)}">${escapeHTML(leisureTypeName(action.leisureType))} (indisponível)</option>`);
+    typeSelect.value=action?.leisureType||(editingSeason?leisureSeriesOf(action)?.leisureType:'')||'';
+    $('#action-season').value=action?.season||'';
+    $('#action-series-seasons').value=action?leisureSeasonsOf(action).length:1;
+    $('#action-leisure-backlog').checked=action?action.backlog===true:Boolean(backlogMode);
+    const studyActive=$('#action-study').value==='true',leisureActive=$('#action-leisure').value==='true',isChild=Boolean(action?.parentId||suggestedParent?.id),isSeries=leisureActive&&!editingSeason&&isChild&&(leisureHasSeasons(action)||leisureTypeUsesSeasons(typeSelect.value));
+    $('#action-dialog-title').textContent=action?(action.study?(action.parentId?'Editar tópico':'Editar matéria'):action.leisure?(editingSeason?'Editar temporada':leisureHasSeasons(action)?'Editar série':action.parentId?'Editar item':'Editar categoria'):'Editar ação'):(studyMode||suggestedParent?.study?(suggestedParent?'Novo tópico':'Nova matéria'):leisureMode||suggestedParent?.leisure?(suggestedParent?'Novo item':'Nova categoria'):suggestedParent?'Nova subação':'Nova ação');
     $('#action-title').value=action?.title||'';$('#action-description').value=action?.description||'';
     $('#action-icon').value=action?.icon||'';$('#action-color').value=action?.color||suggestedParent?.color||'#bbdcd8';
-    const studyActive=$('#action-study').value==='true',leisureActive=$('#action-leisure').value==='true',hideArea=studyActive||leisureActive,isChild=Boolean(action?.parentId||suggestedParent?.id),actionAreas=orderedActionAreas();
-    const contextNoun=studyActive?(isChild?'tópico':'matéria'):leisureActive?(isChild?'item':'categoria'):(isChild?'subação':'ação');
+    const hideArea=studyActive||leisureActive,actionAreas=orderedActionAreas();
+    const contextNoun=studyActive?(isChild?'tópico':'matéria'):leisureActive?(editingSeason?'temporada':leisureHasSeasons(action)?'série':isChild?'item':'categoria'):(isChild?'subação':'ação');
     const childSingular=studyActive?'tópico':leisureActive?'item':'subação',childPlural=studyActive?'tópicos':leisureActive?'itens':'subações';
-    $('#action-title-label').textContent=studyActive?(isChild?'Nome do tópico':'Nome da matéria'):leisureActive?(isChild?'Nome do item':'Nome da categoria'):(isChild?'Nome da subação':'Nome da ação');
-    $('#action-title').placeholder=studyActive?(isChild?'Ex.: Frações':'Ex.: Matemática'):leisureActive?(isChild?'Ex.: Interestelar':'Ex.: Filmes'):(isChild?'Ex.: Reservar hotel':'Ex.: Preparar viagem');
-    $('#action-completed-label').textContent=`${contextNoun.charAt(0).toUpperCase()+contextNoun.slice(1)} concluíd${['tópico','item'].includes(contextNoun)?'o':'a'}`;
-    $('#delete-action').textContent=`Excluir ${contextNoun}`;$('#action-save').textContent=`Salvar ${contextNoun}`;
+    $('#action-title-label').textContent=studyActive?(isChild?'Nome do tópico':'Nome da matéria'):leisureActive?(editingSeason?'Nome da temporada':leisureHasSeasons(action)?'Nome da série':isChild?'Nome do item':'Nome da categoria'):(isChild?'Nome da subação':'Nome da ação');
+    $('#action-title').placeholder=studyActive?(isChild?'Ex.: Frações':'Ex.: Matemática'):leisureActive?(editingSeason?'Ex.: Temporada 1':leisureHasSeasons(action)?'Ex.: Dark':isChild?'Ex.: Interestelar':'Ex.: Filmes'):(isChild?'Ex.: Reservar hotel':'Ex.: Preparar viagem');
+    $('#action-completed-label').textContent=`${contextNoun.charAt(0).toUpperCase()+contextNoun.slice(1)} concluíd${['tópico','item','série'].includes(contextNoun)&&contextNoun!=='série'?'o':'a'}`;
+    $('#delete-action').textContent=editingSeason?'Excluir temporada':`Excluir ${contextNoun}`;$('#action-save').textContent=editingSeason?'Salvar temporada':`Salvar ${contextNoun}`;
     $('#action-area-field').classList.toggle('hidden',hideArea);
     $('#action-area').innerHTML='<option value="">Sem área</option>'+actionAreas.map(area=>`<option value="${escapeHTML(area.id)}">${escapeHTML(area.name)}</option>`).join('');
     if(action?.areaId&&!actionAreas.some(area=>area.id===action.areaId))$('#action-area').insertAdjacentHTML('beforeend',`<option value="${escapeHTML(action.areaId)}">Área indisponível</option>`);
     $('#action-area').value=hideArea?'':(action?.areaId||suggestedParent?.areaId||'');
-    const children=action?actionChildren(action):[],parentFilter=studyActive?(entry=>entry.study===true):leisureActive?(entry=>entry.leisure===true):(entry=>!entry.study&&!entry.leisure),parentOptions=state.actions.filter(entry=>!entry.deleted&&!entry.parentId&&entry.id!==action?.id&&parentFilter(entry)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    const allChildren=action?actionChildren(action):[],children=leisureActive&&!editingSeason?allChildren.filter(item=>!item.seasonOf):allChildren,parentFilter=studyActive?(entry=>entry.study===true):leisureActive?(entry=>entry.leisure===true):(entry=>!entry.study&&!entry.leisure),parentOptions=state.actions.filter(entry=>!entry.deleted&&!entry.parentId&&entry.id!==action?.id&&parentFilter(entry)).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const currentParent=action?.parentId?state.actions.find(entry=>entry.id===action.parentId&&!entry.deleted):null;
     if(currentParent&&!parentOptions.some(entry=>entry.id===currentParent.id))parentOptions.unshift(currentParent);
     const parentPlaceholder=studyActive?'Sem matéria':leisureActive?'Sem categoria':'Ação principal';
     $('#action-parent').innerHTML=`<option value="">${parentPlaceholder}</option>`+parentOptions.map(entry=>`<option value="${escapeHTML(entry.id)}">${escapeHTML(entry.title)}</option>`).join('');
-    $('#action-parent').value=action?.parentId||suggestedParent?.id||'';$('#action-parent').disabled=children.length>0;
-    $('#action-parent-field').classList.toggle('hidden',(studyActive||leisureActive)&&!isChild);
+    $('#action-parent').value=action?.parentId||suggestedParent?.id||'';$('#action-parent').disabled=children.length>0||editingSeason;
+    $('#action-parent-field').classList.toggle('hidden',editingSeason||((studyActive||leisureActive)&&!isChild));
     $('#action-parent-label').innerHTML=studyActive?'Matéria':leisureActive?'Categoria':'Ação mãe <span class="optional">(opcional)</span>';
     $('#action-parent-hint').textContent=studyActive?'O tópico mantém planejamento, vencimento e conclusão próprios.':leisureActive?'O item mantém planejamento, vencimento e conclusão próprios.':'A subação mantém planejamento, vencimento e conclusão próprios.';
     $('#action-schedule').value=action?.schedule||suggestedParent?.schedule||'month';
-    $('#action-scheduled-month').value=action?.scheduledMonth||suggestedParent?.scheduledMonth||suggestedParent?.scheduledDate?.slice(0,7)||selectedActionMonth;
+    $('#action-scheduled-month').value=action?.scheduledMonth||suggestedParent?.scheduledMonth||suggestedParent?.scheduledDate?.slice(0,7)||(leisureActive?selectedLeisureMonth:selectedActionMonth);
     $('#action-scheduled-date').value=action?.scheduledDate||suggestedParent?.scheduledDate||selectedDate;
     $('#action-time').value=action?.scheduledTime||suggestedParent?.scheduledTime||'';
     $('#action-duration').value=action?.durationMinutes??suggestedParent?.durationMinutes??'';
@@ -1989,15 +2161,44 @@
     $('#action-created-at').textContent=action?`${['tópico','item'].includes(contextNoun)?'Criado':'Criada'} em ${fmtDate((action.createdAt||action.updatedAt).slice(0,10),{day:'numeric',month:'long',year:'numeric'})}`:'';
     $('#action-created-at').classList.toggle('hidden',!action);
     $('#action-notes').value=action?.notes||'';
-    $('#action-notes').placeholder=studyActive?(isChild?'Anotações sobre este tópico':'Anotações sobre esta matéria'):leisureActive?(isChild?'Anotações sobre este item':'Anotações sobre esta categoria'):(isChild?'Anotações sobre esta subação':'Anotações sobre esta ação');
+    $('#action-notes').placeholder=studyActive?(isChild?'Anotações sobre este tópico':'Anotações sobre esta matéria'):leisureActive?(editingSeason?'Anotações sobre esta temporada':leisureHasSeasons(action)?'Anotações sobre esta série':isChild?'Anotações sobre este item':'Anotações sobre esta categoria'):(isChild?'Anotações sobre esta subação':'Anotações sobre esta ação');
     $('#delete-action').classList.toggle('hidden',!action);
-    $('#action-subactions-section').classList.toggle('hidden',!action||Boolean(action.parentId));
-    $('#action-subactions-eyebrow').textContent=studyActive?'TÓPICOS':leisureActive?'ITENS':'SUBAÇÕES';
-    $('#add-subaction').textContent=studyActive?'＋ Novo tópico':leisureActive?'＋ Novo item':'＋ Nova subação';
-    $('#action-subactions-count').textContent=children.length?`${children.length} ${children.length===1?childSingular:childPlural}`:(studyActive?'Nenhum tópico':leisureActive?'Nenhum item':'Nenhuma subação');
-    $('#action-subactions-list').innerHTML=children.length?children.map(child=>`<button type="button" class="action-dialog-child${child.completed?' is-complete':''}" data-edit-subaction="${escapeHTML(child.id)}"><span>${child.completed?'✓':'○'}</span><strong>${escapeHTML(child.title)}</strong><small>${escapeHTML(actionScheduleLabel(child)||'Sem período')}</small></button>`).join(''):`<p class="planner-empty">${studyActive?'Crie tópicos para organizar a matéria.':leisureActive?'Crie itens para organizar a categoria.':'Crie ações menores, cada uma com seu próprio planejamento.'}</p>`;
-    updateActionSchedule();refreshColorPalettes();if(!$('#action-dialog').open)$('#action-dialog').showModal();
+    const seriesSeasons=action&&leisureActive&&!editingSeason?leisureSeasonsOf(action):[],showSeasons=leisureActive&&!editingSeason&&isSeries,showSubactions=Boolean(action)&&!editingSeason&&(!action.parentId||showSeasons);
+    $('#action-subactions-section').classList.toggle('hidden',!showSubactions);
+    $('#action-subactions-eyebrow').textContent=studyActive?'TÓPICOS':showSeasons?'TEMPORADAS':leisureActive?'ITENS':'SUBAÇÕES';
+    $('#add-subaction').textContent=studyActive?'＋ Novo tópico':showSeasons?'＋ Adicionar temporada':leisureActive?'＋ Novo item':'＋ Nova subação';
+    $('#add-subaction').dataset.addSeason=showSeasons?action.id:'';
+    if(showSeasons){
+      $('#action-subactions-count').textContent=seriesSeasons.length?`${seriesSeasons.length} ${seriesSeasons.length===1?'temporada':'temporadas'}`:'Nenhuma temporada';
+      $('#action-subactions-list').innerHTML=seriesSeasons.length?seriesSeasons.map(season=>`<button type="button" class="action-dialog-child${season.completed?' is-complete':''}" data-edit-subaction="${escapeHTML(season.id)}"><span>${season.completed?'✓':'○'}</span><strong>Temporada ${escapeHTML(season.season)}</strong><small>${escapeHTML(leisureScheduleSummary(season))}</small></button>`).join(''):'<p class="planner-empty">Adicione temporadas para agendar cada uma separadamente.</p>';
+    }else{
+      $('#action-subactions-count').textContent=children.length?`${children.length} ${children.length===1?childSingular:childPlural}`:(studyActive?'Nenhum tópico':leisureActive?'Nenhum item':'Nenhuma subação');
+      $('#action-subactions-list').innerHTML=children.length?children.map(child=>`<button type="button" class="action-dialog-child${child.completed?' is-complete':''}" data-edit-subaction="${escapeHTML(child.id)}"><span>${child.completed?'✓':'○'}</span><strong>${escapeHTML(child.title)}</strong><small>${escapeHTML(actionScheduleLabel(child)||'Sem período')}</small></button>`).join(''):`<p class="planner-empty">${studyActive?'Crie tópicos para organizar a matéria.':leisureActive?'Crie itens para organizar a categoria.':'Crie ações menores, cada uma com seu próprio planejamento.'}</p>`;
+    }
+    updateActionSchedule();updateLeisureFields();refreshColorPalettes();if(!$('#action-dialog').open)$('#action-dialog').showModal();
   }
+  function updateLeisureFields(){
+    const form=$('#action-form'),leisureActive=$('#action-leisure').value==='true',isSeason=form.dataset.editingSeason==='true',typeId=$('#action-leisure-type').value,usesSeasons=leisureTypeUsesSeasons(typeId);
+    $('#action-schedule-fields').classList.remove('hidden');
+    $('#action-backlog-hint').classList.add('hidden');
+    $('#action-series-container-hint').classList.add('hidden');
+    $('#leisure-extra-fields').classList.toggle('hidden',!leisureActive);
+    if(!leisureActive){updateActionSchedule();return;}
+    const itemLike=Boolean($('#action-parent').value)||isSeason,current=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted),existingSeasons=current?leisureSeasonsOf(current):[];
+    $('#action-leisure-type-field').classList.toggle('hidden',isSeason||!itemLike);
+    const seriesContainer=leisureActive&&!isSeason&&itemLike&&(existingSeasons.length>0||(usesSeasons&&(Number($('#action-series-seasons').value)||0)>0));
+    $('#action-series-seasons-field').classList.toggle('hidden',isSeason||!usesSeasons||!itemLike);
+    $('#action-season-field').classList.toggle('hidden',!isSeason);
+    $('#action-backlog-field').classList.toggle('hidden',!itemLike||seriesContainer);
+    $('#action-series-seasons-hint').classList.toggle('hidden',isSeason||!usesSeasons||!itemLike);
+    $('#action-series-container-hint').classList.toggle('hidden',!seriesContainer);
+    $('#action-series-seasons-hint').textContent=existingSeasons.length?`${existingSeasons.length} ${existingSeasons.length===1?'temporada criada':'temporadas criadas'}. Aumente o número para criar as que faltam; diminuir não exclui nenhuma.`:'Ao salvar, as temporadas serão criadas no backlog para agendar separadamente.';
+    const backlog=!seriesContainer&&$('#action-leisure-backlog').checked;
+    $('#action-schedule-fields').classList.toggle('hidden',backlog||seriesContainer);
+    $('#action-backlog-hint').classList.toggle('hidden',!backlog||seriesContainer);
+    if(!backlog&&!seriesContainer)updateActionSchedule();
+  }
+
   function updateActionSchedule(){
     const date=$('#action-schedule').value==='date';
     $('#action-month-field').classList.toggle('hidden',date);
@@ -2007,32 +2208,71 @@
   function saveAction(event){
     event.preventDefault();
     const title=$('#action-title').value.trim(),schedule=$('#action-schedule').value,scheduledMonth=$('#action-scheduled-month').value,scheduledDate=$('#action-scheduled-date').value;
-    const studyFlag=$('#action-study').value==='true',leisureFlag=$('#action-leisure').value==='true',hasParent=Boolean($('#action-parent').value),contextNoun=studyFlag?(hasParent?'tópico':'matéria'):leisureFlag?(hasParent?'item':'categoria'):(hasParent?'subação':'ação'),contextArticle=['tópico','item'].includes(contextNoun)?'ao':'à';
+    const studyFlag=$('#action-study').value==='true',leisureFlag=$('#action-leisure').value==='true',hasParent=Boolean($('#action-parent').value),editingSeason=$('#action-form').dataset.editingSeason==='true',backlogFlag=leisureFlag&&$('#action-leisure-backlog').checked&&hasParent;
+    const contextNoun=studyFlag?(hasParent?'tópico':'matéria'):leisureFlag?(editingSeason?'temporada':hasParent?'item':'categoria'):(hasParent?'subação':'ação'),contextArticle=['tópico','item'].includes(contextNoun)?'ao':'à';
     if(!title){toast(`Dê um nome ${contextArticle} ${contextNoun}.`);return;}
-    if(schedule==='date'?!scheduledDate:!scheduledMonth){toast('Escolha a data ou o mês.');return;}
-    const id=$('#action-id').value||uid(),existing=state.actions.find(action=>action.id===id),now=stamp(),completed=$('#action-completed').checked,parentId=$('#action-parent').disabled?existing?.parentId||'':$('#action-parent').value;
+    const existingId=$('#action-id').value,existing=state.actions.find(action=>action.id===existingId),leisureTypeValue=$('#action-leisure-type').value,existingSeasonCount=existing?leisureSeasonsOf(existing).length:0,seriesContainerFlag=leisureFlag&&!editingSeason&&hasParent&&(existingSeasonCount>0||(leisureTypeUsesSeasons(leisureTypeValue)&&(Number($('#action-series-seasons').value)||0)>0));
+    if(!backlogFlag&&!seriesContainerFlag&&(schedule==='date'?!scheduledDate:!scheduledMonth)){toast('Escolha a data ou o mês, ou deixe o item no backlog.');return;}
+    const id=existingId||uid(),now=stamp(),completed=$('#action-completed').checked,parentId=$('#action-parent').disabled?existing?.parentId||'':$('#action-parent').value;
     const parent=parentId?state.actions.find(action=>action.id===parentId&&!action.deleted&&!action.parentId):null;if(parentId&&!parent){toast('Escolha um vínculo válido.');return;}
     const study=$('#action-study').value==='true'||existing?.study===true;
     const leisure=$('#action-leisure').value==='true'||existing?.leisure===true;
-    const next={id,parentId:parent?.id||'',study,leisure,leisureType:$('#action-leisure-type').value,season:Number($('#action-season').value)||null,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:(study||leisure)?'':$('#action-area').value,scheduledTime:$('#action-time').value,durationMinutes:$('#action-duration').value?Number($('#action-duration').value):null,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
+    const leisureType=leisure?leisureTypeValue:'',existingSeasons=existing?leisureSeasonsOf(existing):[];
+    if(existingSeasons.length&&!leisureTypeUsesSeasons(leisureType)){toast('Este item possui temporadas. Exclua as temporadas antes de trocar para um tipo sem temporadas.');return;}
+    const season=editingSeason?Number($('#action-season').value)||null:null;
+    if(editingSeason&&(!Number.isInteger(season)||season<1)){toast('Informe um número de temporada válido.');return;}
+    if(editingSeason){const series=leisureSeriesOf(existing),duplicate=series?leisureSeasonsOf(series).find(item=>item.id!==existing.id&&Number(item.season)===season):null;if(duplicate){toast(`A Temporada ${season} já existe nesta série.`);return;}}
+    const previousTitle=existing?.title||'',previousIcon=existing?.icon||'',previousColor=existing?.color||'';
+    const next={id,parentId:parent?.id||'',study,leisure,leisureType,backlog:leisure?backlogFlag:false,seasonOf:existing?.seasonOf||'',season,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:(study||leisure)?'':$('#action-area').value,scheduledTime:$('#action-time').value,durationMinutes:$('#action-duration').value?Number($('#action-duration').value):null,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
     const index=state.actions.findIndex(action=>action.id===id);
     if(index<0)state.actions.push(next);else state.actions[index]=next;
-    selectedActionMonth=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
-    saveLocal();$('#action-dialog').close();renderActions();renderStudies();renderLeisure();renderPlanner();toast(next.study?(next.parentId?'Tópico salvo.':'Matéria salva.'):next.leisure?(next.parentId?'Item salvo.':'Categoria salva.'):(next.parentId?'Subação salva.':'Ação salva.'));
+    const saved=state.actions.find(action=>action.id===id)||next;
+    if(saved.leisure&&!saved.seasonOf){
+      for(const seasonItem of leisureSeasonsOf(saved)){
+        if(!previousTitle||seasonItem.title===previousTitle)seasonItem.title=saved.title;
+        if(!previousIcon||seasonItem.icon===previousIcon)seasonItem.icon=saved.icon;
+        if(!previousColor||seasonItem.color===previousColor)seasonItem.color=saved.color;
+        seasonItem.parentId=saved.parentId;seasonItem.leisureType=saved.leisureType;seasonItem.updatedAt=now;
+      }
+      if(leisureTypeUsesSeasons(saved.leisureType)&&saved.parentId){
+        const requested=Math.max(0,Math.min(30,Number($('#action-series-seasons').value)||0));
+        ensureLeisureSeasons(saved,requested,now);
+      }
+      if(leisureHasSeasons(saved)&&(!existing||existing.completed!==saved.completed)){
+        for(const seasonItem of leisureSeasonsOf(saved)){
+          if(seasonItem.completed!==saved.completed){seasonItem.completed=saved.completed;seasonItem.completedAt=saved.completed?now:'';seasonItem.completionChangedAt=now;seasonItem.updatedAt=now;}
+        }
+      }
+      if(leisureHasSeasons(saved))syncLeisureSeriesCompletion(saved.id);
+    }
+    if(saved.seasonOf)syncLeisureSeriesCompletion(saved.seasonOf);
+    const monthKey=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
+    if(/^\d{4}-\d{2}$/.test(monthKey)){selectedActionMonth=monthKey;if(leisure)selectedLeisureMonth=monthKey;}
+    saveLocal();$('#action-dialog').close();renderActions();renderStudies();renderLeisure();renderPlanner();
+    toast(saved.study?(saved.parentId?'Tópico salvo.':'Matéria salva.'):saved.leisure?(saved.seasonOf?'Temporada salva.':leisureHasSeasons(saved)?'Série salva.':saved.backlog?'Item salvo no backlog.':saved.parentId?'Item salvo.':'Categoria salva.'):(saved.parentId?'Subação salva.':'Ação salva.'));
   }
   function deleteAction(){
     const action=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted);if(!action)return;
-    const study=action.study===true,leisure=action.leisure===true,child=Boolean(action.parentId),noun=study?(child?'tópico':'matéria'):leisure?(child?'item':'categoria'):(child?'subação':'ação'),childNoun=study?'tópico':leisure?'item':'subação',childPlural=study?'tópicos':leisure?'itens':'subações';
-    const children=actionChildren(action),kept=children.length?` ${children.length} ${children.length===1?childNoun:childPlural} ${children.length===1?'permanecerá':'permanecerão'} na lista.`:'';
-    if(!confirm(`Excluir ${noun} “${action.title}”?${kept}`))return;
-    action.deleted=true;action.updatedAt=stamp();for(const child of children){child.parentId='';child.updatedAt=action.updatedAt;}saveLocal();$('#action-dialog').close();renderActions();renderStudies();renderPlanner();const label=noun.charAt(0).toUpperCase()+noun.slice(1),suffix=['tópico','item'].includes(noun)?'o':'a';toast(children.length?`${label} excluíd${suffix}; ${children.length} ${children.length===1?childNoun:childPlural} ${children.length===1?'permaneceu':'permaneceram'} na lista.`:`${label} excluíd${suffix}.`);
+    const study=action.study===true,leisure=action.leisure===true,season=Boolean(action.seasonOf),child=Boolean(action.parentId),seasons=leisure&&!season?leisureSeasonsOf(action):[],noun=study?(child?'tópico':'matéria'):leisure?(season?'temporada':leisureHasSeasons(action)?'série':child?'item':'categoria'):(child?'subação':'ação'),childNoun=study?'tópico':season?'temporada':leisure?'item':'subação',childPlural=study?'tópicos':season?'temporadas':leisure?'itens':'subações';
+    const children=actionChildren(action),seasonNote=seasons.length?` As ${seasons.length} ${seasons.length===1?'temporada também será excluída':'temporadas também serão excluídas'}.`:'',kept=children.length?` ${children.length} ${children.length===1?childNoun:childPlural} ${children.length===1?'permanecerá':'permanecerão'} na lista.`:'';
+    if(!confirm(`Excluir ${noun} “${action.title}”?${seasonNote}${kept}`))return;
+    const now=stamp();action.deleted=true;action.updatedAt=now;
+    for(const seasonItem of seasons){seasonItem.deleted=true;seasonItem.updatedAt=now;}
+    for(const childItem of children){childItem.parentId='';childItem.updatedAt=now;}
+    const seriesId=action.seasonOf;
+    if(seriesId){const series=state.actions.find(entry=>entry.id===seriesId&&!entry.deleted);if(series&&!leisureSeasonsOf(series).length){series.completed=false;series.completedAt='';series.backlog=true;series.updatedAt=now;}syncLeisureSeriesCompletion(seriesId);}
+    saveLocal();$('#action-dialog').close();renderActions();renderStudies();renderLeisure();renderPlanner();
+    const label=noun.charAt(0).toUpperCase()+noun.slice(1),suffix=['tópico','item'].includes(noun)?'o':'a';
+    toast(seasons.length?`${label} excluíd${suffix}; ${seasons.length} ${seasons.length===1?'temporada também foi excluída':'temporadas também foram excluídas'}.`:children.length?`${label} excluíd${suffix}; ${children.length} ${children.length===1?childNoun:childPlural} ${children.length===1?'permaneceu':'permaneceram'} na lista.`:`${label} excluíd${suffix}.`);
   }
   function toggleAction(id){
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);if(!action)return;
     const scroll=$('.action-month-board')?.scrollLeft;
     action.completed=!action.completed;action.completionChangedAt=stamp();action.completedAt=action.completed?isoToday():'';action.updatedAt=action.completionChangedAt;
-    saveLocal();renderActions();renderStudies();if(scroll!==undefined&&$('.action-month-board'))$('.action-month-board').scrollLeft=scroll;renderPlanner();
+    if(action.seasonOf)syncLeisureSeriesCompletion(action.seasonOf);
+    saveLocal();renderActions();renderStudies();renderLeisure();if(scroll!==undefined&&$('.action-month-board'))$('.action-month-board').scrollLeft=scroll;renderPlanner();
   }
+
   function moveActionToMonth(id,monthKey){
     if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(monthKey))return;
     const action=state.actions.find(entry=>entry.id===id&&!entry.deleted);
@@ -2790,7 +3030,7 @@
     anchor.monthWeeks=weeks.filter(week=>Number(week)!==from);if(!anchor.monthWeeks.includes(to))anchor.monthWeeks.push(to);anchor.monthWeeks.sort((a,b)=>a-b);anchor.updatedAt=stamp();saveLocal();renderAnchors();toast(`Âncora movida para ${monthWeekLabel(to).toLowerCase()}.`);
   }
   function saveDailyViewGroups(event){event.preventDefault();const now=stamp();for(const input of $$('#daily-view-groups [data-daily-view-group]')){const key=input.dataset.dailyViewGroup;state.dailyViews[key]={view:input.value==='primary'?'primary':'secondary',weekly:Boolean($(`[data-daily-weekly-group="${key}"]`)?.checked),timeline:Boolean($(`[data-daily-timeline-group="${key}"]`)?.checked)};}for(const input of $$('#anchor-view-groups [data-anchor-daily-view]')){const area=state.areas.find(item=>item.id===input.dataset.anchorDailyView&&!item.deleted);if(!area)continue;area.dailyView=input.value==='secondary'?'secondary':'primary';area.weeklyView=$(`[data-anchor-weekly-view="${area.id}"]`).checked;area.timelineView=$(`[data-anchor-timeline-view="${area.id}"]`).checked;area.updatedAt=now;}state.dailyViewsUpdatedAt=now;saveLocal();renderPlanner();renderTimeline();renderWeekly();renderMonthly();renderAnchors();renderTaskWeekly();renderActions();toast('Configurações salvas.');}
-  let projectView='progress',selectedProjectHistoryId='',projectHistoryEditMode=false,selectedProjectCalendarMonth=isoToday().slice(0,7);
+  let projectView='progress',selectedProjectHistoryId='',projectHistoryEditMode=false,selectedProjectCalendarMonth=isoToday().slice(0,7),activeProjectId='',expandedProjectTasks=new Set();
   const openProjects=new Set(['project-2004']);
   const PROJECT_EXCLUDED_STATUSES=new Set(['Remodelada','Descartada']);
   const projectMonthKey=date=>String(date||isoToday()).slice(0,7).replace('-','');
@@ -2828,7 +3068,48 @@
     const progress=taskProgress(task),done=task.status==='Concluída'&&!task.recurring,excluded=PROJECT_EXCLUDED_STATUSES.has(task.status);return `<div class="project-task-wrap"><div class="project-task-row${done?' is-done':''}${excluded?' is-excluded':''}"><button type="button" class="project-task-check" data-toggle-project-task="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}" aria-label="${task.recurring?'Registrar ocorrência':done?'Reabrir':'Concluir'} ${escapeHTML(task.title)}">${task.recurring?'↻':done?'✓':''}</button><span class="project-task-icon" style="color:${escapeHTML(task.color||project.color||'#6657e8')}">${escapeHTML(task.icon||'▰')}</span><button type="button" class="project-task-name" data-edit-project-task="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}"><small>${escapeHTML(task.code||'')}</small>${escapeHTML(task.title)}</button><span class="project-task-type">${escapeHTML(task.type||'Tarefa')}</span>${task.recurring?`<span class="project-task-frequency">${escapeHTML(projectFrequencyLabel(task.frequency))}</span>`:''}<span class="project-task-status is-${projectStatusClass(task.status)}">${escapeHTML(task.status||'Em andamento')}</span><div class="project-task-progress-cell"><div class="project-list-progress"><span style="width:${progress??0}%"></span></div><input type="number" min="0" max="100" step="1" value="${progress===null?'':Math.round(progress)}" data-project-progress="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}" aria-label="Progresso de ${escapeHTML(task.title)}" ${task.criteria?.length?'disabled title="Calculado pelos critérios"':''}><em>${progress===null?'—':'%'}</em></div><div class="project-row-actions"><button type="button" data-move-project-task="up" data-project-id="${escapeHTML(project.id)}" data-project-task-id="${escapeHTML(task.id)}" ${index===0?'disabled':''} aria-label="Mover para cima">↑</button><button type="button" data-move-project-task="down" data-project-id="${escapeHTML(project.id)}" data-project-task-id="${escapeHTML(task.id)}" ${index===total-1?'disabled':''} aria-label="Mover para baixo">↓</button><button type="button" class="small-edit" data-edit-project-task="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}">Editar</button></div></div>${criterionDetails(task)}</div>`;
   }
   function projectCard(project){
-    const progress=projectProgress(project),status=projectStatus(project),tasks=project.tasks.filter(task=>!task.deleted).sort((a,b)=>(a.order??0)-(b.order??0)),open=openProjects.has(project.id);return `<article class="project-card${open?' is-open':''}" style="--project-color:${escapeHTML(project.color||'#6657e8')}"><div class="project-card-head"><button type="button" class="project-expand" data-toggle-project="${escapeHTML(project.id)}" aria-expanded="${open}" aria-label="${open?'Recolher':'Expandir'} ${escapeHTML(project.title)}">${open?'▾':'▸'}</button><span class="project-icon">${escapeHTML(project.icon||'◈')}</span><div class="project-card-title"><strong><span>P${escapeHTML(project.code||'')}</span> ${escapeHTML(project.title)}</strong><small>${escapeHTML(projectAreaName(project)||'Sem área')} · ${escapeHTML(status)} · ${tasks.length} ${tasks.length===1?'atividade':'atividades'}</small></div><button type="button" class="small-edit" data-edit-project="${escapeHTML(project.id)}">Editar</button></div><div class="project-progress-row"><div class="project-progress"><span style="width:${progress??0}%"></span></div><b>${progressLabel(progress)}</b></div>${project.description?`<p class="project-description">${escapeHTML(project.description)}</p>`:''}<div class="project-card-body${open?'':' hidden'}"><div class="project-task-list">${tasks.length?tasks.map((task,index)=>projectTaskRow(project,task,index,tasks.length)).join(''):'<p class="planner-empty">Nenhuma atividade cadastrada.</p>'}</div><button type="button" class="text-button project-add-task" data-add-project-task="${escapeHTML(project.id)}">＋ Adicionar atividade</button></div></article>`;
+    const progress=projectProgress(project),status=projectStatus(project),tasks=project.tasks.filter(task=>!task.deleted).sort((a,b)=>(a.order??0)-(b.order??0)),open=openProjects.has(project.id);return `<article class="project-card${open?' is-open':''}" style="--project-color:${escapeHTML(project.color||'#6657e8')}" data-project-id="${escapeHTML(project.id)}"><div class="project-card-head"><button type="button" class="project-expand" data-toggle-project="${escapeHTML(project.id)}" aria-expanded="${open}" aria-label="${open?'Recolher':'Expandir'} ${escapeHTML(project.title)}">${open?'▾':'▸'}</button><span class="project-icon">${escapeHTML(project.icon||'◈')}</span><button type="button" class="project-card-title" data-open-project="${escapeHTML(project.id)}" title="Abrir projeto"><strong><span>P${escapeHTML(project.code||'')}</span> ${escapeHTML(project.title)}</strong><small>${escapeHTML(projectAreaName(project)||'Sem área')} · ${escapeHTML(status)} · ${tasks.length} ${tasks.length===1?'atividade':'atividades'}</small></button><button type="button" class="small-edit" data-edit-project="${escapeHTML(project.id)}">Editar</button></div><div class="project-progress-row"><div class="project-progress"><span style="width:${progress??0}%"></span></div><b>${progressLabel(progress)}</b></div>${project.description?`<p class="project-description">${escapeHTML(project.description)}</p>`:''}<div class="project-card-body${open?'':' hidden'}"><div class="project-task-list">${tasks.length?tasks.map((task,index)=>projectTaskRow(project,task,index,tasks.length)).join(''):'<p class="planner-empty">Nenhuma atividade cadastrada.</p>'}</div><button type="button" class="text-button project-add-task" data-add-project-task="${escapeHTML(project.id)}">＋ Adicionar atividade</button></div></article>`;
+  }
+  function projectFocusOccurrences(task){
+    const occurrences=[...(task.occurrences||[])].filter(item=>item.date).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    const next=recurrenceNextDate(task);
+    if(next&&!occurrences.some(item=>item.date===next))occurrences.unshift({id:`next-${task.id}-${next}`,date:next,result:'scheduled',progress:null,virtual:true});
+    if(!occurrences.length)return '<div class="project-focus-occurrences"><span class="project-focus-occurrence-empty">Nenhuma recorrência registrada.</span></div>';
+    const labels={realized:'Realizada',partial:'Parcial','not-realized':'Não realizada',skipped:'Ignorada',scheduled:'Pendente'};
+    return `<div class="project-focus-occurrences">${occurrences.map(item=>{const result=item.result||'scheduled',value=projectValue(item.progress),progress=value===null?(result==='scheduled'?'—':'Sem medição'):`${Math.round(value)}%`,label=labels[result]||result;return `<div class="project-focus-occurrence"><time datetime="${escapeHTML(item.date)}">${escapeHTML(fmtDate(item.date,{day:'2-digit',month:'short',year:'numeric'}))}</time><span class="project-occurrence-result is-${escapeHTML(result)}">${escapeHTML(label)}</span><b>${escapeHTML(progress)}</b>${item.notes?`<small>${escapeHTML(item.notes)}</small>`:''}</div>`;}).join('')}</div>`;
+  }
+  function projectFocusTaskRow(project,task){
+    const progress=taskProgress(task),done=task.status==='Concluída'&&!task.recurring,excluded=PROJECT_EXCLUDED_STATUSES.has(task.status),status=task.status||'Em andamento',expanded=expandedProjectTasks.has(task.id);
+    const meta=[task.code,task.type||'Tarefa',task.recurring?projectFrequencyLabel(task.frequency):'',task.recurring?`próxima ${fmtDate(recurrenceNextDate(task),{day:'2-digit',month:'short'})}`:''].filter(Boolean).join(' · ');
+    return `<div class="project-focus-task-wrap"><div class="project-focus-task${done?' is-done':''}${excluded?' is-excluded':''}"><button type="button" class="project-task-check" data-focus-project-task-toggle="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}" aria-label="${task.recurring?'Registrar ocorrência':done?'Reabrir':'Concluir'} ${escapeHTML(task.title)}">${task.recurring?'↻':done?'✓':''}</button><div class="project-focus-task-copy"><button type="button" class="project-task-name" data-focus-project-task-edit="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}"><strong>${task.icon?`${escapeHTML(task.icon)} `:''}${escapeHTML(task.title)}</strong></button><div class="project-focus-task-meta"><small>${escapeHTML(meta)}</small><span class="project-task-status is-${projectStatusClass(status)}">${escapeHTML(status)}</span>${task.recurring?`<button type="button" class="project-focus-task-expand" data-focus-project-task-expand="${escapeHTML(task.id)}" aria-expanded="${expanded}" aria-label="${expanded?'Recolher':'Expandir'} recorrências de ${escapeHTML(task.title)}">${expanded?'▾':'▸'}</button>`:''}</div></div><div class="project-focus-task-progress"><div class="project-list-progress"><span style="width:${progress??0}%"></span></div><b>${progressLabel(progress)}</b></div></div>${expanded?projectFocusOccurrences(task):''}</div>`;
+  }
+  function renderProjectFocus(){
+    if(!activeProjectId)return;
+    const project=projectList().find(item=>item.id===activeProjectId);
+    if(!project){$('#project-focus-dialog').close();return;}
+    const progress=projectProgress(project),tasks=project.tasks.filter(task=>!task.deleted).sort((a,b)=>(a.order??0)-(b.order??0)),status=projectStatus(project),area=projectAreaName(project),done=tasks.filter(task=>task.status==='Concluída').length;
+    $('#project-focus-dialog').style.setProperty('--routine-color',project.color||'#6657e8');
+    $('#project-focus-eyebrow').textContent=`PROJETO P${project.code||''}`;
+    $('#project-focus-icon').textContent=project.icon||'◈';
+    $('#project-focus-name').textContent=project.title;
+    $('#project-focus-meta').textContent=[area||'Sem área',status].join(' · ');
+    $('#project-focus-progress-bar').style.width=`${progress??0}%`;
+    $('#project-focus-progress-label').textContent=progressLabel(progress);
+    $('#project-focus-description').textContent=project.description||'';
+    $('#project-focus-description').classList.toggle('hidden',!project.description);
+    const dateLabel=value=>value?fmtDate(String(value).slice(0,10),{day:'2-digit',month:'2-digit',year:'numeric'}):'—';
+    const details=[['Área',area||'—'],['Status',status],['Início',dateLabel(project.startDate)],['Fim',dateLabel(project.endDate)],['Atividades',`${tasks.length}${done?` · ${done} concluída${done===1?'':'s'}`:''}`],['Recorrentes',String(tasks.filter(task=>task.recurring).length)],['Atualizado',dateLabel(project.updatedAt)]];
+    $('#project-focus-details').innerHTML=details.map(([label,value])=>`<div><dt>${escapeHTML(label)}</dt><dd>${escapeHTML(value)}</dd></div>`).join('');
+    const notes=project.notes||'';
+    $('#project-focus-notes-section').classList.toggle('hidden',!notes);
+    $('#project-focus-notes').textContent=notes;
+    $('#project-focus-task-count').textContent=tasks.length?`${tasks.length} ${tasks.length===1?'atividade':'atividades'}${done?` · ${done} concluída${done===1?'':'s'}`:''}`:'Nenhuma atividade';
+    $('#project-focus-tasks').innerHTML=tasks.length?tasks.map(task=>projectFocusTaskRow(project,task)).join(''):'<p class="project-focus-empty">Nenhuma atividade cadastrada.</p>';
+  }
+  function openProjectFocus(id){
+    const project=projectList().find(item=>item.id===id);if(!project)return;
+    if(activeProjectId!==id)expandedProjectTasks.clear();
+    activeProjectId=id;renderProjectFocus();if(!$('#project-focus-dialog').open)$('#project-focus-dialog').showModal();
   }
   function recurrenceNextDate(task){const occurrences=(task.occurrences||[]).filter(item=>item.date&&item.result!=='skipped').sort((a,b)=>b.date.localeCompare(a.date)),base=safeDate(occurrences[0]?.date||isoToday()),months=TASK_FREQUENCY_MONTHS[task.frequency];if(task.frequency==='weekly')base.setDate(base.getDate()+7);else if(task.frequency==='biweekly')base.setDate(base.getDate()+14);else base.setMonth(base.getMonth()+(months||1));return `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;}
   function recurringView(projects){const tasks=projects.flatMap(project=>project.tasks.filter(task=>!task.deleted&&task.recurring).map(task=>({project,task}))).sort((a,b)=>recurrenceNextDate(a.task).localeCompare(recurrenceNextDate(b.task)));if(!tasks.length)return'<div class="empty-state"><span>↻</span><h3>Nenhuma tarefa recorrente</h3><p>Marque uma atividade como recorrente para acompanhá-la por período.</p></div>';return `<div class="recurring-board"><div class="recurring-board-head"><span>Atividade</span><span>Projeto</span><span>Frequência</span><span>Próxima</span><span>Progresso</span><span></span></div>${tasks.map(({project,task})=>{const progress=taskProgress(task),last=[...(task.occurrences||[])].sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];return `<div class="recurring-row"><strong><small>${escapeHTML(task.code||'')}</small>${escapeHTML(task.icon||'▰')} ${escapeHTML(task.title)}</strong><span>${escapeHTML(project.title)}</span><span>${escapeHTML(projectFrequencyLabel(task.frequency))}${task.monthWeek?` · ${escapeHTML(monthWeekLabel(task.monthWeek).toLowerCase())}`:''}</span><span>${escapeHTML(fmtDate(recurrenceNextDate(task),{day:'2-digit',month:'short',year:'numeric'}))}</span><span><b>${progressLabel(progress)}</b>${last?`<small>Última: ${escapeHTML(fmtDate(last.date,{day:'2-digit',month:'short'}))}</small>`:''}</span><div><button type="button" class="primary-button compact-button" data-project-occurrence="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}">Registrar</button><button type="button" class="small-edit" data-edit-project-task="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}">Editar</button></div></div>`;}).join('')}</div>`;}
@@ -2855,7 +3136,7 @@
   function renderHistoryEditor(selector,owner){const target=$(selector);if(!target)return;target.innerHTML=`<h3>Histórico mensal</h3><div class="project-history-editor-grid">${historyEditorPeriods(owner).map(period=>`<label>${escapeHTML(projectPeriodLabel(period))}<input class="text-input" type="number" min="0" max="100" step="1" data-form-history="${period}" value="${projectValue(owner?.history?.[period])??''}"></label>`).join('')}</div>`;}
   function readHistoryEditor(selector){const history={};$$(`${selector} [data-form-history]`).forEach(input=>{const value=input.value.trim()===''?null:projectValue(input.value);if(value!==null)history[input.dataset.formHistory]=value;});return history;}
   function projectHistoryAllView(projects){const recorded=[...new Set(projects.flatMap(project=>[...Object.keys(project.history||{}),...project.tasks.flatMap(task=>Object.keys(task.history||{}))]))].filter(period=>/^\d{6}$/.test(period)).sort(),periods=[];if(recorded.length){let cursor=safeDate(`${recorded[0].slice(0,4)}-${recorded[0].slice(4)}-01`),end=safeDate(`${projectMonthKey(isoToday()).slice(0,4)}-${projectMonthKey(isoToday()).slice(4)}-01`);while(cursor<=end){periods.push(`${cursor.getFullYear()}${String(cursor.getMonth()+1).padStart(2,'0')}`);cursor.setMonth(cursor.getMonth()+1);}}const header=periods.map(period=>`<th class="project-history-month">${escapeHTML(projectPeriodLabel(period))}</th>`).join('');let rows='';for(const project of projects){rows+=`<tr class="project-history-project-row"><td><strong>P${escapeHTML(project.code||'')} · ${escapeHTML(project.title)}</strong><button class="small-edit project-chart-button" type="button" data-project-chart="${escapeHTML(project.id)}">Gráfico</button></td><td>${escapeHTML(project.startDate||'—')}</td><td>${escapeHTML(project.endDate||'—')}</td><td>${escapeHTML(projectStatus(project))}</td><td>${progressLabel(projectProgress(project))}</td>${periods.map(period=>projectHistoryEditMode?`<td><input class="project-history-input" type="number" min="0" max="100" step="1" value="${projectValue(project.history?.[period])??''}" data-history-owner="project" data-history-id="${escapeHTML(project.id)}" data-history-period="${period}"></td>`:`<td>${progressLabel(projectValue(project.history?.[period]))}</td>`).join('')}</tr>`;for(const task of project.tasks.filter(item=>!item.deleted).sort((a,b)=>(a.order??0)-(b.order??0)))rows+=`<tr><td class="project-history-activity"><span>${escapeHTML(task.code||'')}</span>${escapeHTML(task.title||'')}<button class="small-edit project-chart-button" type="button" data-task-chart="${escapeHTML(task.id)}" data-project-id="${escapeHTML(project.id)}">Gráfico</button></td><td>${escapeHTML(task.startDate||project.startDate||'—')}</td><td>${escapeHTML(task.endDate||project.endDate||'—')}</td><td>${escapeHTML(task.status||'Em andamento')}</td><td>${progressLabel(taskProgress(task))}</td>${periods.map(period=>projectHistoryEditMode?`<td><input class="project-history-input" type="number" min="0" max="100" step="1" value="${projectValue(task.history?.[period])??''}" data-history-owner="task" data-history-id="${escapeHTML(task.id)}" data-history-period="${period}"></td>`:`<td>${progressLabel(projectValue(task.history?.[period]))}</td>`).join('')}</tr>`;}const actions=projectHistoryEditMode?`<button type="button" class="primary-button compact-button" id="project-history-save">Salvar alterações</button><button type="button" class="secondary-button compact-button" id="project-history-cancel">Cancelar</button>`:`<button type="button" class="secondary-button compact-button" id="project-history-edit">Editar histórico</button>`;return `<div class="project-history-controls"><div class="project-history-actions">${actions}<span>${periods.length} períodos até ${escapeHTML(projectPeriodLabel(projectMonthKey(isoToday())))} · ${projects.length} projetos</span></div></div><div class="action-list-scroll project-history-matrix-wrap"><table class="action-list-table project-history-matrix"><thead><tr><th>Projeto / Atividade</th><th>Início</th><th>Fim</th><th>Status</th><th>% concluído</th>${header}</tr></thead><tbody>${rows||`<tr><td colspan="${5+periods.length}">Nenhum projeto cadastrado.</td></tr>`}</tbody></table></div>`;}
-  function renderProjects(){renderProjectFilters();const content=$('#projects-content');if(!content)return;const projects=filteredProjects();$$('.project-tab').forEach(button=>button.classList.toggle('active',button.dataset.projectView===projectView));if(projectView==='progress')content.innerHTML=projects.length?`<div class="project-summary"><div><span>PROJETOS</span><strong>${projects.length}</strong></div><div><span>EM ANDAMENTO</span><strong>${projects.filter(project=>projectStatus(project)==='Em andamento').length}</strong></div><div><span>ATIVIDADES</span><strong>${projects.reduce((total,project)=>total+project.tasks.filter(task=>!task.deleted).length,0)}</strong></div><div><span>RECORRENTES</span><strong>${projects.reduce((total,project)=>total+project.tasks.filter(task=>!task.deleted&&task.recurring).length,0)}</strong></div></div><div class="project-board">${projects.map(projectCard).join('')}</div>`:'<div class="empty-state"><span>◈</span><h3>Nenhum projeto encontrado</h3><p>Crie um projeto, importe a planilha ou ajuste os filtros.</p></div>';else if(projectView==='recurring')content.innerHTML=recurringView(projects);else if(projectView==='history')content.innerHTML=projectHistoryAllView(projects);else content.innerHTML=projectListView(projects);}
+  function renderProjects(){renderProjectFilters();const content=$('#projects-content');if(!content)return;const projects=filteredProjects();$$('.project-tab').forEach(button=>button.classList.toggle('active',button.dataset.projectView===projectView));if(projectView==='progress')content.innerHTML=projects.length?`<div class="project-summary"><div><span>PROJETOS</span><strong>${projects.length}</strong></div><div><span>EM ANDAMENTO</span><strong>${projects.filter(project=>projectStatus(project)==='Em andamento').length}</strong></div><div><span>ATIVIDADES</span><strong>${projects.reduce((total,project)=>total+project.tasks.filter(task=>!task.deleted).length,0)}</strong></div><div><span>RECORRENTES</span><strong>${projects.reduce((total,project)=>total+project.tasks.filter(task=>!task.deleted&&task.recurring).length,0)}</strong></div></div><div class="project-board">${projects.map(projectCard).join('')}</div>`:'<div class="empty-state"><span>◈</span><h3>Nenhum projeto encontrado</h3><p>Crie um projeto, importe a planilha ou ajuste os filtros.</p></div>';else if(projectView==='recurring')content.innerHTML=recurringView(projects);else if(projectView==='history')content.innerHTML=projectHistoryAllView(projects);else content.innerHTML=projectListView(projects);if($('#project-focus-dialog')?.open)renderProjectFocus();}
   function openProjectDialog(id=''){const project=projectList().find(item=>item.id===id);$('#project-form').reset();$('#project-id').value=project?.id||'';$('#project-dialog-title').textContent=project?'Editar projeto':'Novo projeto';$('#project-code').value=project?.code||'';$('#project-order').value=project?.order??projectList().length;$('#project-title').value=project?.title||'';$('#project-description').value=project?.description||'';const projectAreas=orderedActionAreas();$('#project-area').innerHTML='<option value="">Sem área</option>'+projectAreas.map(item=>`<option value="${escapeHTML(item.id)}">${escapeHTML(item.name)}</option>`).join('');if(project?.areaId&&!projectAreas.some(item=>item.id===project.areaId))$('#project-area').insertAdjacentHTML('beforeend',`<option value="${escapeHTML(project.areaId)}">Área indisponível</option>`);$('#project-area').value=project?.areaId||'';$('#project-status').value=project?.status||'Em andamento';$('#project-start').value=project?.startDate||'';$('#project-end').value=project?.endDate||'';$('#project-icon').value=project?.icon||'◈';$('#project-color').value=project?.color||'#6657e8';$('#project-type').value=project?.type||'Descrição';$('#project-notes').value=project?.notes||'';$('#delete-project').classList.toggle('hidden',!project);renderHistoryEditor('#project-history-editor',project);$('#project-dialog').showModal();}
   function saveProject(event){event.preventDefault();const id=$('#project-id').value||uid(),existing=projectList().find(project=>project.id===id),now=stamp(),code=$('#project-code').value.trim()||String(Date.now()).slice(-6);const areaId=$('#project-area').value;const next={id,code,order:Number($('#project-order').value)||0,title:$('#project-title').value.trim(),description:$('#project-description').value.trim(),areaId,area:actionAreaName({areaId}),status:$('#project-status').value,startDate:$('#project-start').value,endDate:$('#project-end').value,icon:$('#project-icon').value.trim()||'◈',color:$('#project-color').value,type:$('#project-type').value,notes:$('#project-notes').value.trim(),history:existing?.history||{},source:existing?.source||'app',tasks:existing?.tasks||[],updatedAt:now,deleted:false};if(!next.title)return;state.projects=state.projects.filter(project=>project.id!==id);state.projects.push(next);saveLocal();$('#project-dialog').close();renderProjects();toast('Projeto salvo.');}
   function deleteProject(){const id=$('#project-id').value,project=projectList().find(item=>item.id===id);if(!project||!confirm(`Excluir “${project.title}”?`))return;project.deleted=true;project.updatedAt=stamp();saveLocal();$('#project-dialog').close();renderProjects();toast('Projeto excluído.');}
@@ -3183,7 +3464,7 @@
       }
       return [...records.values()];
     };
-    const areas=mergeRecords(a.areas,b.areas),anchors=mergeRecords(a.anchors,b.anchors),tasks=mergeRecords(a.tasks,b.tasks),actions=mergeRecords(a.actions,b.actions),occurrences=mergeRecords(a.occurrences,b.occurrences),actionAreas=mergeRecords(a.actionAreas,b.actionAreas),projects=mergeRecords(a.projects,b.projects);
+    const areas=mergeRecords(a.areas,b.areas),anchors=mergeRecords(a.anchors,b.anchors),tasks=mergeRecords(a.tasks,b.tasks),actions=mergeRecords(a.actions,b.actions),occurrences=mergeRecords(a.occurrences,b.occurrences),actionAreas=mergeRecords(a.actionAreas,b.actionAreas),leisureTypes=mergeRecords(a.leisureTypes,b.leisureTypes),projects=mergeRecords(a.projects,b.projects);
     const leftActions=new Map(a.actions.map(action=>[action.id,action])),rightActions=new Map(b.actions.map(action=>[action.id,action]));
     for(const action of actions){
       const left=leftActions.get(action.id),right=rightActions.get(action.id);
@@ -3302,7 +3583,7 @@
     const useRightMenuIcons=rightMenuIconsAt?rightMenuIconsAt>=leftMenuIconsAt:!leftMenuIconsAt&&Boolean(b.menuIcons);
     const menuIcons=structuredClone((useRightMenuIcons?b.menuIcons:a.menuIcons)||b.menuIcons||a.menuIcons||{});
     const menuIconsUpdatedAt=useRightMenuIcons?rightMenuIconsAt:leftMenuIconsAt;
-    return {version:10,dailyViews,dailyViewsUpdatedAt,menuIcons,menuIconsUpdatedAt,routines:[...routines.values()],tasks,actions,occurrences,actionAreas,projects,areas,anchors,history,taskHistory,dayNotes,weekNotes,monthNotes,weekRegistries,monthRegistries,recordTypes,globalEntries};
+    return {version:12,dailyViews,dailyViewsUpdatedAt,menuIcons,menuIconsUpdatedAt,leisureTypes,routines:[...routines.values()],tasks,actions,occurrences,actionAreas,projects,areas,anchors,history,taskHistory,dayNotes,weekNotes,monthNotes,weekRegistries,monthRegistries,recordTypes,globalEntries};
   }
   function configured() { const c=window.ANCORA_SUPABASE;return Boolean(window.supabase?.createClient&&c?.url&&c?.anonKey); }
   function configureSupabase() {
@@ -3694,12 +3975,20 @@
   $('#project-criteria-list').addEventListener('click',()=>setTimeout(updateProjectTaskProgressMode,0));
   $('#project-criteria-list').addEventListener('input',updateProjectTaskProgressMode);
   $('#project-occurrence-form').addEventListener('submit',saveProjectOccurrence);$('#project-occurrence-result').onchange=event=>{const values={realized:100,partial:50,'not-realized':0};if(event.target.value in values)$('#project-occurrence-progress').value=values[event.target.value];$('#project-occurrence-progress').disabled=event.target.value==='skipped';};
-  $('#projects-content').addEventListener('click',event=>{const expand=event.target.closest('[data-toggle-project]');if(expand){const id=expand.dataset.toggleProject;if(openProjects.has(id))openProjects.delete(id);else openProjects.add(id);renderProjects();return;}const occurrence=event.target.closest('[data-project-occurrence]');if(occurrence){openProjectOccurrence(occurrence.dataset.projectId,occurrence.dataset.projectOccurrence);return;}const toggle=event.target.closest('[data-toggle-project-task]');if(toggle){toggleProjectTask(toggle.dataset.toggleProjectTask,toggle.dataset.projectId);return;}const move=event.target.closest('[data-move-project-task]');if(move){moveProjectTask(move.dataset.projectId,move.dataset.projectTaskId,move.dataset.moveProjectTask);return;}const editTask=event.target.closest('[data-edit-project-task]');if(editTask){openProjectTaskDialog(editTask.dataset.editProjectTask,editTask.dataset.projectId);return;}const addTask=event.target.closest('[data-add-project-task]');if(addTask){openProjectTaskDialog('',addTask.dataset.addProjectTask);return;}const edit=event.target.closest('[data-edit-project]');if(edit)openProjectDialog(edit.dataset.editProject);});
+  $('#projects-content').addEventListener('click',event=>{const open=event.target.closest('[data-open-project]');if(open){openProjectFocus(open.dataset.openProject);return;}const expand=event.target.closest('[data-toggle-project]');if(expand){const id=expand.dataset.toggleProject;if(openProjects.has(id))openProjects.delete(id);else openProjects.add(id);renderProjects();return;}const occurrence=event.target.closest('[data-project-occurrence]');if(occurrence){openProjectOccurrence(occurrence.dataset.projectId,occurrence.dataset.projectOccurrence);return;}const toggle=event.target.closest('[data-toggle-project-task]');if(toggle){toggleProjectTask(toggle.dataset.toggleProjectTask,toggle.dataset.projectId);return;}const move=event.target.closest('[data-move-project-task]');if(move){moveProjectTask(move.dataset.projectId,move.dataset.projectTaskId,move.dataset.moveProjectTask);return;}const editTask=event.target.closest('[data-edit-project-task]');if(editTask){openProjectTaskDialog(editTask.dataset.editProjectTask,editTask.dataset.projectId);return;}const addTask=event.target.closest('[data-add-project-task]');if(addTask){openProjectTaskDialog('',addTask.dataset.addProjectTask);return;}const edit=event.target.closest('[data-edit-project]');if(edit)openProjectDialog(edit.dataset.editProject);});
   $('#projects-content').addEventListener('change',event=>{const progress=event.target.closest('[data-project-progress]');if(progress){const{project,task}=findProjectTask(progress.dataset.projectId,progress.dataset.projectProgress);if(task&&!task.criteria?.length){task.progress=projectValue(progress.value);task.updatedAt=stamp();project.updatedAt=stamp();saveLocal();renderProjects();}return;}if(event.target.matches('#project-history-project')){selectedProjectHistoryId=event.target.value;projectHistoryEditMode=false;renderProjects();}});
   $('#projects-content').addEventListener('click',event=>{const projectChart=event.target.closest('[data-project-chart]');if(projectChart){const project=projectList().find(item=>item.id===projectChart.dataset.projectChart);if(project)projectHistoryChart(project,`P${project.code||''} · ${project.title}`);return;}const taskChart=event.target.closest('[data-task-chart]');if(taskChart){const project=projectList().find(item=>item.id===taskChart.dataset.projectId),task=project?.tasks.find(item=>item.id===taskChart.dataset.taskChart);if(task)projectHistoryChart(task,`${task.code||''} · ${task.title}`);return;}if(event.target.closest('#project-history-edit')){projectHistoryEditMode=true;renderProjects();return;}if(event.target.closest('#project-history-cancel')){projectHistoryEditMode=false;renderProjects();return;}if(event.target.closest('#project-history-save'))saveProjectHistoryEdits();});
   $('#projects-content').addEventListener('click',event=>{if(event.target.closest('[data-add-project-task]')){setTimeout(()=>{$('#project-task-start').value='';$('#project-task-end').value='';},0);}});
   $('#projects-content').addEventListener('click',event=>{const button=event.target.closest('[data-delete-project-occurrence]');if(button)deleteProjectOccurrence(button.dataset.projectId,button.dataset.taskId,button.dataset.deleteProjectOccurrence);});
   $('#projects-content').addEventListener('click',event=>{const button=event.target.closest('[data-project-occurrence-date]');if(button)setTimeout(()=>{$('#project-occurrence-date').value=button.dataset.projectOccurrenceDate;},0);});
+  $('#projects-content').addEventListener('click',event=>{if(event.target.closest('button,input,select,textarea,a,label'))return;const card=event.target.closest('.project-card[data-project-id]');if(card)openProjectFocus(card.dataset.projectId);});
+  $('#project-focus-tasks').addEventListener('click',event=>{const expand=event.target.closest('[data-focus-project-task-expand]');if(expand){const id=expand.dataset.focusProjectTaskExpand;if(expandedProjectTasks.has(id))expandedProjectTasks.delete(id);else expandedProjectTasks.add(id);renderProjectFocus();return;}const toggle=event.target.closest('[data-focus-project-task-toggle]');if(toggle){toggleProjectTask(toggle.dataset.focusProjectTaskToggle,toggle.dataset.projectId);return;}const edit=event.target.closest('[data-focus-project-task-edit]');if(edit)openProjectTaskDialog(edit.dataset.focusProjectTaskEdit,edit.dataset.projectId);});
+  $('#close-project-focus').onclick=()=>$('#project-focus-dialog').close();
+  $('#project-focus-edit').onclick=()=>{const id=activeProjectId;$('#project-focus-dialog').close();openProjectDialog(id);};
+  $('#project-focus-snapshot').onclick=snapshotProjects;
+  $('#project-focus-add-task').onclick=()=>{if(activeProjectId)openProjectTaskDialog('',activeProjectId);};
+  $('#project-focus-chart').onclick=()=>{const project=projectList().find(item=>item.id===activeProjectId);if(project)projectHistoryChart(project,`P${project.code||''} · ${project.title}`);};
+  $('#project-focus-dialog').addEventListener('close',()=>{activeProjectId='';expandedProjectTasks.clear();});
   $('#add-action').onclick=()=>openActionDialog();
   $('#add-study').onclick=()=>openActionDialog(null,'',true);
   $('#add-leisure').onclick=()=>openActionDialog(null,'',false,true);
@@ -3821,14 +4110,20 @@
   $$('.leisure-tab').forEach(button=>button.onclick=()=>{leisureView=button.dataset.leisureView;$$('.leisure-tab').forEach(tab=>tab.classList.toggle('active',tab===button));renderLeisure();});
   $('#leisure-prev-month').onclick=()=>{const d=safeDate(`${selectedLeisureMonth}-01`);d.setMonth(d.getMonth()-1);selectedLeisureMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderLeisure();};$('#leisure-next-month').onclick=()=>{const d=safeDate(`${selectedLeisureMonth}-01`);d.setMonth(d.getMonth()+1);selectedLeisureMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderLeisure();};$('#leisure-current-month').onclick=()=>{selectedLeisureMonth=isoToday().slice(0,7);renderLeisure();};$('#leisure-month').onchange=e=>{if(e.target.value){selectedLeisureMonth=e.target.value;renderLeisure();}};
   $('#leisure-week-prev').onclick=()=>{const d=safeDate(selectedLeisureWeekDate);d.setDate(d.getDate()-7);selectedLeisureWeekDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;renderLeisure();};$('#leisure-week-next').onclick=()=>{const d=safeDate(selectedLeisureWeekDate);d.setDate(d.getDate()+7);selectedLeisureWeekDate=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;renderLeisure();};$('#leisure-week-today').onclick=()=>{selectedLeisureWeekDate=isoToday();renderLeisure();};$('#leisure-week-date').onchange=e=>{if(e.target.value){selectedLeisureWeekDate=e.target.value;renderLeisure();}};
-  $('#leisure-content').addEventListener('click',event=>{const edit=event.target.closest('[data-edit-leisure]');if(edit){openActionDialog(edit.dataset.editLeisure,'',false,true);return;}const item=event.target.closest('[data-add-leisure-item]');if(item){openActionDialog(null,item.dataset.addLeisureItem,false,true);return;}const toggle=event.target.closest('[data-toggle-action]');if(toggle)toggleAction(toggle.dataset.toggleAction);});
+  $('#leisure-content').addEventListener('click',event=>{const edit=event.target.closest('[data-edit-leisure]');if(edit){openActionDialog(edit.dataset.editLeisure,'',false,true);return;}const item=event.target.closest('[data-add-leisure-item]');if(item){openActionDialog(null,item.dataset.addLeisureItem,false,true);return;}const backlogItem=event.target.closest('[data-add-leisure-backlog-item]');if(backlogItem){openActionDialog(null,backlogItem.dataset.addLeisureBacklogItem,false,true,true);return;}const season=event.target.closest('[data-add-leisure-season]');if(season){addNextLeisureSeason(season.dataset.addLeisureSeason);return;}const schedule=event.target.closest('[data-schedule-leisure]');if(schedule){scheduleLeisureItem(schedule.dataset.scheduleLeisure);return;}const toggle=event.target.closest('[data-toggle-action]');if(toggle)toggleAction(toggle.dataset.toggleAction);});
   $('#add-action-area').onclick=()=>openActionAreaDialog();
   $('#action-area-form').addEventListener('submit',saveActionArea);$('#delete-action-area').onclick=deleteActionArea;
   $('#action-area-list').addEventListener('click',event=>{const move=event.target.closest('[data-move-action-area]');if(move){moveActionArea(move.dataset.areaId,move.dataset.moveActionArea);return;}const edit=event.target.closest('[data-edit-action-area]');if(edit)openActionAreaDialog(edit.dataset.editActionArea);});
+  $('#leisure-content').addEventListener('change',event=>{if(event.target.id==='leisure-backlog-month'&&event.target.value){selectedLeisureMonth=event.target.value;renderLeisure();}});
   $('#action-schedule').onchange=updateActionSchedule;
+  $('#action-leisure-type').onchange=updateLeisureFields;
+  $('#action-leisure-backlog').onchange=updateLeisureFields;
+  $('#action-parent').onchange=updateLeisureFields;
+  $('#leisure-type-form').addEventListener('submit',saveLeisureType);$('#delete-leisure-type').onclick=deleteLeisureType;$('#add-leisure-type').onclick=()=>openLeisureTypeDialog();
+  $('#leisure-type-list').addEventListener('click',event=>{const move=event.target.closest('[data-move-leisure-type]');if(move){moveLeisureType(move.dataset.leisureTypeId,move.dataset.moveLeisureType);return;}const edit=event.target.closest('[data-edit-leisure-type]');if(edit)openLeisureTypeDialog(edit.dataset.editLeisureType);});
   $('#action-scheduled-date').onchange=updateActionSchedule;
   $('#action-form').addEventListener('submit',saveAction);$('#delete-action').onclick=deleteAction;
-  $('#add-subaction').onclick=()=>{const parentId=$('#action-id').value;if(parentId)openActionDialog(null,parentId);};
+  $('#add-subaction').onclick=()=>{const parentId=$('#action-id').value,seasonParent=$('#add-subaction').dataset.addSeason;if(seasonParent){const season=addNextLeisureSeason(seasonParent);if(season)openActionDialog(season.id);return;}if(parentId)openActionDialog(null,parentId);};
   $('#action-subactions-list').addEventListener('click',event=>{const child=event.target.closest('[data-edit-subaction]');if(child)openActionDialog(child.dataset.editSubaction);});
   $$('.occurrence-tab').forEach(button=>button.onclick=()=>{occurrenceView=button.dataset.occurrenceView;if(occurrenceView==='week'&&selectedOccurrenceWeekDate.slice(0,7)!==selectedOccurrenceMonth)selectedOccurrenceWeekDate=`${selectedOccurrenceMonth}-01`;renderOccurrences();});
   function multiSelectValues(target){const root=typeof target==='string'?$(target):target;return root?[...root.querySelectorAll('input[type="checkbox"]:checked')].map(input=>input.value):[];}
@@ -4071,7 +4366,7 @@
   $('#task-history-list').addEventListener('click',event=>{const toggle=event.target.closest('[data-task-history-toggle]');if(toggle){const date=toggle.dataset.taskHistoryToggle,expanded=!openTaskHistoryDates.has(date);if(expanded)openTaskHistoryDates.add(date);else openTaskHistoryDates.delete(date);const card=toggle.closest('.task-history-card');card.classList.toggle('is-open',expanded);card.querySelector('.task-history-items').classList.toggle('hidden',!expanded);toggle.setAttribute('aria-expanded',String(expanded));toggle.setAttribute('aria-label',`${expanded?'Ocultar':'Mostrar'} tarefas de ${fmtDate(date)}`);return;}const button=event.target.closest('[data-task-history-date]');if(button){setSelectedDate(button.dataset.taskHistoryDate);setSection('tasks');setTaskView('day');}});
   $('#task-history-export').onclick=exportTaskCSV;
   $('#add-anchor').onclick=()=>openAnchorDialog();$('#anchor-form').addEventListener('submit',saveAnchor);$('#delete-anchor').onclick=deleteAnchor;$('#daily-view-groups-form').addEventListener('submit',saveDailyViewGroups);
-  $$('.settings-tab').forEach(button=>button.onclick=()=>{selectedSettingsView=['areas','menu'].includes(button.dataset.settingsView)?button.dataset.settingsView:'views';renderSettings();});
+  $$('.settings-tab').forEach(button=>button.onclick=()=>{selectedSettingsView=['areas','leisure','menu'].includes(button.dataset.settingsView)?button.dataset.settingsView:'views';renderSettings();});
   $('#menu-icon-list').addEventListener('input',event=>{const input=event.target.closest('[data-menu-icon-input]');if(input)updateMenuIconRow(input);});
   $('#menu-icon-list').addEventListener('focusout',event=>{const input=event.target.closest('[data-menu-icon-input]');if(!input||input.value.trim())return;const link=sidebarLinkFor(input.dataset.menuIconInput);if(link)input.value=sidebarDefaultIcon(link);});
   $('#menu-icon-list').addEventListener('change',event=>{const input=event.target.closest('[data-menu-icon-input]');if(!input||input.value.trim())return;const link=sidebarLinkFor(input.dataset.menuIconInput);if(link)input.value=sidebarDefaultIcon(link);});
