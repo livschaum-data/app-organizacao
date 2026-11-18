@@ -262,7 +262,7 @@
       makeAreaSeed().some(seed=>!data.areas.some(area=>area.id===seed.id))||
       makeAnchorSeed().some(seed=>!data.anchors.some(anchor=>anchor.id===seed.id));
   }
-  function ensurePlannerData(data){
+  function ensurePlannerData(data, options={}){
     const previousVersion=Number(data.version)||0;
     if(!Array.isArray(data.areas))data.areas=[];
     if(!Array.isArray(data.anchors))data.anchors=[];
@@ -324,7 +324,7 @@
       if(!data.actions.some(action=>action.id===seasonId))data.actions.push({...structuredClone(series),id:seasonId,seasonOf:series.id,season:number,backlog:series.backlog===true,updatedAt:series.updatedAt||SEED_TIMESTAMP});
       series.season=null;series.backlog=true;
     }
-    if(previousVersion<13){
+    if(previousVersion<13&&options.skipLeisureCategoryMigration!==true){
       const now=new Date().toISOString(),categoryIds=new Set(data.actions.filter(action=>!action.deleted&&action.leisure&&!action.parentId&&!action.seasonOf).map(action=>action.id));
       if(categoryIds.size){
         for(const action of data.actions){
@@ -3514,8 +3514,12 @@
     const node=$('#toast'); node.textContent=message;node.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>node.classList.remove('show'),3200);
   }
 
-  function mergeState(a={},b={}) {
-    a=ensurePlannerData(normalizeSeedItemIds(a));b=ensurePlannerData(normalizeSeedItemIds(b));
+  function mergeState(a={},b={},options={}) {
+    const isActionBackup=options.actionBackup===true;
+    a=ensurePlannerData(normalizeSeedItemIds(a));b=ensurePlannerData(normalizeSeedItemIds(b),{skipLeisureCategoryMigration:isActionBackup});
+    if(isActionBackup){
+      b.actions=(b.actions||[]).filter(action=>!action.leisure||action.seasonOf||action.leisureType||action.backlog||action.scheduledMonth||action.scheduledDate||action.scheduledTime||action.dueDate||action.completed).map(action=>action.leisure?{...action,parentId:''}:action);
+    }
     const mergeRecords=(left,right)=>{
       const records=new Map();
       for(const record of [...left,...right]){
@@ -3679,11 +3683,11 @@
     const {data,error}=await supabaseClient.from(c.table).select('data,updated_at').eq('user_id',session.user.id).eq('id',actionRecordId()).maybeSingle();
     if(error)throw error;return data;
   }
-  function actionBackupData(){return {actions:state.actions,actionAreas:state.actionAreas};}
+  function actionBackupData(){return {version:state.version,actions:state.actions,actionAreas:state.actionAreas,leisureTypes:state.leisureTypes};}
   async function syncActionBackup(initialBackup){
     let backup=initialBackup;
     for(let attempt=0;attempt<7;attempt++){
-      state=mergeState(state,backup?.data||{});
+      state=mergeState(state,backup?.data||{},{actionBackup:true});
       const data=actionBackupData();
       if(backup&&JSON.stringify(data)===JSON.stringify(backup.data))return;
       const updatedAt=new Date(Math.max(Date.now(),(Date.parse(backup?.updated_at||'')||0)+1)).toISOString();
@@ -3708,7 +3712,7 @@
         for(let attempt=0;attempt<7&&!committed;attempt++) {
           const revisionAtStart=localRevision;
           const [remote,actionBackup]=await Promise.all([readRemote(),readActionBackup()]),remoteJson=JSON.stringify(remote?.data||{});
-          state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{});
+          state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{},{actionBackup:true});
           await syncActionBackup(actionBackup);
           writeStoredState(state);
           if(remote&&JSON.stringify(state)===remoteJson){
@@ -3737,7 +3741,7 @@
     try {
       const [remote,actionBackup]=await Promise.all([readRemote(),readActionBackup()]);
       if(!remote&&!actionBackup){setSyncStatus('online','Ainda não há dados na nuvem para baixar.');return true;}
-      state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{});
+      state=mergeState(mergeState(state,remote?.data||{}),actionBackup?.data||{},{actionBackup:true});
       writeStoredState(state);
       if(JSON.stringify(state)!==JSON.stringify(remote?.data||{})||JSON.stringify(actionBackupData())!==JSON.stringify(actionBackup?.data||{})){
         localStorage.setItem(PENDING_KEY,session.user.id);
