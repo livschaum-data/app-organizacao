@@ -7,14 +7,14 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261118-leisure-view-parity-v109">
+  <link rel="stylesheet" href="styles.css?v=20261118-leisure-item-shortcut-v112">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script>if(!window.pako)document.write('<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"><\/script>');</script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261118-leisure-view-parity-v109"></script>
+  <script defer src="app.js?v=20261118-leisure-item-shortcut-v112"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -228,8 +228,8 @@
       </section>
 
       <section id="projects-workspace" class="workspace-view">
-        <div class="planner-hero project-hero"><div class="eyebrow">AÇÕES E PROJETOS</div><h1>Projetos em progresso.</h1><p>Objetivos, etapas e tarefas recorrentes reunidos em uma visão só.</p></div>
-        <div class="section-heading workspace-heading"><div><div class="eyebrow">SEU PLANEJAMENTO</div><h2>Projetos</h2></div><div class="project-heading-actions"><button type="button" class="secondary-button" id="project-snapshot">Fechar mês</button><button type="button" class="primary-button" id="add-project">＋ Novo projeto</button></div></div>
+        <div class="planner-hero"><div class="eyebrow">AÇÕES E PROJETOS</div><h1>Projetos em progresso.</h1><p>Objetivos, etapas e tarefas recorrentes reunidos em uma visão só.</p></div>
+        <div class="section-heading"><div><div class="eyebrow">SEU PLANEJAMENTO</div><h2>Projetos</h2></div><div class="project-heading-actions"><button type="button" class="secondary-button" id="project-snapshot">Fechar mês</button><button type="button" class="primary-button" id="add-project">＋ Novo projeto</button></div></div>
         <nav class="tabs project-tabs" aria-label="Visões de projetos"><button type="button" class="tab project-tab active" data-project-view="progress">Projetos | Progresso</button><button type="button" class="tab project-tab" data-project-view="recurring">Tarefas recorrentes</button><button type="button" class="tab project-tab" data-project-view="calendar">Calendário</button><button type="button" class="tab project-tab" data-project-view="list">Lista</button><button type="button" class="tab project-tab" data-project-view="history">Histórico</button></nav>
         <div class="project-toolbar"><label>Área<select id="project-filter-area" class="text-input"><option value="">Todas</option></select></label><label>Status<select id="project-filter-status" class="text-input"><option value="">Todos</option><option>Em andamento</option><option>Stand-by</option><option>Concluída</option><option>Remodelada</option><option>Descartada</option></select></label><label>Tipo<select id="project-filter-type" class="text-input"><option value="">Todos</option><option>Tarefa</option><option>Hábito</option><option>Meta</option><option>Hábito/Meta</option><option>Tarefa/Hábito</option></select></label><label>Recorrência<select id="project-filter-recurring" class="text-input"><option value="">Todas</option><option value="yes">Recorrentes</option><option value="no">Não recorrentes</option></select></label><label>Ano<input id="project-filter-year" class="text-input" type="number" min="2000" max="2100" placeholder="Todos"></label><label>Progresso<select id="project-filter-progress" class="text-input"><option value="">Todos</option><option value="missing">Sem medição</option><option value="0-24">0–24%</option><option value="25-49">25–49%</option><option value="50-74">50–74%</option><option value="75-99">75–99%</option><option value="100">100%</option></select></label><label>Ordenar<select id="project-sort" class="text-input"><option value="code">Código</option><option value="title">Nome</option><option value="progress-desc">Maior progresso</option><option value="progress-asc">Menor progresso</option><option value="updated">Atualização recente</option></select></label><label class="project-search-field">Buscar<input id="project-filter-search" class="text-input" type="search" placeholder="Projeto ou atividade"></label><button type="button" id="project-clear-filters" class="text-button">Limpar filtros</button></div>
         <div id="projects-content" class="projects-content"></div>
@@ -237,7 +237,7 @@
 
       <section id="studies-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">SEU PLANEJAMENTO</div><h1>Estudos em progresso.</h1><p>Matérias e tópicos distribuídos no tempo, com o seu avanço sempre à vista.</p></div>
-        <div class="section-heading workspace-heading"><div><div class="eyebrow">ORGANIZAR ESTUDOS</div><h2>Estudos</h2></div><button type="button" class="primary-button" id="add-study">＋ Nova matéria</button></div>
+        <div class="section-heading"><div><div class="eyebrow">ORGANIZAR ESTUDOS</div><h2>Estudos</h2></div><button type="button" class="primary-button" id="add-study">＋ Nova matéria</button></div>
         <nav class="tabs study-tabs" aria-label="Visões de estudos"><button type="button" class="tab study-tab active" data-study-view="annual">Visão anual</button><button type="button" class="tab study-tab" data-study-view="monthly">Visão mensal</button><button type="button" class="tab study-tab" data-study-view="week">Visão semanal</button><button type="button" class="tab study-tab" data-study-view="list">Lista</button></nav>
         <div class="date-navigator study-month-navigator"><button type="button" id="study-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="study-month" type="month" aria-label="Escolher mês dos estudos"><button type="button" id="study-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="study-current-month" class="today-button">Atual</button></div>
         <div class="date-navigator study-week-navigator hidden"><button type="button" id="study-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="study-week-date" type="date" aria-label="Escolher semana dos estudos"><button type="button" id="study-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="study-week-today" class="today-button">Esta semana</button></div>
@@ -247,7 +247,7 @@
 
       <section id="leisure-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">SEU TEMPO LIVRE</div><h1>Lazer em progresso.</h1><p>Filmes, séries, livros e projetos criativos distribuídos no seu ritmo.</p></div>
-        <div class="section-heading workspace-heading"><div><div class="eyebrow">ORGANIZAR LAZER</div><h2>Lazer</h2></div><button type="button" class="primary-button" id="add-leisure">＋ Nova categoria</button></div>
+        <div class="section-heading"><div><div class="eyebrow">ORGANIZAR LAZER</div><h2>Lazer</h2></div><div class="leisure-heading-actions"><button type="button" class="secondary-button" id="add-leisure-item">＋ Novo item</button><button type="button" class="primary-button" id="add-leisure">＋ Nova categoria</button></div></div>
         <nav class="tabs leisure-tabs" aria-label="Visões de lazer"><button type="button" class="tab leisure-tab active" data-leisure-view="annual">Visão anual</button><button type="button" class="tab leisure-tab" data-leisure-view="monthly">Visão mensal</button><button type="button" class="tab leisure-tab" data-leisure-view="week">Visão semanal</button><button type="button" class="tab leisure-tab" data-leisure-view="list">Lista</button><button type="button" class="tab leisure-tab" data-leisure-view="backlog">Backlog</button></nav>
         <div class="date-navigator leisure-month-navigator"><button type="button" id="leisure-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="leisure-month" type="month" aria-label="Escolher mês do lazer"><button type="button" id="leisure-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="leisure-current-month" class="today-button">Atual</button></div>
         <div class="date-navigator leisure-week-navigator hidden"><button type="button" id="leisure-week-prev" class="round-button" aria-label="Semana anterior">←</button><input id="leisure-week-date" type="date" aria-label="Escolher semana do lazer"><button type="button" id="leisure-week-next" class="round-button" aria-label="Próxima semana">→</button><button type="button" id="leisure-week-today" class="today-button">Esta semana</button></div>
@@ -276,7 +276,7 @@
         <div id="occurrences-content"></div>
       </section>
     </main>
-    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v109</span></footer>
+    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v112</span></footer>
   </div>
   </div>
 

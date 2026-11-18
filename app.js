@@ -215,6 +215,7 @@
   let studyView = 'annual';
   let hideCompletedStudies = false;
   let hideCompletedLeisure = false;
+  let pendingLeisureItemAfterCategory = null;
   let ignoreStudyClickUntil = 0;
   let ignoreLeisureClickUntil = 0;
   let selectedStudyMonth = isoToday().slice(0,7), selectedStudyWeekDate = isoToday();
@@ -1920,12 +1921,13 @@
   function renderLeisureBacklog(){
     const items=leisureBacklogItems(),categories=leisureActions().filter(item=>!item.parentId).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
     const groups=categories.map(category=>leisureBacklogCategoryCard(category,items.filter(item=>item.parentId===category.id))).filter(Boolean).join('');
-    return `<div class="leisure-backlog-intro"><div><div class="eyebrow">FORA DO CALENDÁRIO</div><h3>Seu backlog</h3><p>Filmes, livros, jogos e temporadas que você quer ver, ler ou jogar um dia. Escolha “Agendar” para levar um item ao mês de ${escapeHTML(fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'}))}.</p></div><div class="leisure-backlog-tools"><span class="leisure-backlog-count">${items.length} ${items.length===1?'item':'itens'}</span><label class="leisure-backlog-month"><span>Mês para agendar</span><input type="month" id="leisure-backlog-month" value="${escapeHTML(selectedLeisureMonth)}" aria-label="Mês para agendar itens do backlog"></label></div></div>${groups||`<div class="empty-state"><h3>Seu backlog está vazio</h3><p>Use a aba Lista para criar categorias e adicionar itens ao backlog.</p></div>`}`;
+    return `<div class="leisure-backlog-intro"><div><div class="eyebrow">FORA DO CALENDÁRIO</div><h3>Seu backlog</h3><p>Filmes, livros, jogos e temporadas que você quer ver, ler ou jogar um dia. Escolha “Agendar” para levar um item ao mês de ${escapeHTML(fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'}))}.</p></div><div class="leisure-backlog-tools"><span class="leisure-backlog-count">${items.length} ${items.length===1?'item':'itens'}</span><label class="leisure-backlog-month"><span>Mês para agendar</span><input type="month" id="leisure-backlog-month" value="${escapeHTML(selectedLeisureMonth)}" aria-label="Mês para agendar itens do backlog"></label></div></div>${groups||`<div class="empty-state"><h3>Seu backlog está vazio</h3><p>Use o botão “＋ Item no backlog” acima para adicionar algo. Se ainda não houver categorias, crie uma categoria primeiro.</p></div>`}`;
   }
   function renderLeisure(){
     const items=leisureActions(),categories=items.filter(item=>!item.parentId);
     $$('.leisure-tab').forEach(button=>{const active=button.dataset.leisureView===leisureView;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));});
     const isList=leisureView==='list',isBacklog=leisureView==='backlog';
+    const addItemButton=$('#add-leisure-item');if(addItemButton)addItemButton.textContent=isBacklog?'＋ Item no backlog':'＋ Novo item';
     const supportsCompletedToggle=!isList&&!isBacklog,completedToggle=$('#leisure-toggle-completed');
     completedToggle.classList.toggle('hidden',!supportsCompletedToggle);completedToggle.setAttribute('aria-pressed',String(hideCompletedLeisure));
     $('#leisure-toggle-completed-label').textContent=hideCompletedLeisure?'Mostrar concluídas':'Ocultar concluídas';
@@ -1941,6 +1943,11 @@
     action.backlog=false;action.schedule='month';action.scheduledMonth=selectedLeisureMonth;action.scheduledDate='';action.week=null;action.updatedAt=stamp();
     saveLocal();renderLeisure();renderPlanner();
     toast(`“${leisureDisplayTitle(action)}” agendado para ${fmtDate(`${selectedLeisureMonth}-01`,{month:'long',year:'numeric'})}.`);
+  }
+  function openNewLeisureItem(backlog=false){
+    const categories=leisureActions().filter(item=>!item.parentId).sort((a,b)=>a.title.localeCompare(b.title,'pt-BR'));
+    if(!categories.length){pendingLeisureItemAfterCategory={backlog:Boolean(backlog)};toast('Crie uma categoria primeiro para adicionar itens.');openActionDialog(null,'',false,true);return;}
+    openActionDialog(null,categories[0].id,false,true,Boolean(backlog));
   }
 
   function renderActions(){
@@ -2254,7 +2261,9 @@
     if(saved.seasonOf)syncLeisureSeriesCompletion(saved.seasonOf);
     const monthKey=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
     if(/^\d{4}-\d{2}$/.test(monthKey)){selectedActionMonth=monthKey;if(leisure)selectedLeisureMonth=monthKey;}
+    const pendingItem=pendingLeisureItemAfterCategory;pendingLeisureItemAfterCategory=null;
     saveLocal();$('#action-dialog').close();renderActions();renderStudies();renderLeisure();renderPlanner();
+    if(pendingItem&&saved.leisure&&!saved.parentId)setTimeout(()=>openActionDialog(null,saved.id,false,true,pendingItem.backlog===true),0);
     toast(saved.study?(saved.parentId?'Tópico salvo.':'Matéria salva.'):saved.leisure?(saved.seasonOf?'Temporada salva.':leisureHasSeasons(saved)?'Série salva.':saved.backlog?'Item salvo no backlog.':saved.parentId?'Item salvo.':'Categoria salva.'):(saved.parentId?'Subação salva.':'Ação salva.'));
   }
   function deleteAction(){
@@ -4028,6 +4037,7 @@
   $('#add-action').onclick=()=>openActionDialog();
   $('#add-study').onclick=()=>openActionDialog(null,'',true);
   $('#add-leisure').onclick=()=>openActionDialog(null,'',false,true);
+  $('#add-leisure-item').onclick=()=>openNewLeisureItem(leisureView==='backlog');
   $$('.study-tab').forEach(button=>button.onclick=()=>{studyView=button.dataset.studyView;renderStudies();});
   $('#study-toggle-completed').onclick=()=>{hideCompletedStudies=!hideCompletedStudies;renderStudies();};
   $('#study-prev-month').onclick=()=>{const d=safeDate(`${selectedStudyMonth}-01`);d.setMonth(d.getMonth()-1);selectedStudyMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;renderStudies();};
@@ -4267,6 +4277,7 @@
   $('#leisure-type-list').addEventListener('click',event=>{const move=event.target.closest('[data-move-leisure-type]');if(move){moveLeisureType(move.dataset.leisureTypeId,move.dataset.moveLeisureType);return;}const edit=event.target.closest('[data-edit-leisure-type]');if(edit)openLeisureTypeDialog(edit.dataset.editLeisureType);});
   $('#action-scheduled-date').onchange=updateActionSchedule;
   $('#action-form').addEventListener('submit',saveAction);$('#delete-action').onclick=deleteAction;
+  $('#action-dialog').addEventListener('close',()=>{pendingLeisureItemAfterCategory=null;});
   $('#add-subaction').onclick=()=>{const parentId=$('#action-id').value,seasonParent=$('#add-subaction').dataset.addSeason;if(seasonParent){const season=addNextLeisureSeason(seasonParent);if(season)openActionDialog(season.id);return;}if(parentId)openActionDialog(null,parentId);};
   $('#action-subactions-list').addEventListener('click',event=>{const child=event.target.closest('[data-edit-subaction]');if(child)openActionDialog(child.dataset.editSubaction);});
   $$('.occurrence-tab').forEach(button=>button.onclick=()=>{occurrenceView=button.dataset.occurrenceView;if(occurrenceView==='week'&&selectedOccurrenceWeekDate.slice(0,7)!==selectedOccurrenceMonth)selectedOccurrenceWeekDate=`${selectedOccurrenceMonth}-01`;renderOccurrences();});
