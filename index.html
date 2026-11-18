@@ -7,14 +7,14 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261118-processes-search-all-tabs-v98">
+  <link rel="stylesheet" href="styles.css?v=20261118-projects-history-v100">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script>if(!window.pako)document.write('<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"><\/script>');</script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261118-processes-search-all-tabs-v98"></script>
+  <script defer src="app.js?v=20261118-projects-history-v100"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -274,7 +274,7 @@
         <div id="occurrences-content"></div>
       </section>
     </main>
-    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v98</span></footer>
+    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v100</span></footer>
   </div>
   </div>
 
@@ -339,7 +339,7 @@
     <form id="project-form" method="dialog"><div class="dialog-head"><div><div class="eyebrow">AÇÕES E PROJETOS</div><h2 id="project-dialog-title">Novo projeto</h2></div><button type="button" class="close-button" data-close="project-dialog" aria-label="Fechar">×</button></div>
       <input type="hidden" id="project-id"><div class="form-row"><div class="field"><label class="field-label" for="project-code">Código</label><input class="text-input" id="project-code" maxlength="20" placeholder="Ex.: 2004"></div><div class="field"><label class="field-label" for="project-order">Ordem</label><input class="text-input" id="project-order" type="number" min="0" step="1"></div></div><label class="field-label" for="project-title">Nome do projeto</label><input class="text-input" id="project-title" maxlength="160" required placeholder="Ex.: Me aproximar dos amigos que quero manter">
       <label class="field-label" for="project-description">Descrição <span class="optional">(opcional)</span></label><textarea class="text-input description-input" id="project-description" maxlength="3000" rows="3"></textarea>
-      <div class="form-row"><div class="field"><label class="field-label" for="project-area">Área</label><input class="text-input" id="project-area" maxlength="80" placeholder="Relacionamentos"></div><div class="field"><label class="field-label" for="project-status">Status</label><select class="text-input" id="project-status"><option>Em andamento</option><option>Stand-by</option><option>Concluída</option><option>Remodelada</option><option>Descartada</option></select></div></div>
+      <div class="form-row"><div class="field"><label class="field-label" for="project-area">Área</label><select class="text-input" id="project-area"><option value="">Sem área</option></select></div><div class="field"><label class="field-label" for="project-status">Status</label><select class="text-input" id="project-status"><option>Em andamento</option><option>Stand-by</option><option>Concluída</option><option>Remodelada</option><option>Descartada</option></select></div></div>
       <div class="form-row"><div class="field"><label class="field-label" for="project-progress">Progresso (%) <span id="project-progress-mode" class="progress-mode is-manual">Manual</span></label><input class="text-input" id="project-progress" type="number" min="0" max="100" step="1"></div><div class="field"></div></div>
       <div class="form-row"><div class="field"><label class="field-label" for="project-start">Início</label><input class="text-input" id="project-start" type="date"></div><div class="field"><label class="field-label" for="project-end">Fim <span class="optional">(opcional)</span></label><input class="text-input" id="project-end" type="date"></div></div>
       <div class="form-row"><div class="field"><label class="field-label" for="project-icon">Ícone</label><input class="text-input icon-input" id="project-icon" maxlength="8" value="◈"></div><div class="field"><label class="field-label" for="project-color">Cor</label><input class="color-input" id="project-color" type="color" value="#6657e8"></div></div>
