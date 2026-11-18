@@ -49,7 +49,7 @@
   const TASK_FREQUENCY_LABELS={weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
   const RECORD_FREQUENCY_LABELS={daily:'Diária',weekly:'Semanal',biweekly:'Quinzenal',monthly:'Mensal',bimonthly:'Bimestral',quarterly:'Trimestral',semiannual:'Semestral',annual:'Anual'};
   const RECORD_CATEGORY_LABELS={record:'Registro',review:'Revisão',planning:'Planejamento',alignment:'Alinhamento',capture:'Entrada | Captura',processing:'Entrada | Processamento'};
-  const RECORD_CATEGORY_COLORS={record:'#8fb2aa',review:'#b189aa',planning:'#dba866',alignment:'#7484a8',capture:'#d98ba8',processing:'#c77fa6'};
+  const RECORD_CATEGORY_COLORS={record:'#8fb2aa',review:'#9fbcd9',planning:'#e3cf7f',alignment:'#7484a8',capture:'#d98ba8',processing:'#c77fa6'};
   const TASK_FREQUENCY_PLURAL={weekly:'Semanais',biweekly:'Quinzenais',monthly:'Mensais',bimonthly:'Bimestrais',quarterly:'Trimestrais',semiannual:'Semestrais',annual:'Anuais'};
   const TASK_FREQUENCY_MONTHS={monthly:1,bimonthly:2,quarterly:3,semiannual:6,annual:12};
   const MONTH_WEEK_OPTIONS=[1,2,3,4,5,6];
@@ -184,6 +184,8 @@
   let selectedRecordLinkedView = 'cards';
   let recordLinkedSort = { key: 'name', dir: 'asc' };
   let recordDirectorySearch = '';
+  let recordTypeSearch = '';
+  let recordLinkedSearch = '';
   let selectedTaskWeekDate = isoToday();
   let selectedTaskMonth = isoToday().slice(0,7);
   let selectedTaskYear = Number(isoToday().slice(0,4));
@@ -1383,7 +1385,7 @@
     }).join('')}</tbody></table></div>`;
   }
   function renderRecordTypes(){
-    const all=state.recordTypes.filter(item=>!item.deleted),table=selectedRecordTypeView==='table';
+    const all=state.recordTypes.filter(item=>!item.deleted),table=selectedRecordTypeView==='table',search=normalizeRecordSearch(recordTypeSearch.trim());
     $$('.record-type-view-button').forEach(button=>{const active=button.dataset.recordTypeView===selectedRecordTypeView;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));});
     $('#record-type-list').classList.toggle('hidden',table);
     $('#record-type-table').classList.toggle('hidden',!table);
@@ -1394,12 +1396,19 @@
       else{$('#record-type-table').innerHTML='';$('#record-type-list').innerHTML=emptyAll;}
       return;
     }
-    const counts={};for(const type of all)counts[type.category]=(counts[type.category]||0)+1;
-    $('#record-type-filters').innerHTML=[['','Todas',all.length],...Object.entries(RECORD_CATEGORY_LABELS).map(([key,label])=>[key,label,counts[key]||0])].map(([value,label,count])=>`<button type="button" class="record-type-filter${selectedRecordTypeCategory===value?' is-active':''}" data-record-category="${value}" aria-pressed="${selectedRecordTypeCategory===value}">${label}<small>${count}</small></button>`).join('');
-    const types=all.filter(type=>!selectedRecordTypeCategory||type.category===selectedRecordTypeCategory).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+    const visible=search?all.filter(type=>recordTypeMatchesSearch(type,search)):all;
+    const counts={};for(const type of visible)counts[type.category]=(counts[type.category]||0)+1;
+    $('#record-type-filters').innerHTML=[['','Todas',visible.length],...Object.entries(RECORD_CATEGORY_LABELS).map(([key,label])=>[key,label,counts[key]||0])].map(([value,label,count])=>`<button type="button" class="record-type-filter${selectedRecordTypeCategory===value?' is-active':''}" data-record-category="${value}" aria-pressed="${selectedRecordTypeCategory===value}">${label}<small>${count}</small></button>`).join('');
+    if(!visible.length){
+      const emptySearch='<div class="empty-state"><span>✍</span><h3>Nenhum tipo encontrado</h3><p>Revise a busca ou limpe o campo para ver todos os tipos.</p></div>';
+      if(table){$('#record-type-list').innerHTML='';$('#record-type-table').innerHTML=emptySearch;}
+      else{$('#record-type-table').innerHTML='';$('#record-type-list').innerHTML=emptySearch;}
+      return;
+    }
+    const types=visible.filter(type=>!selectedRecordTypeCategory||type.category===selectedRecordTypeCategory).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
     const infos=types.map(recordTypeInfo);
     if(!infos.length){
-      const emptyFilter='<div class="empty-state"><span>✍</span><h3>Nenhum tipo nesta categoria</h3><p>Escolha outra categoria ou crie um novo tipo.</p></div>';
+      const emptyFilter='<div class="empty-state"><span>✍</span><h3>Nenhum tipo nesta categoria</h3><p>Escolha outra categoria ou ajuste a busca.</p></div>';
       if(table){$('#record-type-list').innerHTML='';$('#record-type-table').innerHTML=emptyFilter;}
       else{$('#record-type-table').innerHTML='';$('#record-type-list').innerHTML=emptyFilter;}
       return;
@@ -1531,13 +1540,23 @@
       return `<tr class="record-type-table-row"><td><button type="button" class="record-type-table-name record-linked-table-open" ${item.kind==='task'?`data-edit-linked-task="${escapeHTML(item.id)}"`:`data-edit-linked-routine="${escapeHTML(item.id)}"`} aria-label="Editar ${escapeHTML(item.name)}"><span class="record-type-icon" style="--record-color:${escapeHTML(item.color)}" aria-hidden="true">${escapeHTML(item.icon)}</span><strong>${escapeHTML(item.name)}</strong></button></td><td>${escapeHTML(item.context)}</td><td><div class="record-linked-table-categories">${item.categories.map(category=>recordCategoryTagHtml(category.key,category.label)).join('')}</div></td><td><span class="record-type-status is-${item.status.key}">${escapeHTML(item.status.label)}</span></td><td>${item.occurrences.length?`${item.doneCount}/${item.occurrences.length} · ${item.rate}%`:'—'}</td><td>${latest?`${escapeHTML(fmtDate(latest.date,{day:'2-digit',month:'2-digit'}))} · ${escapeHTML(recordOccurrenceLabel(latest))}`:'—'}</td><td><div class="record-linked-table-topics">${topics}</div></td></tr>`;
     }).join('')}</tbody></table></div>`;
   }
+  function recordLinkedMatchesSearch(item,search){
+    if(!search)return true;
+    const text=[item.name,item.context,item.status.label,...item.categories.map(category=>category.label),...item.topics.map(({type})=>type.name)].join(' ');
+    return normalizeRecordSearch(text).includes(search);
+  }
   function renderRecordLinked(){
-    const list=$('#record-linked-list'),tableWrap=$('#record-linked-table'),items=recordLinkedEntries(),table=selectedRecordLinkedView==='table';
+    const list=$('#record-linked-list'),tableWrap=$('#record-linked-table'),allItems=recordLinkedEntries(),search=normalizeRecordSearch(recordLinkedSearch.trim()),items=search?allItems.filter(item=>recordLinkedMatchesSearch(item,search)):allItems,table=selectedRecordLinkedView==='table';
     $$('.record-linked-view-button').forEach(button=>{const active=button.dataset.recordLinkedView===selectedRecordLinkedView;button.classList.toggle('is-active',active);button.setAttribute('aria-pressed',String(active));});
     list.classList.toggle('hidden',table);tableWrap.classList.toggle('hidden',!table);
-    $('#record-linked-summary').textContent=items.length?`${items.length} ${items.length===1?'item':'itens'}`:'';
-    if(!items.length){
+    $('#record-linked-summary').textContent=allItems.length?(search?`${items.length} de ${allItems.length} ${allItems.length===1?'item':'itens'}`:`${allItems.length} ${allItems.length===1?'item':'itens'}`):'';
+    if(!allItems.length){
       const empty='<div class="empty-state"><span>✍</span><h3>Nenhuma rotina ou tarefa vinculada ainda</h3><p>Vincule um tópico a uma tarefa ou passo de rotina na aba Processos.</p></div>';
+      if(table){list.innerHTML='';tableWrap.innerHTML=empty;}else{tableWrap.innerHTML='';list.innerHTML=empty;}
+      return;
+    }
+    if(!items.length){
+      const empty='<div class="empty-state"><span>✍</span><h3>Nenhum item encontrado</h3><p>Revise a busca ou limpe o campo para ver todos os itens.</p></div>';
       if(table){list.innerHTML='';tableWrap.innerHTML=empty;}else{tableWrap.innerHTML='';list.innerHTML=empty;}
       return;
     }
@@ -3479,6 +3498,8 @@
   $$('.add-record-type-button').forEach(button=>button.onclick=()=>openRecordTypeDialog());
   $('#record-type-filters').addEventListener('click',event=>{const button=event.target.closest('[data-record-category]');if(!button)return;selectedRecordTypeCategory=button.dataset.recordCategory||'';renderRecordTypes();});
   $('#record-directory-search').addEventListener('input',event=>{recordDirectorySearch=event.target.value;renderRecordDirectory();});
+  $('#record-type-search').addEventListener('input',event=>{recordTypeSearch=event.target.value;renderRecordTypes();});
+  $('#record-linked-search').addEventListener('input',event=>{recordLinkedSearch=event.target.value;renderRecordLinked();});
   $$('.record-type-view-button').forEach(button=>button.onclick=()=>{selectedRecordTypeView=button.dataset.recordTypeView==='table'?'table':'cards';renderRecordTypes();});
   $('#record-type-kind').onchange=()=>updateRecordTypeKindUI();
   $('#record-type-form').addEventListener('submit',saveRecordType);

@@ -592,6 +592,11 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .record-search-field{display:grid;gap:5px;flex:1;min-width:220px;color:var(--muted);font-size:10px;font-weight:700}
 .record-search-field .text-input{margin:0}
 .record-directory-summary{color:#64736e;font-size:11px}
+.record-type-toolbar-search{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px 12px}
+.record-type-toolbar-search .record-search-field{min-width:0}
+.record-type-toolbar-search #record-type-filters{grid-column:1/-1;grid-row:2}
+.record-type-toolbar-search .record-type-view-toggle{grid-column:2;grid-row:1}
+@media(max-width:560px){.record-type-toolbar-search{grid-template-columns:1fr}.record-type-toolbar-search .record-type-view-toggle{grid-column:1;grid-row:2;justify-self:start}.record-type-toolbar-search #record-type-filters{grid-row:3}}
 .record-directory-card{padding:13px 14px}
 .record-directory-entries{display:grid;gap:6px;margin-top:10px}
 .record-directory-entry{display:grid;gap:3px;padding:7px 8px;border-radius:9px;background:#f7f3ed}
@@ -601,8 +606,8 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .record-directory-tag,.record-directory-frequency{padding:3px 8px;border-radius:999px;font-size:9px;font-weight:800;white-space:nowrap}
 .record-directory-tag{background:#e8efec;color:#476b66}
 .record-directory-tag.is-record{background:#f8dcc4;color:#8f4a1b}
-.record-directory-tag.is-review{background:#f7e9a8;color:#6f5810}
-.record-directory-tag.is-planning{background:#dce8f7;color:#2f5680}
+.record-directory-tag.is-review{background:#dce8f7;color:#2f5680}
+.record-directory-tag.is-planning{background:#f7e9a8;color:#6f5810}
 .record-directory-tag.is-alignment{background:#dcecd6;color:#3d6b34}
 .record-directory-tag.is-capture{background:#f7dbe6;color:#93445f}
 .record-directory-tag.is-processing{background:#f0d2e2;color:#7f3f5d}
