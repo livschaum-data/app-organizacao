@@ -57,6 +57,8 @@ A seção **Lazer** organiza filmes, séries, livros, jogos e outros itens em ca
 
 Use o botão **＋ Novo item** no topo da seção para adicionar um item. Se ainda não houver categorias, o app abre o cadastro de categoria e, ao salvar, continua automaticamente no cadastro do item. Na aba **Backlog**, o botão passa a ser **＋ Item no backlog**.
 
+As categorias funcionam apenas como agrupamentos. Agendamento, horário, duração, vencimento e conclusão são definidos em cada item; o cadastro da categoria mostra apenas nome, descrição, ícone, cor e notas.
+
 O **Backlog** é uma visão separada do calendário. Itens no backlog não aparecem nas visões anual, mensal, semanal, na lista nem no planejador diário; eles ficam reunidos por categoria na aba **Backlog**, com o botão **Agendar** para levá-los ao mês selecionado. Também é possível criar um item diretamente no backlog pelo botão **＋ Backlog** de cada categoria.
 
 Tipos marcados como “usar temporadas” mostram automaticamente o campo de temporadas. Ao criar uma série, informe quantas temporadas existem: cada temporada é criada como um item independente no backlog e pode ser agendada, concluída e editada separadamente. O campo de temporadas também permite acrescentar temporadas depois, sem excluir as existentes. A série funciona como um agrupamento e mostra o progresso de temporadas concluídas.

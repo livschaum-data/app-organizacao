@@ -325,6 +325,12 @@
       if(!data.actions.some(action=>action.id===seasonId))data.actions.push({...structuredClone(series),id:seasonId,seasonOf:series.id,season:number,backlog:series.backlog===true,updatedAt:series.updatedAt||SEED_TIMESTAMP});
       series.season=null;series.backlog=true;
     }
+    for(const category of data.actions.filter(action=>!action.deleted&&action.leisure&&!action.parentId&&!action.seasonOf)){
+      category.leisureType='';category.backlog=false;category.season=null;
+      category.schedule='month';category.scheduledMonth='';category.scheduledDate='';category.week=null;
+      category.scheduledTime='';category.durationMinutes=null;category.dueDate='';
+      category.completed=false;category.completedAt='';category.completionChangedAt='';
+    }
     if(!Array.isArray(data.recordTypes))data.recordTypes=[];
     for(const type of data.recordTypes){
       if(typeof type.name!=='string')type.name='';
@@ -2195,9 +2201,14 @@
     $('#action-schedule-fields').classList.remove('hidden');
     $('#action-backlog-hint').classList.add('hidden');
     $('#action-series-container-hint').classList.add('hidden');
+    $('#action-category-hint').classList.add('hidden');
+    $('#action-time-fields').classList.remove('hidden');
+    $('#action-due-field').classList.remove('hidden');
+    $('#action-completed-field').classList.remove('hidden');
     $('#leisure-extra-fields').classList.toggle('hidden',!leisureActive);
     if(!leisureActive){updateActionSchedule();return;}
-    const itemLike=Boolean($('#action-parent').value)||isSeason,current=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted),existingSeasons=current?leisureSeasonsOf(current):[];
+    const itemLike=Boolean($('#action-parent').value)||isSeason,isCategory=!isSeason&&!itemLike,current=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted),existingSeasons=current?leisureSeasonsOf(current):[];
+    $('#leisure-extra-fields').classList.toggle('hidden',isCategory);
     $('#action-leisure-type-field').classList.toggle('hidden',isSeason||!itemLike);
     const seriesContainer=leisureActive&&!isSeason&&itemLike&&(existingSeasons.length>0||(usesSeasons&&(Number($('#action-series-seasons').value)||0)>0));
     $('#action-series-seasons-field').classList.toggle('hidden',isSeason||!usesSeasons||!itemLike);
@@ -2206,10 +2217,14 @@
     $('#action-series-seasons-hint').classList.toggle('hidden',isSeason||!usesSeasons||!itemLike);
     $('#action-series-container-hint').classList.toggle('hidden',!seriesContainer);
     $('#action-series-seasons-hint').textContent=existingSeasons.length?`${existingSeasons.length} ${existingSeasons.length===1?'temporada criada':'temporadas criadas'}. Aumente o número para criar as que faltam; diminuir não exclui nenhuma.`:'Ao salvar, as temporadas serão criadas no backlog para agendar separadamente.';
-    const backlog=!seriesContainer&&$('#action-leisure-backlog').checked;
-    $('#action-schedule-fields').classList.toggle('hidden',backlog||seriesContainer);
+    const backlog=!seriesContainer&&$('#action-leisure-backlog').checked,hideTiming=isCategory||seriesContainer;
+    $('#action-schedule-fields').classList.toggle('hidden',backlog||seriesContainer||isCategory);
+    $('#action-time-fields').classList.toggle('hidden',hideTiming);
+    $('#action-due-field').classList.toggle('hidden',hideTiming);
+    $('#action-completed-field').classList.toggle('hidden',isCategory);
+    $('#action-category-hint').classList.toggle('hidden',!isCategory);
     $('#action-backlog-hint').classList.toggle('hidden',!backlog||seriesContainer);
-    if(!backlog&&!seriesContainer)updateActionSchedule();
+    if(!backlog&&!seriesContainer&&!isCategory)updateActionSchedule();
   }
 
   function updateActionSchedule(){
@@ -2221,11 +2236,11 @@
   function saveAction(event){
     event.preventDefault();
     const title=$('#action-title').value.trim(),schedule=$('#action-schedule').value,scheduledMonth=$('#action-scheduled-month').value,scheduledDate=$('#action-scheduled-date').value;
-    const studyFlag=$('#action-study').value==='true',leisureFlag=$('#action-leisure').value==='true',hasParent=Boolean($('#action-parent').value),editingSeason=$('#action-form').dataset.editingSeason==='true',backlogFlag=leisureFlag&&$('#action-leisure-backlog').checked&&hasParent;
+    const studyFlag=$('#action-study').value==='true',leisureFlag=$('#action-leisure').value==='true',hasParent=Boolean($('#action-parent').value),editingSeason=$('#action-form').dataset.editingSeason==='true',backlogFlag=leisureFlag&&$('#action-leisure-backlog').checked&&hasParent,isLeisureCategory=leisureFlag&&!editingSeason&&!hasParent;
     const contextNoun=studyFlag?(hasParent?'tópico':'matéria'):leisureFlag?(editingSeason?'temporada':hasParent?'item':'categoria'):(hasParent?'subação':'ação'),contextArticle=['tópico','item'].includes(contextNoun)?'ao':'à';
     if(!title){toast(`Dê um nome ${contextArticle} ${contextNoun}.`);return;}
-    const existingId=$('#action-id').value,existing=state.actions.find(action=>action.id===existingId),leisureTypeValue=$('#action-leisure-type').value,existingSeasonCount=existing?leisureSeasonsOf(existing).length:0,seriesContainerFlag=leisureFlag&&!editingSeason&&hasParent&&(existingSeasonCount>0||(leisureTypeUsesSeasons(leisureTypeValue)&&(Number($('#action-series-seasons').value)||0)>0));
-    if(!backlogFlag&&!seriesContainerFlag&&(schedule==='date'?!scheduledDate:!scheduledMonth)){toast('Escolha a data ou o mês, ou deixe o item no backlog.');return;}
+    const existingId=$('#action-id').value,existing=state.actions.find(action=>action.id===existingId),leisureTypeValue=$('#action-leisure-type').value,existingSeasonCount=existing?leisureSeasonsOf(existing).length:0,seriesContainerFlag=leisureFlag&&!editingSeason&&hasParent&&(existingSeasonCount>0||(leisureTypeUsesSeasons(leisureTypeValue)&&(Number($('#action-series-seasons').value)||0)>0)),containerLike=isLeisureCategory||seriesContainerFlag;
+    if(!backlogFlag&&!seriesContainerFlag&&!isLeisureCategory&&(schedule==='date'?!scheduledDate:!scheduledMonth)){toast('Escolha a data ou o mês, ou deixe o item no backlog.');return;}
     const id=existingId||uid(),now=stamp(),completed=$('#action-completed').checked,parentId=$('#action-parent').disabled?existing?.parentId||'':$('#action-parent').value;
     const parent=parentId?state.actions.find(action=>action.id===parentId&&!action.deleted&&!action.parentId):null;if(parentId&&!parent){toast('Escolha um vínculo válido.');return;}
     const study=$('#action-study').value==='true'||existing?.study===true;
@@ -2236,7 +2251,7 @@
     if(editingSeason&&(!Number.isInteger(season)||season<1)){toast('Informe um número de temporada válido.');return;}
     if(editingSeason){const series=leisureSeriesOf(existing),duplicate=series?leisureSeasonsOf(series).find(item=>item.id!==existing.id&&Number(item.season)===season):null;if(duplicate){toast(`A Temporada ${season} já existe nesta série.`);return;}}
     const previousTitle=existing?.title||'',previousIcon=existing?.icon||'',previousColor=existing?.color||'';
-    const next={id,parentId:parent?.id||'',study,leisure,leisureType,backlog:leisure?backlogFlag:false,seasonOf:existing?.seasonOf||'',season,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:(study||leisure)?'':$('#action-area').value,scheduledTime:$('#action-time').value,durationMinutes:$('#action-duration').value?Number($('#action-duration').value):null,schedule,scheduledMonth:schedule==='month'?scheduledMonth:'',scheduledDate:schedule==='date'?scheduledDate:'',week:schedule==='month'?Number($('#action-week').value)||null:null,dueDate:$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed,completedAt:completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):'',completionChangedAt:existing?.completed===completed?existing?.completionChangedAt||'':now,updatedAt:now,deleted:false};
+    const next={id,parentId:parent?.id||'',study,leisure,leisureType:isLeisureCategory?'':leisureType,backlog:isLeisureCategory?false:(seriesContainerFlag?true:(leisure?backlogFlag:false)),seasonOf:existing?.seasonOf||'',season,title,description:$('#action-description').value.trim(),notes:$('#action-notes').value.trim(),icon:$('#action-icon').value.trim(),color:$('#action-color').value,areaId:(study||leisure)?'':$('#action-area').value,scheduledTime:containerLike?'':$('#action-time').value,durationMinutes:containerLike?null:($('#action-duration').value?Number($('#action-duration').value):null),schedule:containerLike?'month':schedule,scheduledMonth:containerLike?'':(schedule==='month'?scheduledMonth:''),scheduledDate:containerLike?'':(schedule==='date'?scheduledDate:''),week:containerLike?null:(schedule==='month'?Number($('#action-week').value)||null:null),dueDate:containerLike?'':$('#action-due').value,createdAt:existing?.createdAt||isoToday(),completed:isLeisureCategory?false:completed,completedAt:isLeisureCategory?'':(completed?(existing?.completed?existing.completedAt||existing.completionChangedAt||isoToday():isoToday()):''),completionChangedAt:isLeisureCategory?now:(existing?.completed===completed?existing?.completionChangedAt||'':now),updatedAt:now,deleted:false};
     const index=state.actions.findIndex(action=>action.id===id);
     if(index<0)state.actions.push(next);else state.actions[index]=next;
     const saved=state.actions.find(action=>action.id===id)||next;
@@ -2259,7 +2274,7 @@
       if(leisureHasSeasons(saved))syncLeisureSeriesCompletion(saved.id);
     }
     if(saved.seasonOf)syncLeisureSeriesCompletion(saved.seasonOf);
-    const monthKey=(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
+    const monthKey=containerLike?'':(schedule==='date'?scheduledDate:scheduledMonth).slice(0,7);
     if(/^\d{4}-\d{2}$/.test(monthKey)){selectedActionMonth=monthKey;if(leisure)selectedLeisureMonth=monthKey;}
     const pendingItem=pendingLeisureItemAfterCategory;pendingLeisureItemAfterCategory=null;
     saveLocal();$('#action-dialog').close();renderActions();renderStudies();renderLeisure();renderPlanner();
@@ -2270,6 +2285,7 @@
     const action=state.actions.find(entry=>entry.id===$('#action-id').value&&!entry.deleted);if(!action)return;
     const study=action.study===true,leisure=action.leisure===true,season=Boolean(action.seasonOf),child=Boolean(action.parentId),seasons=leisure&&!season?leisureSeasonsOf(action):[],noun=study?(child?'tópico':'matéria'):leisure?(season?'temporada':leisureHasSeasons(action)?'série':child?'item':'categoria'):(child?'subação':'ação'),childNoun=study?'tópico':season?'temporada':leisure?'item':'subação',childPlural=study?'tópicos':season?'temporadas':leisure?'itens':'subações';
     const children=actionChildren(action),seasonNote=seasons.length?` As ${seasons.length} ${seasons.length===1?'temporada também será excluída':'temporadas também serão excluídas'}.`:'',kept=children.length?` ${children.length} ${children.length===1?childNoun:childPlural} ${children.length===1?'permanecerá':'permanecerão'} na lista.`:'';
+    if(leisure&&!season&&!child&&children.length){toast('Esta categoria ainda tem itens. Mova ou exclua os itens antes de excluir a categoria.');return;}
     if(!confirm(`Excluir ${noun} “${action.title}”?${seasonNote}${kept}`))return;
     const now=stamp();action.deleted=true;action.updatedAt=now;
     for(const seasonItem of seasons){seasonItem.deleted=true;seasonItem.updatedAt=now;}
