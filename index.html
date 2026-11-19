@@ -7,14 +7,14 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261118-habits-group-setting-v124">
+  <link rel="stylesheet" href="styles.css?v=20261118-project-months-v125">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script>if(!window.pako)document.write('<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"><\/script>');</script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261118-habits-group-setting-v124"></script>
+  <script defer src="app.js?v=20261118-project-months-v125"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -276,7 +276,7 @@
         <div id="occurrences-content"></div>
       </section>
     </main>
-    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v124</span></footer>
+    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v125</span></footer>
   </div>
   </div>
 
@@ -407,6 +407,7 @@
         <div class="project-focus-progress"><div class="project-progress"><span id="project-focus-progress-bar"></span></div><b id="project-focus-progress-label"></b></div>
         <details class="project-focus-calc" id="project-focus-calc"><summary>Como o progresso é calculado</summary><div id="project-focus-calc-content"></div></details>
         <p id="project-focus-description" class="occurrence-focus-text hidden"></p>
+        <div class="project-focus-month-note"><div class="project-focus-month-note-head"><div class="focus-section-label">NOTA DO MÊS · <span id="project-focus-note-month"></span></div><div class="project-focus-month-nav"><button type="button" class="secondary-button compact-button" data-project-focus-month-shift="-1" aria-label="Mês anterior">‹</button><input type="month" id="project-focus-month" class="text-input" aria-label="Mês da nota"><button type="button" class="secondary-button compact-button" data-project-focus-month-shift="1" aria-label="Próximo mês">›</button><button type="button" class="text-button" data-project-focus-month-today>Atual</button></div></div><textarea id="project-focus-month-note" class="text-input" rows="3" maxlength="4000" placeholder="Registro deste mês..."></textarea><div class="project-focus-month-note-actions"><button type="button" class="secondary-button compact-button" id="project-focus-month-note-save">Salvar nota</button></div></div>
         <dl id="project-focus-details" class="occurrence-focus-details"></dl>
         <div id="project-focus-notes-section" class="occurrence-focus-section hidden"><div class="focus-section-label">NOTAS</div><div id="project-focus-notes" class="occurrence-focus-notes"></div></div>
         <div class="project-focus-activities-head"><div><div class="focus-section-label">ATIVIDADES</div><strong id="project-focus-task-count"></strong></div><button type="button" class="text-button" id="project-focus-add-task">＋ Nova atividade</button></div>

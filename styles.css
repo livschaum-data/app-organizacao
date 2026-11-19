@@ -540,6 +540,18 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .weekly-habit-row th small{display:block;margin-top:2px;color:var(--muted);font-size:8px;font-weight:500}
 .weekly-habit-row .habit-cell{margin:0 auto}
 .weekly-habit-row td{text-align:center}
+.project-month-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:10px 13px;border:1px solid #e6e2da;border-radius:10px;background:#fbf9f5}
+.project-month-nav{display:flex;align-items:center;gap:7px}
+.project-month-nav input{width:145px;padding:7px 8px}
+.project-month-bar>span{color:var(--muted);font-size:10px}
+.project-focus-month-note{margin:14px 0;padding:12px;border:1px solid #e6e2da;border-radius:10px;background:#fbf9f5}
+.project-focus-month-note-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:7px}
+.project-focus-month-note-head .focus-section-label{margin:0}
+.project-focus-month-nav{display:flex;align-items:center;gap:5px}
+.project-focus-month-nav input{width:135px;padding:5px 7px;font-size:10px}
+.project-focus-month-note textarea{width:100%;min-height:70px}
+.project-focus-month-note-actions{display:flex;justify-content:flex-end;margin-top:6px}
+@media(max-width:650px){.project-month-bar{align-items:flex-start}.project-month-bar>span{flex-basis:100%}}
 .habit-screen-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px}
 .habit-week-nav{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .habit-week-nav h3{margin:0;font:700 16px Manrope,sans-serif;text-transform:capitalize}
