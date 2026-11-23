@@ -569,7 +569,15 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .weekly-habit-row th small{display:block;margin-top:2px;color:var(--muted);font-size:8px;font-weight:500}
 .weekly-habit-row .habit-cell{margin:0 auto}
 .weekly-habit-row th .weekly-area-icon{color:var(--habit-color,#55c994)}
-.weekly-habit-row td{text-align:center}
+.weekly-habit-row td{text-align:left}
+.weekly-habit-row .weekly-anchor{padding:3px 2px}
+.weekly-habit{display:flex;align-items:center;gap:5px;width:100%}
+.weekly-habit-mark{display:grid;place-items:center;width:16px;height:16px;flex:none;border:1px solid color-mix(in srgb,var(--habit-color,#a7b9b1) 48%,#a7b9b1);border-radius:5px;background:#fffdfa;color:#a39c93;font-size:9px;font-weight:800;line-height:1}
+.weekly-habit.is-done .weekly-habit-mark{background:var(--habit-color,#55c994);border-color:var(--habit-color,#55c994);color:#fff}
+.weekly-habit.is-done>span:last-child{color:#75847d;text-decoration:line-through}
+.weekly-habit.is-off .weekly-habit-mark{color:#c7c1b8;border-color:#e0dbd2}
+.weekly-habit:disabled{opacity:.7;cursor:default}
+.weekly-habit.is-off:hover>span:last-child{color:inherit;text-decoration:none}
 .project-month-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px;padding:10px 13px;border:1px solid #e6e2da;border-radius:10px;background:#fbf9f5}
 .project-month-nav{display:flex;align-items:center;gap:7px}
 .project-month-nav input{width:145px;padding:7px 8px}

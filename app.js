@@ -162,9 +162,9 @@
       bar.appendChild(inner);
       scroller.parentNode.insertBefore(bar,scroller);
       scroller.classList.add('has-top-scroll');
-      state={bar,inner,observer:null,mutation:null};
+      state={bar,inner,observer:null,mutation:null,barAt:0};
       topScrollRegistry.set(scroller,state);
-      bar.addEventListener('scroll',()=>{if(scroller.scrollLeft!==bar.scrollLeft)scroller.scrollLeft=bar.scrollLeft;},{passive:true});
+      bar.addEventListener('scroll',()=>{state.barAt=Date.now();if(scroller.scrollLeft!==bar.scrollLeft)scroller.scrollLeft=bar.scrollLeft;},{passive:true});
       scroller.addEventListener('scroll',()=>{if(bar.scrollLeft!==scroller.scrollLeft)bar.scrollLeft=scroller.scrollLeft;},{passive:true});
       bar.addEventListener('wheel',event=>{if(Math.abs(event.deltaY)<=Math.abs(event.deltaX))return;scroller.scrollLeft+=event.deltaY;event.preventDefault();},{passive:false});
     }
@@ -173,7 +173,10 @@
       state.inner.style.width=`${scroller.scrollWidth}px`;
       const overflowing=scroller.scrollWidth-scroller.clientWidth>1;
       state.bar.classList.toggle('is-empty',!overflowing);
-      if(state.bar.scrollLeft!==scroller.scrollLeft)state.bar.scrollLeft=scroller.scrollLeft;
+      if(state.bar.scrollLeft!==scroller.scrollLeft){
+        if(Date.now()-state.barAt<400)scroller.scrollLeft=state.bar.scrollLeft;
+        else state.bar.scrollLeft=scroller.scrollLeft;
+      }
     };
     state.observer?.disconnect();state.mutation?.disconnect();
     if(typeof ResizeObserver==='function'){
@@ -186,6 +189,28 @@
     update();
     requestAnimationFrame(update);
   }
+  // Preserva a rolagem horizontal das tabelas quando o conteúdo é redesenhado.
+  const HSCROLL_SELECTOR='.weekly-scroll,.action-month-board,.action-calendar-scroll,.action-list-scroll,.action-list-list-scroll,.occurrence-list-scroll,.habit-screen-scroll,.recurring-board,.recurring-history-wrap,.project-history-matrix-wrap,.record-type-table-wrap';
+  const hScrollMemory=new Map();
+  function hScrollKey(el){
+    if(el.id)return `#${el.id}`;
+    const parent=el.parentElement,base=el.classList[0]||el.tagName.toLowerCase();
+    const matches=parent?[...parent.children].filter(child=>(child.classList[0]||child.tagName.toLowerCase())===base):[el];
+    return `${parent?.id||'root'}|${base}|${matches.indexOf(el)}`;
+  }
+  function hScrollOverflow(el){return el.scrollWidth-el.clientWidth>1;}
+  document.addEventListener('scroll',event=>{
+    const el=event.target;
+    if(!(el instanceof Element)||!el.matches(HSCROLL_SELECTOR)||!hScrollOverflow(el))return;
+    hScrollMemory.set(hScrollKey(el),el.scrollLeft);
+  },{passive:true,capture:true});
+  function restoreHorizontalScroll(){
+    for(const el of $$(HSCROLL_SELECTOR)){
+      const left=hScrollMemory.get(hScrollKey(el));
+      if(left>0&&el.scrollLeft===0&&hScrollOverflow(el))el.scrollLeft=left;
+    }
+  }
+  new MutationObserver(restoreHorizontalScroll).observe(document.body,{childList:true,subtree:true});
   const uid = () => crypto.randomUUID ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const isoToday = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
   const isoDateKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -1274,7 +1299,7 @@
       const cells=dates.map((date,index)=>`<td>${entriesFor(date,index).join('')}</td>`).join('');
       return `<tr class="weekly-global-row" style="--area-color:${color}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">${icon}</span><span>${escapeHTML(label)}</span></th>${cells}</tr>`;
     }).join('');
-    const habitRows=groupInWeekly('habits')?activeHabits().map(({project,task})=>{const cells=dates.map(date=>{const started=!task.startDate||date>=task.startDate,future=date>isoToday(),done=habitDoneOn(task,date);if(!started)return '<td><span class="habit-cell is-off">·</span></td>';const label=`${done?'Desmarcar':'Marcar'} ${task.title} em ${fmtDate(date)}`;return `<td><button type="button" class="habit-cell ${done?'is-done':future?'is-off':'is-missed'}" data-toggle-habit="${escapeHTML(task.id)}" data-habit-project="${escapeHTML(project.id)}" data-habit-date="${date}" ${future?'disabled':''} aria-label="${escapeHTML(label)}">${done?'✓':future?'·':'×'}</button></td>`;}).join('');return `<tr class="weekly-global-row weekly-habit-row" style="--area-color:#e8f1ec;--habit-color:${escapeHTML(projectAreaColor(project))}"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">↻</span><span>${escapeHTML(task.title)}</span><small>${escapeHTML(project.title)}</small></th>${cells}</tr>`;}).join(''):'';
+    const habitRows=groupInWeekly('habits')?(habits=>{const cells=dates.map(date=>{const entries=habits.filter(({task})=>!task.startDate||date>=task.startDate);return `<td>${entries.map(({project,task})=>{const future=date>isoToday(),done=habitDoneOn(task,date),label=`${done?'Desmarcar':'Marcar'} ${task.title} em ${fmtDate(date)}`;return `<button type="button" class="weekly-anchor weekly-global-item weekly-habit${done?' is-done':future?' is-off':' is-missed'}" style="--habit-color:${escapeHTML(projectAreaColor(project))}" data-toggle-habit="${escapeHTML(task.id)}" data-habit-project="${escapeHTML(project.id)}" data-habit-date="${date}" ${future?'disabled':''} aria-label="${escapeHTML(label)}" title="${escapeHTML(`${task.title} · ${project.title}`)}"><span class="weekly-habit-mark" aria-hidden="true">${done?'✓':future?'·':'×'}</span><span>${escapeHTML(task.title)}</span></button>`;}).join('')}</td>`;}).join('');return `<tr class="weekly-global-row weekly-habit-row" style="--area-color:#e8f1ec"><th scope="row"><span class="weekly-area-icon" aria-hidden="true">↻</span><span>Hábitos</span></th>${cells}</tr>`;})(activeHabits()):'';
     $('#weekly-grid').innerHTML=`<table class="weekly-table"><thead><tr><th scope="col" class="weekly-corner">Tipo / grupo</th>${headers}</tr></thead><tbody>${areaRows}${groupRows}${habitRows}</tbody></table>`;
   }
   function renderWeeklyGroups(dates){
@@ -3731,6 +3756,7 @@
     if(section==='projects')renderProjects();
     if(section==='occurrences')renderOccurrences();
     if(section==='timeline')renderTimeline();
+    restoreHorizontalScroll();
     document.body.classList.remove('sidebar-open');updateSidebarToggle();
   }
   function openActionsWeek(date=selectedDate){
