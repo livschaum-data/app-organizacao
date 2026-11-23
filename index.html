@@ -7,13 +7,14 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261122-history-start-date-v178">
+  <link rel="stylesheet" href="styles.css?v=20261123-auto-end-date-v183">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script>if(!window.pako)document.write('<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"><\/script>');</script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
-  <script defer src="app.js?v=20261122-history-start-date-v178"></script>
+  <script src="esmaltes-data.js?v=20261122-esmaltes-v1"></script>
+  <script defer src="app.js?v=20261123-auto-end-date-v183"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -103,9 +104,10 @@
 
       <section id="summary-workspace" class="workspace-view">
         <div class="planner-hero"><div class="eyebrow">ACOMPANHAMENTO</div><h1 id="summary-heading">Resumo dos seus dias.</h1><p id="summary-subtitle">Veja quantos dias ainda têm rotinas ou tarefas pendentes.</p><div class="date-navigator" id="summary-month-navigator"><button type="button" id="summary-prev-month" class="round-button" aria-label="Mês anterior">←</button><input id="summary-date" type="month" aria-label="Escolher mês do resumo"><button type="button" id="summary-next-month" class="round-button" aria-label="Próximo mês">→</button><button type="button" id="summary-today" class="today-button">Mês atual</button></div></div>
-        <div class="tabs summary-view-tabs" role="tablist" aria-label="Seções do resumo"><button type="button" class="tab summary-tab active" role="tab" aria-selected="true" data-summary-view="summary">Resumo</button><button type="button" class="tab summary-tab" role="tab" aria-selected="false" data-summary-view="recordacoes">Recordações</button></div>
+        <div class="tabs summary-view-tabs" role="tablist" aria-label="Seções do resumo"><button type="button" class="tab summary-tab active" role="tab" aria-selected="true" data-summary-view="summary">Resumo</button><button type="button" class="tab summary-tab" role="tab" aria-selected="false" data-summary-view="recordacoes">Recordações</button><button type="button" class="tab summary-tab" role="tab" aria-selected="false" data-summary-view="esmaltes">Registro esmaltes</button></div>
         <div id="summary-panel"><div class="summary-actions"><p class="summary-explainer">Rotinas e tarefas têm conclusões separadas. Ao concluir, itens abertos ficam registrados como não realizados. Dias futuros não entram no resumo.</p><button type="button" id="summary-open-task-review" class="secondary-button">Revisar tarefas pendentes →</button></div><div id="summary-content" class="summary-content"></div></div>
         <div id="summary-recordacoes" class="hidden"><div id="recordacoes-list" class="registries-list"></div></div>
+<div id="summary-esmaltes" class="summary-esmaltes hidden"><div id="esmaltes-content"></div></div>
       </section>
 
       <section id="registries-workspace" class="workspace-view">
@@ -275,7 +277,7 @@
         <div id="occurrences-content"></div>
       </section>
     </main>
-    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v178</span></footer>
+    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v183</span></footer>
   </div>
   </div>
 
