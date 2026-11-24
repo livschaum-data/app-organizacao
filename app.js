@@ -3529,8 +3529,23 @@
   }
   function projectTaskNextDate(task,fromDate=isoToday()){
     if(!task)return '';
+    const frequency=task.frequency||(taskIsHabit(task)?'daily':'monthly'),occurrences=(task.occurrences||[]).filter(item=>item.date).sort((a,b)=>String(a.date).localeCompare(String(b.date))),latest=occurrences[occurrences.length-1],monthly=MONTHLY_TASK_FREQUENCIES.includes(frequency);
+    if(monthly&&latest){
+      const anchor=latest.expectedDate||latest.date,step=TASK_FREQUENCY_MONTHS[frequency]||1,day=Number(String(anchor).slice(8,10))||1,anchorDate=safeDate(anchor);
+      let cursor=new Date(anchorDate.getFullYear(),anchorDate.getMonth(),1);
+      for(let guard=0;guard<240;guard++){
+        cursor=new Date(cursor.getFullYear(),cursor.getMonth()+step,1);
+        const lastDay=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate();
+        cursor.setDate(Math.min(day,lastDay));
+        const key=`${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
+        if(task.endDate&&key>task.endDate)return '';
+        if(key<=latest.date||key<fromDate)continue;
+        if(!occurrences.some(item=>(item.expectedDate||item.date)===key))return key;
+      }
+      return '';
+    }
     const toDate=task.endDate&&task.endDate>=fromDate?task.endDate:`${Number(fromDate.slice(0,4))+2}-12-31`;
-    const covered=new Set((task.occurrences||[]).filter(item=>item.date).map(item=>item.expectedDate||item.date));
+    const covered=new Set(occurrences.map(item=>item.expectedDate||item.date));
     return projectTaskScheduleDates(task,fromDate,toDate).find(date=>!covered.has(date))||'';
   }
   function habitDoneOn(task,date){return (task.occurrences||[]).some(item=>item.date===date&&item.result==='realized');}
