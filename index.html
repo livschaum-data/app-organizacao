@@ -7,14 +7,14 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261124-next-original-anchor-v251">
+  <link rel="stylesheet" href="styles.css?v=20261125-preview-origins-v265">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script>if(!window.pako)document.write('<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"><\/script>');</script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
   <script src="esmaltes-data.js?v=20261122-esmaltes-v1"></script>
-  <script defer src="app.js?v=20261124-next-original-anchor-v251"></script>
+  <script defer src="app.js?v=20261125-preview-origins-v265"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -277,7 +277,7 @@
         <div id="occurrences-content"></div>
       </section>
     </main>
-    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v251</span></footer>
+    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v265</span></footer>
   </div>
   </div>
 
@@ -399,13 +399,20 @@
   </dialog>
   <dialog id="project-chart-dialog" class="dialog project-chart-dialog" aria-labelledby="project-chart-title"><div class="dialog-head"><div><div class="eyebrow">HISTÓRICO</div><h2 id="project-chart-title">Evolução</h2></div><button type="button" class="close-button" data-close="project-chart-dialog" aria-label="Fechar">×</button></div><div id="project-chart-content"></div></dialog>
 
+  <dialog id="project-close-preview-dialog" class="dialog project-close-preview-dialog" aria-labelledby="project-close-preview-title">
+    <div class="dialog-head"><div><div class="eyebrow">FECHAMENTO</div><h2 id="project-close-preview-title">Fechar mês</h2></div><button type="button" class="close-button" data-close="project-close-preview-dialog" aria-label="Fechar">×</button></div>
+    <p id="project-close-preview-note" class="schedule-hint"></p>
+    <div id="project-close-preview-content" class="project-close-preview-content"></div>
+    <div class="dialog-actions"><span></span><button type="button" class="secondary-button" data-close="project-close-preview-dialog">Cancelar</button><button type="button" class="primary-button" id="project-close-preview-confirm">Confirmar fechamento</button></div>
+  </dialog>
+
   <dialog id="project-focus-dialog" class="focus-dialog" aria-labelledby="project-focus-name">
     <div class="focus-shell">
       <div class="focus-topbar"><span class="focus-brand">âncora<span>·</span></span><button type="button" class="focus-close" id="close-project-focus" aria-label="Fechar projeto">×</button></div>
       <div class="focus-content">
         <div class="eyebrow" id="project-focus-eyebrow"></div>
         <div class="focus-title-row"><span id="project-focus-icon" class="focus-icon"></span><div><h2 id="project-focus-name"></h2><p id="project-focus-meta"></p></div></div>
-        <div class="project-focus-progress"><div class="project-progress"><span id="project-focus-progress-bar"></span></div><b id="project-focus-progress-label"></b></div>
+        <div class="project-focus-progress"><div class="project-progress"><span id="project-focus-progress-bar"></span></div><b id="project-focus-progress-label"></b><span id="project-focus-progress-origin" class="project-focus-progress-origin"></span></div>
  <div class="project-month-bar project-focus-month-bar"><div class="project-month-nav"><button type="button" class="secondary-button compact-button" data-focus-month-shift="-1" aria-label="Mês anterior">‹</button><input type="month" id="project-focus-month" class="text-input" aria-label="Mês do projeto"><button type="button" class="secondary-button compact-button" data-focus-month-shift="1" aria-label="Próximo mês">›</button><button type="button" class="text-button" data-focus-month-today>Atual</button></div><span id="project-focus-month-status"></span></div>
         <p id="project-focus-description" class="occurrence-focus-text hidden"></p>
         <dl id="project-focus-details" class="occurrence-focus-details"></dl>

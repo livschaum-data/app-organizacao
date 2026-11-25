@@ -1132,3 +1132,74 @@ textarea:focus-visible{outline:3px solid #7bb5ab;outline-offset:2px}
 .settings-columns.has-monthly,.daily-view-group-row.has-monthly{grid-template-columns:minmax(170px,1fr) 190px 145px 125px 125px}
 @media(max-width:850px){.daily-view-group-row.has-monthly{grid-template-columns:minmax(150px,1fr) 180px 95px 95px 95px}}
 @media(max-width:650px){.daily-view-group-row.has-monthly{grid-template-columns:1fr 1fr}}
+
+/* Progress origin badges, occurrence flags, and calendar indicators */
+.progress-origin{display:inline-flex;align-items:center;padding:1px 5px;border-radius:999px;font-size:8px;font-weight:800;line-height:1.5;letter-spacing:.2px;white-space:nowrap;background:#eef1ee;color:#5a6772;cursor:help;vertical-align:middle}
+.progress-origin.is-manual{background:#f2e8d9;color:#88622e}
+.progress-origin.is-auto{background:#e3eef5;color:#376b83}
+.progress-origin.is-closed{background:#e7e5f6;color:#544a99}
+.progress-origin.is-standby{background:#fff1d7;color:#a35a14}
+.progress-origin.is-empty{background:#f1efec;color:#8a857e}
+.project-progress-row .progress-origin{margin-left:6px}
+.project-task-progress-cell .progress-origin{margin-left:2px}
+.project-focus-progress{flex-wrap:wrap}
+.project-focus-progress-origin{display:inline-flex;align-items:center}
+.recurring-progress{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+.occurrence-flag{display:inline-flex;align-items:center;margin-left:5px;padding:1px 5px;border-radius:999px;font-size:7px;font-weight:800;line-height:1.5;white-space:nowrap}
+.occurrence-flag.is-next{background:#dce5fb;color:#47639a}
+.occurrence-flag.is-rescheduled{background:#f6e3cf;color:#8a5b2d}
+.project-occurrence-card .occurrence-flag{margin-left:0;justify-self:start}
+.project-calendar-item{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.project-calendar-item-title{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-calendar-flag{padding:0 4px;border-radius:999px;font-size:6px;font-weight:800;line-height:1.4;white-space:nowrap}
+.project-calendar-flag.is-next{background:#dce5fb;color:#47639a}
+.project-calendar-flag.is-rescheduled{background:#f6e3cf;color:#8a5b2d}
+.project-calendar-item.is-next{border:1px dashed #7f9bd0}
+.project-calendar-item.is-rescheduled{box-shadow:inset 2px 0 0 #d9a15f}
+.project-history-origin{display:inline-flex;align-items:center;margin-left:4px;font-size:6px;padding:0 4px;line-height:1.4;vertical-align:middle}
+.project-month-progress-wrap{display:flex;flex-direction:column;gap:2px;min-width:0}
+.project-month-origin{align-self:center;font-size:6px}
+.project-history-editor-value{display:flex;flex-direction:column;gap:2px;min-width:0}
+.project-history-editor-origin{align-self:flex-start;font-size:6px}
+
+/* Habit month adherence + 3-month consistency */
+.habit-consistency{display:inline-flex;align-items:center;margin-left:4px;padding:1px 5px;border-radius:999px;background:#e6f1ea;color:#2f6b4f;font-size:7px;font-weight:800;line-height:1.5;white-space:nowrap;cursor:help;vertical-align:middle}
+.project-task-progress-cell{flex-wrap:wrap;row-gap:2px}
+.project-focus-task-progress{flex-wrap:wrap}
+.habit-consistency-cell{min-width:104px;text-align:right!important}
+.habit-consistency-cell b{display:block;color:#2f6b4f;font-size:12px}
+.habit-consistency-cell small{color:var(--muted);font-size:9px}
+.habit-table{min-width:780px}
+@media(max-width:700px){.habit-table{min-width:720px}}
+
+/* Future-month forecast and closed-month indicators */
+.progress-origin.is-forecast{background:#f3e8f7;color:#7a4a8a}
+.project-month-status-line{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.project-month-state{display:inline-flex;align-items:center;padding:1px 6px;border-radius:999px;font-size:8px;font-weight:800;line-height:1.5;white-space:nowrap;cursor:help}
+.project-month-state.is-open{background:#e4f3e8;color:#2b812f}
+.project-month-state.is-closed{background:#e7e5f6;color:#544a99}
+.project-month-state.is-ever-closed{background:#f1ede6;color:#7a6a55}
+.project-month-state.is-reopened{background:#e3eef5;color:#376b83}
+.project-month-state.is-forecast{background:#f3e8f7;color:#7a4a8a}
+.project-history-matrix .project-history-month.is-closed{background:#e7e5f6;color:#4d427f}
+.project-history-matrix .project-history-month.is-ever-closed,.project-history-matrix .project-history-month.is-reopened{background:#f1ede6;color:#6b5d4b}
+.project-history-state{margin-left:3px;font-size:8px;opacity:.85}
+
+/* Month editor actions */
+.project-month-status-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+
+/* Close-month preview */
+.project-close-preview-content{display:grid;gap:8px;max-height:55vh;overflow:auto;padding-right:4px}
+.project-close-preview-group{display:grid;gap:4px;padding:8px 10px;border:1px solid #dbe4de;border-radius:8px;background:#f7faf7}
+.project-close-preview-row{display:grid;grid-template-columns:minmax(0,1fr) 140px 90px;gap:8px;align-items:center;font-size:11px;padding:3px 0;border-bottom:1px solid #e8eee8}
+.project-close-preview-row:last-child{border-bottom:0}
+.project-close-preview-row.is-project{font-weight:700}
+.project-close-preview-row.is-task{padding-left:12px;color:var(--muted)}
+.project-close-preview-row small{display:block;color:#6657a5;font-size:9px;font-weight:800}
+.project-close-preview-value{text-align:right;font-variant-numeric:tabular-nums}
+
+.project-close-preview-row.is-head{font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);font-weight:800;border-bottom:1px solid #dbe4de}
+
+.project-close-preview-value{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right;font-variant-numeric:tabular-nums}
+.project-close-preview-value b{font-size:11px}
+.project-close-preview-origin{font-size:7px;line-height:1.4}
