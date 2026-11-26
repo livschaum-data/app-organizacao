@@ -7,14 +7,14 @@
   <title>Âncora — minha rotina</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="stylesheet" href="styles.css?v=20261125-preview-origins-v265">
+  <link rel="stylesheet" href="styles.css?v=20261125-habit-detail-v267">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
   <script>if(!window.pako)document.write('<script src="https://unpkg.com/pako@2.1.0/dist/pako.min.js"><\/script>');</script>
   <script src="supabase-config.js"></script>
   <script src="project-seed-data.js?v=20261102-projects-v2"></script>
   <script src="esmaltes-data.js?v=20261122-esmaltes-v1"></script>
-  <script defer src="app.js?v=20261125-preview-origins-v265"></script>
+  <script defer src="app.js?v=20261125-habit-detail-v267"></script>
 </head>
 <body>
   <div class="app-layout">
@@ -277,7 +277,7 @@
         <div id="occurrences-content"></div>
       </section>
     </main>
-    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v265</span></footer>
+    <footer class="footer">Um ponto de apoio para cada dia. <span id="app-version" class="footer-version">v267</span></footer>
   </div>
   </div>
 
@@ -386,6 +386,22 @@
       <div id="project-task-history-editor" class="project-history-editor"></div>
       <div class="dialog-actions"><button type="button" class="secondary-button" id="delete-project-task">Excluir tarefa</button><span></span><button type="button" class="secondary-button" data-close="project-task-dialog">Cancelar</button><button type="submit" class="primary-button">Salvar tarefa</button></div>
     </form>
+  </dialog>
+
+  <dialog id="habit-detail-dialog" class="dialog habit-detail-dialog" aria-labelledby="habit-detail-title">
+    <div class="habit-detail-head">
+      <div>
+        <div class="eyebrow" id="habit-detail-eyebrow">HÁBITO</div>
+        <h2 id="habit-detail-title"></h2>
+        <p id="habit-detail-meta" class="schedule-hint"></p>
+      </div>
+      <button type="button" class="close-button" data-close="habit-detail-dialog" aria-label="Fechar">×</button>
+    </div>
+    <div class="project-month-bar habit-detail-month-bar"><div class="project-month-nav"><button type="button" class="secondary-button compact-button" data-habit-detail-month-shift="-1" aria-label="Mês anterior">‹</button><input type="month" id="habit-detail-month" class="text-input" aria-label="Mês do hábito"><button type="button" class="secondary-button compact-button" data-habit-detail-month-shift="1" aria-label="Próximo mês">›</button><button type="button" class="text-button" data-habit-detail-month-today>Atual</button></div><span id="habit-detail-month-state"></span></div>
+    <div id="habit-detail-summary" class="habit-detail-summary"></div>
+    <p id="habit-detail-hint" class="schedule-hint"></p>
+    <div id="habit-detail-calendar" class="habit-detail-calendar"></div>
+    <div class="dialog-actions"><button type="button" class="secondary-button" id="habit-detail-edit">Editar hábito</button><span></span><button type="button" class="secondary-button" data-close="habit-detail-dialog">Fechar</button></div>
   </dialog>
 
   <dialog id="project-occurrence-dialog" class="dialog small-dialog" aria-labelledby="project-occurrence-title">

@@ -57,7 +57,8 @@ Os selos aparecem nos cartões de projeto, nas linhas de atividade, no diálogo 
 
 `Concluída`, `Remodelada` e `Descartada` são status finais.
 
-- **Concluída**: progresso 100% em todos os meses.
+- **Concluída**: progresso 100% no **mês atual/global** e em todos os meses **após** o `endDate`. No mês de encerramento e nos anteriores, usa o valor registrado/cálculo do mês; sem medição registrada, fica “—”, sem fallback para 100%.
+  - No mês atual de um item `Concluída`, o progresso e o status ficam **automáticos e desabilitados** no editor de mês e no histórico do diálogo de edição. O mês de encerramento passado e os anteriores continuam editáveis pelo registro/cálculo.
 - **Remodelada / Descartada**: a partir do mês seguinte ao `endDate`, o status é repetido e o progresso é replicado.
   - Usa o valor registrado no mês de encerramento (`completionPeriod`).
   - Se não houver, usa o último valor registrado até o encerramento.
@@ -69,6 +70,7 @@ Os selos aparecem nos cartões de projeto, nas linhas de atividade, no diálogo 
 - O valor é herdado do último mês anterior que **não** estava em Stand-by.
 - Tem precedência sobre as demais regras do mês (inclusive recorrência e hábito).
 - Se não houver valor herdado, o resultado é “sem medição”.
+- No editor de mês e no histórico do diálogo de edição, o **progresso** de um mês Stand-by fica herdado e **não editável**; o **status** continua editável.
 
 ### Status normais
 
@@ -115,6 +117,15 @@ Usada no progresso **global** e no **cálculo do projeto em qualquer mês permit
 
 Na tela de hábitos, a coluna **Mês** mostra a aderência do mês e a coluna **Consistência 3m** mostra o valor global. Nas atividades, o valor principal do mês continua sendo a aderência mensal e o selo `3m XX%` mostra a consistência. **A aderência do mês vale apenas para o próprio hábito; o projeto usa sempre a consistência 3m até o mês selecionado.**
 
+### Tela do hábito
+
+- Clicar no nome de um hábito abre a **tela do hábito**, com o mês completo em formato de calendário.
+- O mês pode ser alterado pelo seletor, pelos botões **‹/›** ou por **Atual**.
+- O resumo mostra: **esperado mensal** (a meta do hábito), **esperado no mês** (prorrateado no mês atual ou em mês parcial), **marcadas**, **aderência** e **consistência 3m** até o mês selecionado.
+- Dias até hoje em meses passados ficam editáveis para preenchimento retroativo. Dias futuros e anteriores ao início do hábito ficam bloqueados.
+- **Editar hábito** abre o formulário completo da atividade.
+- Em um mês de projeto já fechado, as marcações atualizam o hábito e a consistência, mas **não recalculam o snapshot do projeto**; a tela avisa isso.
+
 ### Recorrências
 
 Ocorrências com resultado `skipped` (ignorada) ou `scheduled` (pendente) não entram na média. Ocorrências sem progresso medido também são ignoradas.
@@ -143,15 +154,16 @@ Ocorrências com resultado `skipped` (ignorada) ou `scheduled` (pendente) não e
 ## 5. Projetos
 
 1. Projeto **Concluída** → 100%.
-2. Projeto em **Stand-by** → valor herdado do último mês não Stand-by.
-3. Projeto com **progresso manual** → usa o manual.
-4. Caso contrário → **média simples** das atividades com medição.
-   - **Hábitos entram pela consistência 3m**, não pela aderência do mês.
+2. Projeto em **Stand-by** → valor herdado do último mês não Stand-by; sem valor herdado, sem medição.
+3. No **mês atual/global**, projeto com **progresso manual** → usa o manual.
+4. No **mês atual/global**, caso contrário → **média simples** das atividades com medição.
+5. Em **meses passados abertos** → **média simples** das atividades com o progresso do mês. O progresso manual global do projeto **não** é usado como fallback do passado.
+   - **Hábitos entram pela consistência 3m**, não pela aderência do mês. Em status final: `Concluída` = 100%; `Remodelada`/`Descartada` ficam fora. Em Stand-by: vale o valor herdado.
    - Atividades com status **Remodelada** ou **Descartada** ficam fora.
    - Atividades sem medição ficam fora.
-5. Projeto sem nenhuma atividade medida → sem medição.
+6. Projeto sem nenhuma atividade medida → sem medição.
 
-Na aba **Progresso**, o projeto usa a média das atividades com o progresso do mês. **Para hábitos, usa sempre a consistência 3m**, em qualquer mês com cálculo permitido; a aderência mensal do hábito aparece apenas na própria atividade. Em meses passados abertos, o projeto também usa a consistência 3m dos hábitos no cálculo. Em meses fechados, usa o snapshot salvo; se não houver snapshot, mostra “—” e não recalcula. A coluna do **Histórico** usa a mesma regra: snapshot nos meses fechados e valor do mês apenas em meses abertos.
+Na aba **Progresso**, no mês atual o projeto usa o **progresso manual**, se houver; caso contrário, a média das atividades com o progresso do mês. Em **meses passados abertos**, usa a **média do mês** e o manual global não entra como fallback. Um **valor salvo no mês** tem prioridade sobre o manual global naquele mês. **Para hábitos, usa sempre a consistência 3m**, em qualquer mês com cálculo permitido, exceto quando o hábito está em status final ou Stand-by. A aderência mensal do hábito aparece apenas na própria atividade. Em meses fechados, usa o snapshot salvo; se não houver snapshot, mostra “—” e não recalcula. A coluna do **Histórico** usa a mesma regra: snapshot nos meses fechados e cálculo do mês nos meses abertos (manual no mês atual).
 
 ## 6. Fechamento e reabertura de mês
 
@@ -166,8 +178,8 @@ Na aba **Progresso**, o projeto usa a média das atividades com o progresso do m
   - grava `project.history[period]` e `project.statusHistory[period]`;
   - grava `history` e `statusHistory` de cada atividade;
   - para status finais, replica o status e o progresso.
-- **Projeto:** no mês atual, o snapshot do projeto recebe o **progresso global do projeto** (`projectProgress`), que inclui a **consistência 3m dos hábitos até o mês**. Nos meses passados, usa o valor do mês (`projectProgressForMonth`); **se não houver medição naquele mês, fica sem medição (“—”) e não usa o progresso atual como fallback**.
-- **Hábito:** o snapshot do hábito recebe a **aderência do mês** (`habitMonthStats`), não a consistência.
+- **Projeto:** o snapshot recebe o **valor exibido no mês** (`projectProgressForMonth`). No mês atual, esse valor é o **progresso global** (inclui o manual, quando houver, e a consistência 3m dos hábitos), salvo se houver um **valor salvo manualmente no próprio mês**, que prevalece e é preservado no fechamento. Nos meses passados, é o cálculo do mês; **se não houver medição naquele mês, fica sem medição (“—”) e não usa o progresso atual nem o manual global como fallback**.
+- **Hábito:** o snapshot do hábito recebe a **aderência do mês** (`habitMonthStats`), não a consistência. **Em Stand-by, o valor herdado prevalece** sobre a aderência do mês.
   - Isso significa que o snapshot do projeto pode ser diferente da média dos snapshots das atividades. O projeto guarda o valor global; o hábito guarda o valor mensal.
 - **Mês passado que já foi fechado** (mesmo depois de reaberto) **não recalcula recorrência nem hábito**. Ele usa o valor salvo; se não houver valor, mostra “—”. Alterações manuais continuam permitidas e são gravadas no histórico. O marcador permanente fica em `everClosedProjectMonths`.
 - Ao fechar um **mês passado aberto**, atividade ou projeto **sem medição naquele mês** ficam sem medição (“—”); não salvam o progresso atual. O mês atual continua usando o valor atual, porque é o mês corrente.
@@ -222,15 +234,16 @@ Exemplo: trimestral, ocorrência mais recente com original **04/01/2027** ajusta
 - Colunas mensais usam `resolveProgress(..., {mode:'history', period})`.
 - Meses fechados → **Snapshot**; sem snapshot salvo → “—”, sem recálculo.
 - Meses abertos com valor salvo → **Valor do mês**.
-- Status final → **Status final**.
-- Stand-by → **herdado**, com o mês de origem no tooltip.
-- Hábito → **Hábito** (aderência do mês, prorrateada quando for o mês atual). A consistência 3m não substitui o valor da coluna mensal.
+- Projeto em mês aberto sem valor salvo → **cálculo do mês** (média das atividades; **Manual** no mês atual, quando o projeto tem progresso manual). O cálculo aparece no Histórico e no gráfico, não só na aba Progresso.
+- Status final → **Status final**; sem valor registrado no encerramento, “—”, sem replicar o progresso atual.
+- Stand-by → **herdado**, com o mês de origem no tooltip; sem valor herdado, “—”.
+- Hábito → **Hábito** (aderência do mês, prorrateada quando for o mês atual). A consistência 3m não substitui o valor da coluna mensal. No projeto, o hábito entra pela consistência; em status final, `Concluída` = 100% e `Remodelada`/`Descartada` ficam fora; em Stand-by, vale o herdado.
 - Recorrência passada → **Mês** (média das ocorrências do mês).
 - “—” = sem medição.
 
-O editor de mês e o histórico do diálogo de edição mostram o mesmo selo ao lado do valor pré-preenchido.
+O editor de mês e o histórico do diálogo de edição mostram o mesmo selo ao lado do valor. O editor de mês pré-preenche o valor calculado do mês aberto; o histórico do diálogo de edição mantém apenas os valores salvos, para não gravar cálculos automáticos sem intenção. Na edição de uma linha do Histórico, **Salvar sem alterar não grava os valores calculados**: só os campos alterados são persistidos.
 
-O **gráfico de evolução** usa o mesmo intervalo e o mesmo resolvedor do Histórico. Por isso ele inclui valores herdados (Stand-by), status final e meses calculados que não têm registro próprio. O resumo do gráfico indica quantos pontos são herdados/calculados.
+O **gráfico de evolução** usa o mesmo intervalo e o mesmo resolvedor do Histórico. Por isso ele inclui valores herdados (Stand-by), status final e meses calculados que não têm registro próprio, inclusive o cálculo mensal do projeto em meses abertos. O resumo do gráfico indica quantos pontos são herdados/calculados.
 
 ## 9. Visões e consistência
 
@@ -249,6 +262,9 @@ Checklist usado nos testes headless (Edge com perfil isolado):
 | Status final | Remodelada; fim 15/09/2026; histórico 63% em 09/2026 | 63% em 11/2026, origem `final` |
 | Mês fechado | Histórico 55% em 10/2026; ocorrência de 99% no mesmo mês | 55%, origem `snapshot`, sem recálculo |
 | Hábito no mês atual | Meta 30; 15 marcações no dia 25 | Esperado 25 → 60%, origem `habit` |
+| Tela do hábito | Clicar no nome do hábito | Abre o mês completo com esperado mensal, esperado no mês, marcadas, aderência e consistência 3m |
+| Tela do hábito em mês passado | Selecionar janeiro e clicar no dia 20 | Marca/desmarca o dia e atualiza o resumo e o calendário |
+| Tela do hábito em mês futuro | Selecionar dezembro | Dias bloqueados; esperado mensal continua visível |
 | Consistência 3m | Atual 60% ×3, anterior 80% ×2, retrasado 50% ×1 | 65%, origem `habit-consistency` |
 | Fechamento de hábito | Fechar o mês atual de um hábito | Snapshot do hábito recebe a aderência do mês, não a consistência 3m |
 | Fechamento de projeto | Hábito com mês 60% e consistência 65% | Snapshot do projeto recebe 65% (progresso global) |
@@ -275,6 +291,14 @@ Checklist usado nos testes headless (Edge com perfil isolado):
 | Ocorrência remarcada | `expectedDate` 05/11, `date` 07/11 | Coluna original 05/11, selo “Remarcada” |
 | Próxima projetada | Sem ocorrência futura | Selo “Próxima” no calendário e nas visões |
 | Média do projeto | Atividades 42% e 60%; uma Remodelada | 51%, Remodelada fora do cálculo |
+| Manual no mês atual | Projeto manual 80%, atividades 60% e 40% em janeiro | Lista, mês atual e fechamento atual usam 80%; janeiro passado aberto usa 50% da média |
+| Status final global | Projeto Remodelada, fim 12/2025, histórico 50% | Lista e meses seguintes usam 50%, origem `final`; sem histórico, “—” |
+| Histórico de mês aberto | Projeto com atividades 60% e 40% em janeiro, sem histórico | Histórico e gráfico mostram 50% em janeiro, origem `média` |
+| Editar linha sem alterar | Abrir Editar na linha do projeto e Salvar | Nenhum valor calculado é gravado; o histórico salvo continua igual |
+| Editar linha com alteração | Mudar novembro de 80% para 85% e Salvar | Só novembro é gravado como 85%, origem `Valor do mês` |
+| Fechar mês atual com valor salvo | Salvar 85% em novembro e fechar novembro | Prévia mostra 85%; o snapshot mantém 85%, origem `snapshot`, sem sobrescrever com o global |
+| Stand-by sem herança | Item Stand-by sem valor no mês anterior | “Sem medição” na Lista, no mês e no Histórico |
+| Stand-by no fechamento | Hábito Stand-by com herdado 80% e aderência 50% no mês | Prévia e snapshot usam 80% herdado; a aderência não prevalece |
 | Sem medição | Sem histórico, sem progresso manual, sem ocorrências | “Sem medição” |
 
 Também foi feita uma comparação automatizada entre a versão anterior e a nova, com o mesmo estado salvo:
