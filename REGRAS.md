@@ -163,6 +163,9 @@ Ocorrências com resultado `skipped` (ignorada) ou `scheduled` (pendente) não e
    - Atividades sem medição ficam fora.
 6. Projeto sem nenhuma atividade medida → sem medição.
 
+- Ao editar uma atividade e trocar o projeto no formulário, ela é **movida**: sai do projeto original e passa a existir somente no novo projeto. O projeto de origem também tem a data de atualização renovada, para que a sincronização não restaure a atividade antiga.
+- Na carga dos dados, projetos e atividades sem `id` ou com `id` duplicado recebem um `id` único. Isso evita que uma edição seja tratada como criação de uma nova atividade e deixe duplicatas no projeto antigo.
+
 Na aba **Progresso**, no mês atual o projeto usa o **progresso manual**, se houver; caso contrário, a média das atividades com o progresso do mês. Em **meses passados abertos**, usa a **média do mês** e o manual global não entra como fallback. Um **valor salvo no mês** tem prioridade sobre o manual global naquele mês. **Para hábitos, usa sempre a consistência 3m**, em qualquer mês com cálculo permitido, exceto quando o hábito está em status final ou Stand-by. A aderência mensal do hábito aparece apenas na própria atividade. Em meses fechados, usa o snapshot salvo; se não houver snapshot, mostra “—” e não recalcula. A coluna do **Histórico** usa a mesma regra: snapshot nos meses fechados e cálculo do mês nos meses abertos (manual no mês atual).
 
 ## 6. Fechamento e reabertura de mês
@@ -265,6 +268,9 @@ Checklist usado nos testes headless (Edge com perfil isolado):
 | Tela do hábito | Clicar no nome do hábito | Abre o mês completo com esperado mensal, esperado no mês, marcadas, aderência e consistência 3m |
 | Tela do hábito em mês passado | Selecionar janeiro e clicar no dia 20 | Marca/desmarca o dia e atualiza o resumo e o calendário |
 | Tela do hábito em mês futuro | Selecionar dezembro | Dias bloqueados; esperado mensal continua visível |
+| Mover atividade de projeto | Editar uma atividade e trocar o projeto | A atividade sai do projeto original e fica só no novo |
+| Atividade sem `id` | Carregar projeto importado com atividade sem id | A atividade recebe um id único e o botão Editar abre os dados corretos |
+| Atividades com id duplicado | Duas atividades com o mesmo id | A segunda recebe um id novo; editar uma não afeta a outra |
 | Consistência 3m | Atual 60% ×3, anterior 80% ×2, retrasado 50% ×1 | 65%, origem `habit-consistency` |
 | Fechamento de hábito | Fechar o mês atual de um hábito | Snapshot do hábito recebe a aderência do mês, não a consistência 3m |
 | Fechamento de projeto | Hábito com mês 60% e consistência 65% | Snapshot do projeto recebe 65% (progresso global) |
